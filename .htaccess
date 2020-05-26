@@ -1,0 +1,11 @@
+Options All -Indexes
+
+RewriteEngine On
+
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-l
+
+RewriteRule ^(.+)$ index.php?altum=$1 [QSA,L]
+
+# ErrorDocument 404 http://192.168.43.172/wordpress
