@@ -11,4 +11,3 @@ Features
 *******************
 
 1. Scrape specified webistes for Zimbabwean rates and provide an api that users can use to access.
-
