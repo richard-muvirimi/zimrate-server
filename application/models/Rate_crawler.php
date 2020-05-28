@@ -101,7 +101,7 @@ class Rate_crawler extends CI_Model
                 $this->set__last_checked(time());
 
                 //status
-                $status = true;
+                $status = $this->get__rate() ? true : false;
 
             }
 
@@ -153,7 +153,7 @@ class Rate_crawler extends CI_Model
 
         $date = array_filter(explode(" ", $raw_date), function ($value) {
 
-            if (is_numeric($value)) {
+            if (strtotime($value) != false) {
                 return true;
             } else {
 
@@ -182,13 +182,29 @@ class Rate_crawler extends CI_Model
     /**
      * Remove all html and php tags from given string
      *
-     * @param string $value
+     * @param string|HtmlDomParser $value
      * @return string
      */
     private function __clean($value)
     {
 
-        return trim(strip_tags(htmlspecialchars_decode($value)));
+        if (is_a($value, "HtmlDomParser")) {
+            $value = $value->innerhtml();
+        }
+
+        $value = utf8_decode($value);
+        $value = strip_tags($value);
+        $value = str_replace("&nbsp;", " ", $value);
+        $value = preg_replace('/\s+/', ' ', $value);
+        $value = trim($value);
+
+        // $value = strip_tags(trim(html_entity_decode($value), " \t\n\r\0\x0B\xC2\xA0"));
+
+        return implode(" ", array_map(function ($word) {
+
+            return trim($word, "-");
+
+        }, explode(" ", $value)));
     }
 
     /**
