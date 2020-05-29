@@ -55,6 +55,9 @@ class Rate_model extends CI_Model
             'last_updated' => array(
                 'type' => 'INT',
             ),
+            'timezone' => array(
+                'type' => 'TEXT',
+            ),
         );
         $this->dbforge->add_field($fields);
         $this->dbforge->add_key('id', true);

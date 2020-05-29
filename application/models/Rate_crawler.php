@@ -77,6 +77,13 @@ class Rate_crawler extends CI_Model
     private $__last_updated;
 
     /**
+     * The date time zone
+     *
+     * @var string
+     */
+    private $__time_zone;
+
+    /**
      * crawl given site for values
      *
      * @return bool
@@ -87,7 +94,7 @@ class Rate_crawler extends CI_Model
         $status = false;
 
         //if enabled and half an hour has passed since last check
-        if ($this->get__enabled() && abs(time() - $this->get__last_checked()) > (60 * 30)) {
+        if ($this->get__enabled() && true || abs(time() - $this->get__last_checked()) > (60 * 30)) {
 
             /**
              * Get site html file and scan for required fields
@@ -123,8 +130,24 @@ class Rate_crawler extends CI_Model
         //rate
         $this->set__rate($this->__clean_rate($dom->findOneOrFalse($this->get__selector())));
 
+        $date = $this->__clean_date($dom->findOneOrFalse($this->get__last_updated_selector())) ?: ($this->get__rate() ? time() : 0);
+
         //date
-        $this->set__last_updated($this->__clean_date($dom->findOneOrFalse($this->get__last_updated_selector())) ?: ($this->get__rate() ? time() : 0));
+        $this->set__last_updated($this->__fixDateOffset($date));
+    }
+
+    /**
+     * Fix date offset
+     *
+     * @param Integer $date
+     */
+    private function __fixDateOffset($date)
+    {
+
+        $timezone = $this->get__time_zone();
+
+        return $date - date_offset_get(date_create("now", timezone_open($timezone)));
+
     }
 
     /**
@@ -151,32 +174,40 @@ class Rate_crawler extends CI_Model
 
         $raw_date = $this->__clean($value);
 
-        $date = array_filter(explode(" ", $raw_date), function ($value) {
+        $date = strtotime($raw_date);
 
-            if (strtotime($value) != false) {
-                return true;
-            } else {
+        if ($date == false) {
 
-                $months = array();
-                for ($i = 1; $i < 13; $i++) {
-                    $months[] = strtolower(DateTime::createFromFormat('m', $i)->format('F'));
-                }
+            $date = array_filter(explode(" ", $raw_date), function ($value) {
 
-                if (in_array(strtolower($value), $months)) {
+                if (strtotime($value) != false || is_numeric($value)) {
                     return true;
                 } else {
-                    $months = array_map(function ($value) {
-                        return substr($value, 0, 3);
-                    }, $months);
 
-                    return in_array($value, $months);
+                    $months = array();
+                    for ($i = 1; $i < 13; $i++) {
+                        $months[] = strtolower(DateTime::createFromFormat('m', $i)->format('F'));
+                    }
+
+                    if (in_array(strtolower($value), $months)) {
+                        return true;
+                    } else {
+                        $months = array_map(function ($value) {
+                            return substr($value, 0, 3);
+                        }, $months);
+
+                        return in_array($value, $months);
+                    }
                 }
-            }
 
-            return false;
-        });
+                return false;
+            });
 
-        return strtotime(implode(" ", $date));
+            return strtotime(implode(" ", $date));
+        } else {
+            return $date;
+        }
+
     }
 
     /**
@@ -202,7 +233,7 @@ class Rate_crawler extends CI_Model
 
         return implode(" ", array_map(function ($word) {
 
-            return trim($word, "-");
+            return trim($word, "-,");
 
         }, explode(" ", $value)));
     }
@@ -469,6 +500,7 @@ class Rate_crawler extends CI_Model
      */
     public function set__last_updated($__last_updated)
     {
+
         $this->__last_updated = $__last_updated;
 
         return $this;
@@ -484,6 +516,30 @@ class Rate_crawler extends CI_Model
     public function set__id($__id)
     {
         $this->__id = $__id;
+
+        return $this;
+    }
+
+    /**
+     * Get the date time zone
+     *
+     * @return  string
+     */
+    public function get__time_zone()
+    {
+        return $this->__time_zone;
+    }
+
+    /**
+     * Set the date time zone
+     *
+     * @param  string  $__time_zone  The date time zone
+     *
+     * @return  self
+     */
+    public function set__time_zone(string $__time_zone)
+    {
+        $this->__time_zone = $__time_zone;
 
         return $this;
     }

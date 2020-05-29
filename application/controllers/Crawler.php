@@ -28,6 +28,7 @@ class Crawler extends CI_Controller
                 $crawler->set__last_checked($site->last_checked);
                 $crawler->set__last_updated_selector($site->last_updated_selector);
                 $crawler->set__last_updated($site->last_updated);
+                $crawler->set__time_zone($site->timezone);
 
                 $crawler->crawl_site();
 
