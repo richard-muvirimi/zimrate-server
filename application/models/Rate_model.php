@@ -235,9 +235,23 @@ class Rate_model extends CI_Model
         $this->db->select_min('rate', "min");
 
         $this->db->group_by("currency");
+        $this->db->order_by('COUNT(url)', 'DESC');
 
         return $this->db->get("zimrate");
 
+    }
+
+    /**
+     * Get the sources of currency
+     *
+     * @param string $currency
+     */
+    public function getCurrencySources($currency)
+    {
+        $this->db->select("url");
+        $this->db->where('currency', $currency);
+
+        return $this->db->get("zimrate");
     }
 
 }
