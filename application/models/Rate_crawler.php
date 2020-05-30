@@ -193,14 +193,14 @@ class Rate_crawler extends CI_Model
     private function __clean_date($value)
     {
 
-        //first trim words by month
         $raw_date = $this->__clean($value);
 
-        $date = strtotime($raw_date, mktime(0, 0, 0));
+        $date = date_parse($raw_date);
 
         if ($date === false) {
 
-            $date = array_filter(explode(" ", $raw_date), function ($value) {
+            //first trim words by month
+            $date = array_filter(explode(" ", $value), function ($value) {
 
                 if (is_numeric($value)) {
                     return true;
@@ -225,8 +225,10 @@ class Rate_crawler extends CI_Model
                 return false;
             });
 
-            $date = strtotime(implode(" ", $date), mktime(0, 0, 0));
+            $date = date_parse(implode(" ", $date));
         }
+
+        $date = mktime($date["hour"], $date["minute"], $date["second"], $date["month"], $date["day"], $date["year"]);
 
         return $date;
 
