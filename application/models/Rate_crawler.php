@@ -178,7 +178,7 @@ class Rate_crawler extends CI_Model
             //split by non numeric
             $figures = preg_split("/[^0-9,.]/", $numbers, -1, PREG_SPLIT_NO_EMPTY);
 
-            $amount = max($figures);
+            $amount = count($figures) > 0 ? max($figures) : 0;
         }
 
         return $amount;

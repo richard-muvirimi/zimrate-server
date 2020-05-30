@@ -183,6 +183,7 @@ class Rate_model extends CI_Model
         }
 
         $this->db->order_by('currency', 'ASC');
+        $this->db->where('status', 1);
 
         return $this->db->get("zimrate");
     }
@@ -234,6 +235,8 @@ class Rate_model extends CI_Model
         $this->db->select_max('rate', "max");
         $this->db->select_min('rate', "min");
 
+        $this->db->where('status', 1);
+
         $this->db->group_by("currency");
         $this->db->order_by('COUNT(url)', 'DESC');
 
@@ -248,8 +251,10 @@ class Rate_model extends CI_Model
      */
     public function getCurrencySources($currency)
     {
+        $this->db->distinct();
         $this->db->select("url");
         $this->db->where('currency', $currency);
+        $this->db->where('status', 1);
 
         return $this->db->get("zimrate");
     }
