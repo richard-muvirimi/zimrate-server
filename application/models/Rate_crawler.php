@@ -94,7 +94,7 @@ class Rate_crawler extends CI_Model
         $status = false;
 
         //if enabled and half an hour has passed since last check
-        if ($this->get__enabled() && true || abs(time() - $this->get__last_checked()) > (60 * 30)) {
+        if ($this->get__enabled() && (abs(time() - $this->get__last_checked()) > (60 * 30) || !$this->get__status())) {
 
             /**
              * Get site html file and scan for required fields
