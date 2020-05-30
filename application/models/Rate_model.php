@@ -182,8 +182,9 @@ class Rate_model extends CI_Model
             $this->db->where('last_updated >', $date);
         }
 
-        $this->db->order_by('currency', 'ASC');
         $this->db->where('status', 1);
+
+        $this->db->order_by('currency', 'ASC');
 
         return $this->db->get("zimrate");
     }

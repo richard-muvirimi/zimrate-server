@@ -195,7 +195,7 @@ class Rate_crawler extends CI_Model
 
         $raw_date = $this->__clean($value);
 
-        $date = date_parse($raw_date);
+        $date = date_parse(preg_replace("/[\\/]/", "-", $raw_date));
 
         if ($date === false) {
 

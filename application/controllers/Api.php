@@ -82,8 +82,8 @@ class Api extends CI_Controller
     private function __normaliseDate()
     {
 
-        $date = strtotime($this->input->get("date"));
-        if ($date === false) {
+        $date = $this->input->get("date");
+        if (!is_numeric($date)) {
             $date = "";
         }
 
