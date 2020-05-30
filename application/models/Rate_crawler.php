@@ -158,7 +158,30 @@ class Rate_crawler extends CI_Model
      */
     private function __clean_rate($value)
     {
-        return floatval($this->__clean($value));
+
+        $amount = $this->__clean($value);
+
+        if (!is_numeric($amount)) {
+
+            $words = explode(" ", $amount);
+
+            //remove non numeric words
+            $numbered = array_filter($words, function ($word) {
+                preg_match("/[0-9]/", $word, $matches);
+
+                return count($matches) > 0;
+            });
+
+            //join to allow removing non numeric characters
+            $numbers = implode(" ", $numbered);
+
+            //split by non numeric
+            $figures = preg_split("/[^0-9,.]/", $numbers, -1, PREG_SPLIT_NO_EMPTY);
+
+            $amount = max($figures);
+        }
+
+        return $amount;
     }
 
     /**
@@ -171,16 +194,15 @@ class Rate_crawler extends CI_Model
     {
 
         //first trim words by month
-
         $raw_date = $this->__clean($value);
 
-        $date = strtotime($raw_date);
+        $date = strtotime($raw_date, mktime(0, 0, 0));
 
-        if ($date == false) {
+        if ($date === false) {
 
             $date = array_filter(explode(" ", $raw_date), function ($value) {
 
-                if (strtotime($value) != false || is_numeric($value)) {
+                if (is_numeric($value)) {
                     return true;
                 } else {
 
@@ -203,10 +225,10 @@ class Rate_crawler extends CI_Model
                 return false;
             });
 
-            return strtotime(implode(" ", $date));
-        } else {
-            return $date;
+            $date = strtotime(implode(" ", $date), mktime(0, 0, 0));
         }
+
+        return $date;
 
     }
 
