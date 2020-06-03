@@ -25,6 +25,8 @@ $lang['maximum'] = "Highest";
 $lang['minimum'] = "Lowest";
 $lang['rate_usd'] = "Against the United States Dollar";
 
+$lang['sample_app'] = "Get sample app using this service";
+
 $lang['not_convinced'] = "Still not convinced on using api?";
 $lang['contact_btn'] = "Get in touch";
 

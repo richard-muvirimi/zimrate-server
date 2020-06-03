@@ -191,6 +191,15 @@
                         <div class="pricing-header text-center">
                             <p class="section-paragraph mb-0"><?php echo $this->lang->line('rate_usd'); ?></p>
                         </div>
+
+                        <div class="pricing-header text-center">
+                            <p class="section-paragraph mb-0"><?php echo $this->lang->line('sample_app'); ?></p>
+                            <a
+                                href='https://play.google.com/store/apps/details?id=com.tyganeutronics.myratecalculator&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'>
+                                <img alt='Get it on Google Play' style="margin: auto;"
+                                    src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png' />
+                            </a>
+                        </div>
                     </div>
                 </div>
             </section>
