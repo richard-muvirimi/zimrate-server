@@ -25,29 +25,29 @@ All exchange rates from multiple sites in one RESTful api. No need to scrounge t
         * `currency`               Name of currency e.g USD, ZAR
         * `url`                    The url of the site you want scanned.
 
-            - Make sure the site does not load it's values using javascript as the app cannot process such sites
-            - Get the full url of the site including the www or http:// or https:// if it's present
-            - A site tester is included and can be accessed by going to `your-site/tester?site=site-url` (or using post) where `site url` is site you want to check
-            - The response you get from the site tester is what the app will see on crawling
+            * Make sure the site does not load it's values using javascript as the app cannot process such sites
+            * Get the full url of the site including the www or http:// or https:// if it's present
+            * A site tester is included and can be accessed by going to `your-site/tester?site=site-url` (or using post) where `site url` is site you want to check
+            * The response you get from the site tester is what the app will see on crawling
 
         * `selector`               The css selector of the currency field
 
-            - Best obtained by right clicking in browser, inspect element then copy selector
-            - Its best to be very specific as a page you did not create can have multiple id or elements with same class names and would only confuse the app
-            - the site will discard all non numeric values and take the highest numeric value
+            * Best obtained by right clicking in browser, inspect element then copy selector
+            * Its best to be very specific as a page you did not create can have multiple id or elements with same class names and would only confuse the app
+            * the site will discard all non numeric values and take the highest numeric value
 
         * `rate`                   The rate from site, (initially set to 1)
         * `last_checked`           The timestamp when scan was last perfomed (initially set to 0)
         * `last_updated_selector`  The css selector of the date field
         
-            - Best obtained by right clicking in browser, inspect element then copy selector
-            - Its best to be very specific as a page you did not create can have multiple id or elements with same class names and would only confuse the app
-            - the site will first try to parse the date, if it fails it will remove words that do not refer to a date and try parsing again
+            * Best obtained by right clicking in browser, inspect element then copy selector
+            * Its best to be very specific as a page you did not create can have multiple id or elements with same class names and would only confuse the app
+            * the site will first try to parse the date, if it fails it will remove words that do not refer to a date and try parsing again
 
         * `last_updated`           The timestamp site was last updated. depends on the timezone of site (set below to get correct timestamp) (initially set to 0)
         * `timezone`               the timezone of site
 
-            - Using the site tester linked above, use this field to correct the site's timestamp
+            * Using the site tester linked above, use this field to correct the site's timestamp
 
     3. Add sites you want scanned manually into the database (there is no interface for that as i would have to worry more about security)
 
