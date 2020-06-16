@@ -130,7 +130,7 @@ class Rate_model extends CI_Model
      * @param integer $date
      * @param string $prefer
      */
-    public function getByFilter($source, $currency, $date, $prefer)
+    public function getByFilter($source, $currency, $date, $prefer, $enabled = false)
     {
 
         $columns = array(
@@ -184,6 +184,10 @@ class Rate_model extends CI_Model
 
         $this->db->where('status', 1);
 
+        if ($enabled) {
+            $this->db->where('enabled', 1);
+        }
+
         $this->db->order_by('currency', 'ASC');
 
         return $this->db->get("zimrate");
@@ -208,6 +212,8 @@ class Rate_model extends CI_Model
 
         $this->db->distinct();
         $this->db->select("currency");
+        $this->db->where('enabled', 1);
+        $this->db->where('status', 1);
 
         return $this->db->get("zimrate");
 
@@ -237,6 +243,7 @@ class Rate_model extends CI_Model
         $this->db->select_min('rate', "min");
 
         $this->db->where('status', 1);
+        $this->db->where('enabled', 1);
 
         $this->db->group_by("currency");
         $this->db->order_by('COUNT(url)', 'DESC');
@@ -254,8 +261,10 @@ class Rate_model extends CI_Model
     {
         $this->db->distinct();
         $this->db->select("url");
+
         $this->db->where('currency', $currency);
         $this->db->where('status', 1);
+        $this->db->where('enabled', 1);
 
         return $this->db->get("zimrate");
     }

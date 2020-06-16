@@ -26,6 +26,30 @@ class Api extends CI_Controller
 
     }
 
+    public function v1()
+    {
+
+        $this->load->helper('url');
+        $this->load->model("Rate_model", "rate");
+
+        $this->__logVisit();
+
+        $source = $this->__normaliseName();
+        $currency = $this->__normaliseCurrency();
+        $date = $this->__normaliseDate();
+        $prefer = $this->__normalisePrefer();
+
+        $sites = $this->rate->getByFilter($source, $currency, $date, $prefer, true);
+
+        header('Content-type: application/json');
+
+        $response["USD"] = $sites->result();
+        $response["info"] = "https://www.herald.co.zw/fiu-goes-after-whatsapp-dealers/";
+
+        echo json_encode($response);
+
+    }
+
     private function __logVisit()
     {
 
