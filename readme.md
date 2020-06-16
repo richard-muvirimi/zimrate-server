@@ -27,7 +27,7 @@ All exchange rates from multiple sites in one RESTful api. No need to scrounge t
 
             * Make sure the site does not load it's values using javascript as the app cannot process such sites
             * Get the full url of the site including the www or http:// or https:// if it's present
-            * A site tester is included and can be accessed by going to `your-site/tester?site=site-url` (or using post) where `site url` is site you want to check
+            * A site tester is included and can be accessed by going to `your-site/tester?site=site-url` (or using post) where `site-url` is site you want to check
             * The response you get from the site tester is what the app will see on crawling
 
         * `selector`               The css selector of the currency field
