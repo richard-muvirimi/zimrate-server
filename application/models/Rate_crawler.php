@@ -99,7 +99,7 @@ class Rate_crawler extends CI_Model
             /**
              * Get site html file and scan for required fields
              */
-            $site = $this->__get_html_contents($this->get__url());
+            $site = $this->get_html_contents($this->get__url());
 
             if ($site !== false) {
                 $this->__parse_html($site);
@@ -268,7 +268,7 @@ class Rate_crawler extends CI_Model
      * @param string $url
      * @return string|bool
      */
-    private function __get_html_contents($url)
+    public function get_html_contents($url)
     {
 
         $headers[] = "User-Agent:Zimrate/1.0"; // <-- this is user agent
