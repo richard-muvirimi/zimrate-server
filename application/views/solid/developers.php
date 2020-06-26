@@ -74,6 +74,8 @@
 
                         <p class="text-sm mb-0"><?php echo $this->lang->line('param_emphasis'); ?></p>
                         <br>
+                        <p class="text-sm mb-0"><?php echo $this->lang->line('usage_emphasis'); ?></p>
+                        <br>
                         <p class="text-sm mb-0"><?php echo $this->lang->line('disclaimer'); ?></p>
                         <p class="text-sm mb-0"><?php echo $this->lang->line('documentation_disclaimer'); ?></p>
 
