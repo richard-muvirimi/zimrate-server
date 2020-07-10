@@ -116,6 +116,11 @@
                             <p class="section-paragraph mb-0"><?php echo $this->lang->line('last_checked'); ?></p>
                             <h2 id="last_checked_date" class="section-title mt-0"><?php echo $last_checked; ?></h2>
                         </div>
+
+                        <div class="section-paragraph mb-0">
+                            <?php echo file_get_contents(APPPATH . DIRECTORY_SEPARATOR . "assets" . DIRECTORY_SEPARATOR . "notification.txt"); ?>
+                        </div>
+
                         <div class="pricing-tables-wrap">
 
                             <?php foreach ($currencies as $key => $currency): ?>
@@ -188,8 +193,9 @@
 
                         </div>
 
-                        <div class="pricing-header text-center">
-                            <p class="section-paragraph mb-0"><?php echo $this->lang->line('rate_usd'); ?></p>
+                        <div class="pricing-header">
+                            <p class="section-paragraph mb-0 text-center"><?php echo $this->lang->line('rate_usd'); ?>
+                            </p>
                         </div>
 
                         <div class="pricing-header text-center">

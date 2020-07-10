@@ -84,6 +84,13 @@ class Rate_crawler extends CI_Model
     private $__time_zone;
 
     /**
+     * The site html
+     *
+     * @var string
+     */
+    private $__site;
+
+    /**
      * crawl given site for values
      *
      * @return bool
@@ -99,10 +106,12 @@ class Rate_crawler extends CI_Model
             /**
              * Get site html file and scan for required fields
              */
-            $site = $this->get_html_contents($this->get__url());
+            if (empty($this->get__site())) {
+                $this->get_html_contents($this->get__url());
+            }
 
-            if ($site !== false) {
-                $this->__parse_html($site);
+            if ($this->get__site() !== false) {
+                $this->__parse_html($this->get__site());
 
                 //last checked
                 $this->set__last_checked(time());
@@ -266,7 +275,6 @@ class Rate_crawler extends CI_Model
      * get content of given url
      *
      * @param string $url
-     * @return string|bool
      */
     public function get_html_contents($url)
     {
@@ -291,16 +299,14 @@ class Rate_crawler extends CI_Model
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 
         // $output contains the output string
-        $output = curl_exec($ch);
+        $this->set__site(curl_exec($ch));
 
         if (curl_error($ch)) {
-            $output = false;
+            $this->set__site(false);
         }
 
         // close curl resource to free up system resources
         curl_close($ch);
-
-        return $output;
     }
 
     /**
@@ -564,6 +570,30 @@ class Rate_crawler extends CI_Model
     public function set__time_zone(string $__time_zone)
     {
         $this->__time_zone = $__time_zone;
+
+        return $this;
+    }
+
+    /**
+     * Get the site html
+     *
+     * @return  string
+     */
+    public function get__site()
+    {
+        return $this->__site;
+    }
+
+    /**
+     * Set the site html
+     *
+     * @param  string  $__site  The site html
+     *
+     * @return  self
+     */
+    public function set__site(string $__site)
+    {
+        $this->__site = $__site;
 
         return $this;
     }

@@ -44,7 +44,7 @@ class Api extends CI_Controller
         header('Content-type: application/json');
 
         $response["USD"] = $sites->result();
-        $response["info"] = "https://www.herald.co.zw/fiu-goes-after-whatsapp-dealers/";
+        $response["info"] = strip_tags(file_get_contents(APPPATH . DIRECTORY_SEPARATOR . "assets" . DIRECTORY_SEPARATOR . "notification.txt"));
 
         echo json_encode($response);
 

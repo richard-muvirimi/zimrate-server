@@ -13,6 +13,11 @@ class Crawler extends CI_Controller
 
         $sites = $this->rate->getAll();
 
+        $cache = array(
+            "url" => "",
+            "site" => "",
+        );
+
         foreach ($sites->result() as $site) {
 
             if ($site->enabled) {
@@ -30,13 +35,22 @@ class Crawler extends CI_Controller
                 $crawler->set__last_updated($site->last_updated);
                 $crawler->set__time_zone($site->timezone);
 
+                //set cache if same site
+                $crawler->set__site(($crawler->get__url() === $cache["url"]) ? $cache['site'] : "");
+
                 $crawler->crawl_site();
 
-                //checl if successful
+                //check if successful
                 if ($crawler->get__status()) {
+
+                    //set cache
+                    $cache["url"] = $crawler->get__url();
+                    $cache['site'] = $crawler->get__site();
 
                     $this->rate->update_rate($crawler->get__id(), $crawler->get__rate(), $crawler->get__last_updated(), $crawler->get__last_checked(), $crawler->get__status());
 
+                } else {
+                    $cache["url"] = "";
                 }
             }
         }

@@ -71,6 +71,8 @@ class Rate_model extends CI_Model
     {
         $this->db->select("*");
 
+        $this->db->order_by('url');
+
         return $this->db->get("zimrate");
     }
 
@@ -246,7 +248,7 @@ class Rate_model extends CI_Model
         $this->db->where('enabled', 1);
 
         $this->db->group_by("currency");
-        $this->db->order_by('COUNT(url)', 'DESC');
+        $this->db->order_by('COUNT(DISTINCT url)', 'DESC');
 
         return $this->db->get("zimrate");
 
