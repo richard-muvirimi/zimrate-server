@@ -55,8 +55,10 @@
                 <div class="container">
                     <div class="features-inner has-bottom-divider">
 
-                        <p class="text-sm mb-0">
-                            <?php printf($this->lang->line('api_access'), anchor(base_url("api/v1"))); ?></p>
+                        <p class="text-sm mb-0"> <?php printf($this->lang->line('api_access'), anchor(base_url("api/v1"))); ?></p>
+
+                        <h4><?php echo $this->lang->line('api_parameters'); ?></h4>
+                        <p class="text-sm mb-0"><?php echo $this->lang->line('api_brief'); ?></p>
 
                         <dl>
                             <dt><?php echo $this->lang->line('param_name_title'); ?></dt>
@@ -73,10 +75,28 @@
                         </dl>
 
                         <p class="text-sm mb-0"><?php echo $this->lang->line('param_emphasis'); ?></p>
-                        <br>
-                        <p class="text-sm mb-0"><?php echo $this->lang->line('usage_emphasis'); ?></p>
-                        <br>
-                        <p class="text-sm mb-0"><?php echo $this->lang->line('disclaimer'); ?></p>
+
+                        <h4><?php echo $this->lang->line('cors_title'); ?></h4>
+                        <p class="text-sm mb-0"><?php echo $this->lang->line('cors_state'); ?></p>
+
+                        <ul>
+                            <li><?php echo $this->lang->line('cors_param'); ?></li>
+                            <li>
+                                <p class="text-sm mb-0"><?php echo $this->lang->line('cors_jsonp'); ?></p>
+                                <p class="text-sm mb-0"><?php printf($this->lang->line('cors_example'), base_url("api/v1")); ?></p>
+                            </li>
+                        </ul>
+
+                        <p class="text-sm mb-0"><?php echo $this->lang->line('cors_summary'); ?></p>
+
+                        <h4>...</h4>
+
+                        <ul>
+                            <li><?php echo $this->lang->line('usage_emphasis'); ?></li>
+                            <li><?php echo $this->lang->line('info_disable'); ?></li>
+                        </ul>
+
+                        <h4><?php echo $this->lang->line('disclaimer'); ?></h4>
                         <p class="text-sm mb-0"><?php echo $this->lang->line('documentation_disclaimer'); ?></p>
 
                     </div>

@@ -8,27 +8,44 @@ class Api extends CI_Controller
     public function index()
     {
 
-        $this->load->helper('url');
-        $this->load->model("Rate_model", "rate");
-
-        $this->__logVisit();
-
-        $source = $this->__normaliseName();
-        $currency = $this->__normaliseCurrency();
-        $date = $this->__normaliseDate();
-        $prefer = $this->__normalisePrefer();
-
-        $sites = $this->rate->getByFilter($source, $currency, $date, $prefer);
+        $sites = $this->_getData();
 
         header('Content-type: application/json');
 
         echo json_encode($sites->result());
-
     }
 
     public function v1()
     {
 
+        $sites = $this->_getData();
+
+        $response["USD"] = $sites->result();
+
+        if ($this->input->get_post("info") != "false") {
+            $response["info"] = strip_tags(file_get_contents(APPPATH . DIRECTORY_SEPARATOR . "assets" . DIRECTORY_SEPARATOR . "notification.txt"));
+        }
+
+        $json = json_encode($response);
+
+        $callback = $this->input->get_post("callback");
+        if ($callback) {
+            header('Content-type: application/javascript');
+
+            echo $callback . "(" . $json . ");";
+        } else {
+            header('Content-type: application/json');
+
+            if ($this->input->get_post("cors") ==  "true") {
+                header('Access-Control-Allow-Origin: *');
+            }
+
+            echo $json;
+        }
+    }
+
+    private function _getData()
+    {
         $this->load->helper('url');
         $this->load->model("Rate_model", "rate");
 
@@ -39,15 +56,7 @@ class Api extends CI_Controller
         $date = $this->__normaliseDate();
         $prefer = $this->__normalisePrefer();
 
-        $sites = $this->rate->getByFilter($source, $currency, $date, $prefer, true);
-
-        header('Content-type: application/json');
-
-        $response["USD"] = $sites->result();
-        $response["info"] = strip_tags(file_get_contents(APPPATH . DIRECTORY_SEPARATOR . "assets" . DIRECTORY_SEPARATOR . "notification.txt"));
-
-        echo json_encode($response);
-
+        return $this->rate->getByFilter($source, $currency, $date, $prefer, true);
     }
 
     private function __logVisit()
@@ -57,14 +66,14 @@ class Api extends CI_Controller
 
         $data = array(
             "v" => 1, // Version.
-             "tid" => "UA-67829308-8", // Tracking ID / Property ID.
-             "dh" => base_url(), // Document hostname.
-             "cid" => $this->input->ip_address(), // Anonymous Client ID.
-             "t" => "pageview", // Hit Type.
-             "dp" => "api", // Page.
+            "tid" => "UA-67829308-8", // Tracking ID / Property ID.
+            "dh" => base_url(), // Document hostname.
+            "cid" => $this->input->ip_address(), // Anonymous Client ID.
+            "t" => "pageview", // Hit Type.
+            "dp" => "api", // Page.
         );
 
-        $headers[] = $this->input->user_agent() ?: "User-Agent:Zimrate/1.0";
+        $headers[] = $this->input->user_agent() ?: "User-Agent: Zimrate/1.0";
 
         // create curl resource
         $ch = curl_init();
@@ -106,7 +115,6 @@ class Api extends CI_Controller
         $currencies = $this->rate->getCurrencies();
 
         return in_array($currency, array_column($currencies->result_array(), "currency")) ? $currency : "";
-
     }
 
     /**
