@@ -1,4 +1,5 @@
 <?php
+
 use voku\helper\HtmlDomParser;
 
 defined('BASEPATH') or exit('No direct script access allowed');
@@ -118,9 +119,7 @@ class Rate_crawler extends CI_Model
 
                 //status
                 $status = $this->get__rate() ? true : false;
-
             }
-
         }
 
         $this->set__status($status);
@@ -148,7 +147,7 @@ class Rate_crawler extends CI_Model
     /**
      * Fix date offset
      *
-     * @param Integer $date
+     * @param int $date
      */
     private function __fixDateOffset($date)
     {
@@ -156,7 +155,6 @@ class Rate_crawler extends CI_Model
         $timezone = $this->get__time_zone();
 
         return $date - date_offset_get(date_create("now", timezone_open($timezone)));
-
     }
 
     /**
@@ -204,6 +202,13 @@ class Rate_crawler extends CI_Model
 
         $raw_date = $this->__clean($value);
 
+        /**
+         * bug: php_parse fails when there is no year but time right after month
+         * 
+         * hack: wrap time in brackets or some other non numeric value :)
+         */
+        $raw_date = preg_replace("/[0-9]{1,2}:[0-9]{1,2}/", "($0)", $raw_date);
+
         $date = date_parse(preg_replace("/[\\/]/", "-", $raw_date));
 
         if ($date === false) {
@@ -237,10 +242,9 @@ class Rate_crawler extends CI_Model
             $date = date_parse(implode(" ", $date));
         }
 
-        $date = mktime($date["hour"], $date["minute"], $date["second"], $date["month"], $date["day"], $date["year"]);
+        $date = mktime($date["hour"] ?: 0, $date["minute"] ?: 0, $date["second"] ?: 0, $date["month"] ?: date("n"), $date["day"] ?: date("j"), $date["year"] ?: date("Y"));
 
         return $date;
-
     }
 
     /**
@@ -267,7 +271,6 @@ class Rate_crawler extends CI_Model
         return implode(" ", array_map(function ($word) {
 
             return trim($word, "-,");
-
         }, explode(" ", $value)));
     }
 
