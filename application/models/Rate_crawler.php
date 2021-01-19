@@ -209,42 +209,34 @@ class Rate_crawler extends CI_Model
          */
         $raw_date = preg_replace("/[0-9]{1,2}:[0-9]{1,2}/", "($0)", $raw_date);
 
-        $date = date_parse(preg_replace("/[\\/]/", "-", $raw_date));
+        /**
+         * Change back and forward strokes to dashes
+         */
+        $raw_date = preg_replace("/[\\/]/", "-", $raw_date);
 
-        if ($date === false) {
-
-            //first trim words by month
-            $date = array_filter(explode(" ", $value), function ($value) {
-
-                if (is_numeric($value)) {
-                    return true;
-                } else {
-
-                    $months = array();
-                    for ($i = 1; $i < 13; $i++) {
-                        $months[] = strtolower(DateTime::createFromFormat('m', $i)->format('F'));
-                    }
-
-                    if (in_array(strtolower($value), $months)) {
-                        return true;
-                    } else {
-                        $months = array_map(function ($value) {
-                            return substr($value, 0, 3);
-                        }, $months);
-
-                        return in_array($value, $months);
-                    }
-                }
-
-                return false;
-            });
-
-            $date = date_parse(implode(" ", $date));
+        /**
+         * filter all text not related to dates
+         * 
+         * Method: will only leave months in the form jan or january
+         * 
+         */
+        $months = array();
+        for ($i = 1; $i <= 12; $i++) {
+            $months[] = strtolower(DateTime::createFromFormat('n', $i)->format('M'));
+            $months[] = strtolower(DateTime::createFromFormat('n', $i)->format('F'));
         }
 
-        $date = mktime($date["hour"] ?: 0, $date["minute"] ?: 0, $date["second"] ?: 0, $date["month"] ?: date("n"), $date["day"] ?: date("j"), $date["year"] ?: date("Y"));
+        $raw_date = preg_replace("/\b(?!(" . implode("|", $months) . "))(\w+[a-z])/i", "", $raw_date);
 
-        return $date;
+        /**
+         * Parse the date
+         */
+        $date = date_parse($raw_date);
+
+        /**
+         * Return parsed date substituting with defaults on none existant parts
+         */
+        return mktime($date["hour"] ?: 0, $date["minute"] ?: 0, $date["second"] ?: 0, $date["month"] ?: date("n"), $date["day"] ?: date("j"), $date["year"] ?: date("Y"));
     }
 
     /**
