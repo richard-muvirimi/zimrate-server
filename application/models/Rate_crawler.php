@@ -203,9 +203,9 @@ class Rate_crawler extends CI_Model
         $raw_date = $this->__clean($value);
 
         /**
-         * bug: php_parse fails when there is no year but time right after month
+         * bug: php_parse fails when there is no year but time right after month e.g => "19 January 11:22"
          * 
-         * hack: wrap time in brackets or some other non numeric value :)
+         * hack: wrap time in brackets or some other non alpha-numeric characters :)
          */
         $raw_date = preg_replace("/[0-9]{1,2}:[0-9]{1,2}/", "($0)", $raw_date);
 
@@ -217,7 +217,7 @@ class Rate_crawler extends CI_Model
         /**
          * filter all text not related to dates
          * 
-         * Method: will only leave months in the form jan or january
+         * Method: will only leave text (months) in the form jan or january
          * 
          */
         $months = array();
@@ -226,7 +226,7 @@ class Rate_crawler extends CI_Model
             $months[] = strtolower(DateTime::createFromFormat('n', $i)->format('F'));
         }
 
-        $raw_date = preg_replace("/\b(?!(" . implode("|", $months) . "))(\w+[a-z])/i", "", $raw_date);
+        $raw_date = preg_replace("/\b(?!(" . implode("|", $months) . "|(\w[0-9][a-z])))(\w*[a-z]+[^\s]*|(\w[^\D\d\w]))/i", "", $raw_date);
 
         /**
          * Parse the date
