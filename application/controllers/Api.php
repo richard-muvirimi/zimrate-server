@@ -95,18 +95,25 @@ class Api extends CI_Controller
         ob_clean();
     }
 
+    /**
+     * Normalise search term
+     *
+     * @return string
+     */
     private function __normaliseName()
     {
 
-        $source = $this->input->get_post("source");
-        $name = $this->input->get_post("name");
-
         //if source fails try name
-        return strip_tags($source ?: ($name ?: ""));
+        $name = empty($this->input->get_post("source")) ? $this->input->get_post("name") : $this->input->get_post("source");
+
+        //allow only alpha numeric text
+        return preg_match('/^[a-zA-Z0-9 ]+$/', $name) == 1 ? $name : "";
     }
 
     /**
      * Normalise currency
+     * 
+     * @return string
      */
     private function __normaliseCurrency()
     {
