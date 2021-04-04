@@ -7,7 +7,7 @@ class Crawler extends CI_Controller
 
     public function index()
     {
-        $this->load->library("HtmlParser");
+
         $this->load->model("Rate_model", "rate");
         $this->load->model("Rate_crawler", "crawler");
 
@@ -48,12 +48,10 @@ class Crawler extends CI_Controller
                     $cache['site'] = $crawler->get__site();
 
                     $this->rate->update_rate($crawler->get__id(), $crawler->get__rate(), $crawler->get__last_updated(), $crawler->get__last_checked(), $crawler->get__status());
-
                 } else {
                     $cache["url"] = "";
                 }
             }
         }
-
     }
 }
