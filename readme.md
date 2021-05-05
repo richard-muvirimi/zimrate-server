@@ -11,8 +11,8 @@ All exchange rates from multiple sites in one RESTful api. No need to scrounge t
 
 ### Installation (Setting Up)
 
-1. Open `application/config/config.php` and change `$config['base_url']` to the url of your site
-2. Open `application/config/database.php` and enter your database connection details. (The ones available are from my local server environment)
+1. Open `app/Config/App.php` and change `$baseURL` to the url of your site
+2. Open `app/Config/Database.php` and enter your database connection details. (The ones available are from my local server environment)
 3. Run `composer install` to install required dependencies
 4. You are setup and done now onto adding sites to scan:
 
@@ -53,17 +53,18 @@ All exchange rates from multiple sites in one RESTful api. No need to scrounge t
 
    3. Add sites you want scanned manually into the database (there is no interface for that as i would have to worry more about security)
 
-   4. Once done goto `your-site/crawler` and the app will scan rates from specified sites. The app is restricted to scanning each site after 30 minutes to prevent banning on said sites
+   4. Once done goto `your-site/crawl` and the app will scan rates from specified sites. The app is restricted to scanning each site after 30 minutes to prevent banning on said sites
 
    5. Set up a cron job pointing to the crawler:
-      - URL `your-site/crawler`
-      - CLI `your-site-path/index.php crawler index` (note the spaces)
+      - URL `your-site/crawl`
+      - CLI `your-site-path/index.php crawl index` (note the spaces)
 
-5. For monitoring you can change the crawler headers in `application/models/Rate_crawler.php` => `__get_html_contents` as it defaults to "Zimrate"
+5. For monitoring you can change the crawler headers in `app/Entities/Rate.php` => `get_html_contents()` as it defaults to "Zimrate"
 
-6. In `application/controllers/Api.php` => `__logVisit` you can change tracking id to that of your google analytics tracking property
+6. In `app/Controllers/Api.php` => `__logVisit()` you can change tracking id to that of your google analytics tracking property
 
-7. Visit `your-site/api` or `your-site/api/v1` for the api
+7. Visit `your-site/install` to install the application databases
+8. Visit `your-site/api` or `your-site/api/v1` for the api
 
 ### Contributions and Issues
 
