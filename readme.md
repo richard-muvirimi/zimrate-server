@@ -2,7 +2,7 @@
 
 All exchange rates from multiple sites in one RESTful api. No need to scrounge the internet for the current days rate.
 
-![Screenshot1](src/images/zimrate_screenshot.png)
+![Screenshot1](public/images/zimrate_screenshot.png)
 
 ### Features
 
