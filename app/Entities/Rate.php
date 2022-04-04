@@ -234,16 +234,20 @@ class Rate extends Entity
         }
     }
 
+    /**
+     * Parse a site using curl
+     * 
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return void
+     */
     public function get_html_contents_text()
     {
         $client = \Config\Services::curlrequest();
 
         $headers = array(
             "Accept" => "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language" => "en-us,en;q=0.5",
             "Accept-Charset" => "ISO-8859-1,utf-8;q=0.7,*;q=0.7",
-            "Keep-Alive" => "115",
-            "Connection" => "keep-alive",
             "Cache-Control" => "max-age=0",
         );
 
@@ -258,7 +262,8 @@ class Rate extends Entity
                     $response  = $client->get($this->url, array(
                         'headers' => $headers,
                         'user_agent' => "Zimrate/1.0",
-                        'verify' => false
+                        'verify' => false,
+                        "timeout" => MINUTE * 3
                     ));
 
                     if ($response->getStatusCode() == 200) {
@@ -281,19 +286,37 @@ class Rate extends Entity
         } catch (Exception $e) {
             //failed to parse site
 
-            if ($this->status) { //first time only
-                $this->mail($e->getMessage());
+            if (getenv("app.panther")) {
+                //try with panther
+
+                $this->get_html_content_browser();
+            } else {
+                if ($this->status) { //first time only
+                    $this->mail($e->getMessage());
+                }
             }
         }
     }
 
+    /**
+     * Parse a site using selenium
+     * 
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return void
+     */
     private function get_html_content_browser()
     {
 
         //$_SERVER["PANTHER_FIREFOX_BINARY"] = ROOTPATH . "drivers/firefox/firefox-bin";
         //$_SERVER["PANTHER_CHROME_BINARY"] = ROOTPATH . "drivers/chrome-linux/chrome";
 
-        $_SERVER["PANTHER_CHROME_ARGUMENTS"] = "--no-sandbox"; // - -port=5001";
+        /**
+         * @see https://peter.sh/experiments/chromium-command-line-switches/
+         */
+        $args = array(
+            "--no-sandbox", "--disable-gpu", "--incognito", "--window-size=1920,1080", "start-maximized", "--user-agent=" . $this->getUserAgent(), "--headless"
+        );
 
         $options = array(
             "connection_timeout_in_ms" => MINUTE * 1000 * 3,
@@ -304,7 +327,7 @@ class Rate extends Entity
 
         try {
 
-            $client = Client::createChromeClient(null, null, $options);
+            $client = Client::createChromeClient(null, $args, $options);
 
             if (str_starts_with($this->selector, "//")) {
                 $xpath = $this->selector;
@@ -345,7 +368,15 @@ class Rate extends Entity
         }
     }
 
-    private function  mail($message)
+    /**
+     * Send mail when there is an error parsing a site
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @param string $message
+     * @return void
+     */
+    private function mail($message)
     {
         $email = \Config\Services::email();
 
@@ -356,5 +387,37 @@ class Rate extends Entity
         $email->setMessage('Failed to parse ' . $this->url . ' with error message ' . $message);
 
         $email->send();
+    }
+
+    /**
+     * Get user agent string and cache if possible
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return string
+     */
+    private function getUserAgent()
+    {
+
+        $agent = cache("user-agent");
+
+        if (!$agent) {
+            $client = Client::createChromeClient();
+            $client->request('GET', "chrome://version");
+
+            $agent =  $client->executeScript("return navigator.userAgent;");
+
+            $client->quit();
+
+            if (!$agent) {
+                $agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36";
+            }
+
+            $agent = preg_replace("/headless/i", "", $agent);
+
+            cache()->save("user-agent", $agent);
+        }
+
+        return $agent;
     }
 }
