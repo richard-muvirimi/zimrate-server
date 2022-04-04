@@ -11,18 +11,18 @@ All exchange rates from multiple sites in one RESTful api. No need to scrounge t
 
 ### Installation (Setting Up)
 
-1. Open `app/Config/App.php` and change `$baseURL` to the url of your site
-2. Open `app/Config/Database.php` and enter your database connection details. (The ones available are from my local server environment)
-3. Run `composer install` to install required dependencies
-4. You are setup and done now onto adding sites to scan:
+1. Copy `env` to `.env` and change the parameters to that of your environment
+2. Run `composer install` to install required dependencies
+3. Visit `your-site/install` to create database fields
+4. If you need to parse javascript sites, you will need to setup the [Panther](https://github.com/symfony/panther) library. On a capable system this would require installing google chrome or chomium and it's chrome driver as detailed in their documentation.
+5. You are setup and done now onto adding sites to scan:
 
-   1. Run app once to create database fields (Visit main page)
-
-   2. The following fields will be created:
+   1. The following fields will be created:
 
       - `id` Unique site identifyer
       - `status` Can only be 0 (failed) or 1(Success) representing last scan state
       - `enabled` Can only be 0 (failed) or 1(Success) representing whether the site is enabled for scanning
+      - `javascript` Can only be 0 (failed) or 1(Success) representing whether the site needs the [Panther](https://github.com/symfony/panther) library to parse site
       - `name` Name of site, will be used filtering sites based on source
       - `currency` Name of currency e.g USD, ZAR
       - `url` The url of the site you want scanned.
@@ -51,20 +51,17 @@ All exchange rates from multiple sites in one RESTful api. No need to scrounge t
 
         - Using the site tester linked above, use this field to correct the site's timestamp
 
-   3. Add sites you want scanned manually into the database (there is no interface for that as i would have to worry more about security)
+   2. Add sites you want scanned manually into the database (there is no interface for that as i would have to worry more about security)
 
-   4. Once done goto `your-site/crawl` and the app will scan rates from specified sites. The app is restricted to scanning each site after 30 minutes to prevent banning on said sites
+   3. Once done goto `your-site/crawl` and the app will scan rates from specified sites. The app is restricted to scanning each site after 30 minutes to prevent banning on said sites
 
-   5. Set up a cron job pointing to the crawler:
+   4. Set up a cron job pointing to the crawler:
       - URL `your-site/crawl`
       - CLI `your-site-path/index.php crawl index` (note the spaces)
 
-5. For monitoring you can change the crawler headers in `app/Entities/Rate.php` => `get_html_contents()` as it defaults to "Zimrate"
+6. For monitoring you can change the crawler headers in `app/Entities/Rate.php` => `get_html_contents()` as it defaults to "Zimrate"
 
-6. In `app/Controllers/Api.php` => `__logVisit()` you can change tracking id to that of your google analytics tracking property
-
-7. Visit `your-site/install` to install the application databases
-8. Visit `your-site/api` or `your-site/api/v1` for the api
+7. Visit `your-site/api` or `your-site/api/v1` for the api
 
 ### Contributions and Issues
 

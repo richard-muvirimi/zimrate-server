@@ -13,7 +13,10 @@ class Tester extends BaseController
         $site = new \App\Entities\Rate();
         $site->url = $request->getPostGet("site");
         $site->enabled = true;
-        $site->status = false;
+        $site->status = false; //also prevents mail
+        $site->site = false;
+        $site->javascript = getenv("app.panther");
+        $site->selector  = $request->getPostGet("css") ?? "*";
 
         $site->get_html_contents();
 

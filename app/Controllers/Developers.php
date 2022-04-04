@@ -12,8 +12,12 @@ class Developers extends BaseController
 
         $rateModel = new RateModel();
 
+        $prefers = $rateModel->supportedPrefers();
+        sort($prefers);
+
         $data = array(
             "currencies" => array_column($rateModel->getDisplayCurrencies(), "currency"),
+            "prefers" => array_map("strtoupper", $prefers)
         );
 
         return view('solid/developers', $data);

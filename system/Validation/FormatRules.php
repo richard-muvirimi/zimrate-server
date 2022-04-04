@@ -39,8 +39,7 @@ class FormatRules
 	 */
 	public function alpha_space(?string $value = null): bool
 	{
-		if ($value === null)
-		{
+		if ($value === null) {
 			return true;
 		}
 
@@ -200,8 +199,7 @@ class FormatRules
 	 */
 	public function regex_match(?string $str, string $pattern): bool
 	{
-		if (strpos($pattern, '/') !== 0)
-		{
+		if (strpos($pattern, '/') !== 0) {
 			$pattern = "/{$pattern}/";
 		}
 
@@ -260,8 +258,7 @@ class FormatRules
 	public function valid_email(string $str = null): bool
 	{
 		// @see https://regex101.com/r/wlJG1t/1/
-		if (function_exists('idn_to_ascii') && defined('INTL_IDNA_VARIANT_UTS46') && preg_match('#\A([^@]+)@(.+)\z#', $str, $matches))
-		{
+		if (function_exists('idn_to_ascii') && defined('INTL_IDNA_VARIANT_UTS46') && preg_match('#\A([^@]+)@(.+)\z#', $str, $matches)) {
 			$str = $matches[1] . '@' . idn_to_ascii($matches[2], 0, INTL_IDNA_VARIANT_UTS46);
 		}
 
@@ -280,16 +277,13 @@ class FormatRules
 	 */
 	public function valid_emails(string $str = null): bool
 	{
-		foreach (explode(',', $str) as $email)
-		{
+		foreach (explode(',', $str) as $email) {
 			$email = trim($email);
-			if ($email === '')
-			{
+			if ($email === '') {
 				return false;
 			}
 
-			if ($this->valid_email($email) === false)
-			{
+			if ($this->valid_email($email) === false) {
 				return false;
 			}
 		}
@@ -305,14 +299,12 @@ class FormatRules
 	 *
 	 * @return boolean
 	 */
-	public function valid_ip(string $ip = null, string $which = null): bool
+	public function valid_ip(string $ip = null, string $which = ""): bool
 	{
-		if (empty($ip))
-		{
+		if (empty($ip)) {
 			return false;
 		}
-		switch (strtolower($which))
-		{
+		switch (strtolower($which)) {
 			case 'ipv4':
 				$which = FILTER_FLAG_IPV4;
 				break;
@@ -324,7 +316,7 @@ class FormatRules
 				break;
 		}
 
-		return (bool) filter_var($ip, FILTER_VALIDATE_IP, $which) || (! ctype_print($ip) && (bool) filter_var(inet_ntop($ip), FILTER_VALIDATE_IP, $which));
+		return (bool) filter_var($ip, FILTER_VALIDATE_IP, $which) || (!ctype_print($ip) && (bool) filter_var(inet_ntop($ip), FILTER_VALIDATE_IP, $which));
 	}
 
 	/**
@@ -336,15 +328,12 @@ class FormatRules
 	 */
 	public function valid_url(string $str = null): bool
 	{
-		if (empty($str))
-		{
+		if (empty($str)) {
 			return false;
 		}
 
-		if (preg_match('/^(?:([^:]*)\:)?\/\/(.+)$/', $str, $matches))
-		{
-			if (! in_array($matches[1], ['http', 'https'], true))
-			{
+		if (preg_match('/^(?:([^:]*)\:)?\/\/(.+)$/', $str, $matches)) {
+			if (!in_array($matches[1], ['http', 'https'], true)) {
 				return false;
 			}
 
@@ -366,8 +355,7 @@ class FormatRules
 	 */
 	public function valid_date(string $str = null, string $format = null): bool
 	{
-		if (empty($format))
-		{
+		if (empty($format)) {
 			return (bool) strtotime($str);
 		}
 

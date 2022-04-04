@@ -104,6 +104,10 @@
                                     <div class="pricing-table-inner is-revealing" style="height: initial;">
                                         <div class="pricing-table-main">
 
+                                            <div class="pricing-table-features-title text-xs pt-24 pb-24">
+                                                <?= lang('Site.page.home.usd_rate', [$currency->currency]); ?>
+                                            </div>
+
                                             <div class="pricing-table-header pb-24">
                                                 <div class="pricing-table-price">
                                                     <span class="pricing-table-price-amount h1">
@@ -146,8 +150,46 @@
                                                 </div>
                                             </div>
 
-                                            <div class="pricing-table-features-title text-xs pt-24 pb-24">
-                                                <?= lang('Site.page.home.usd_rate', [$currency->currency]); ?>
+                                            <div class="pricing-table-header pb-24">
+                                                <div class="pricing-table-price">
+                                                    <span class="pricing-table-price-amount h1">
+                                                        <?php echo round($currency->median, 2); ?>
+                                                    </span>
+                                                    <span class="pricing-table-price-currency h2">
+                                                        %
+                                                    </span>
+                                                    <span class="text-xs">
+                                                        <?= lang('Site.page.home.median'); ?>
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div class="pricing-table-header pb-24">
+                                                <div class="pricing-table-price">
+                                                    <span class="pricing-table-price-amount h1">
+                                                        <?php echo round($currency->mode, 2); ?>
+                                                    </span>
+                                                    <span class="pricing-table-price-currency h2">
+                                                        %
+                                                    </span>
+                                                    <span class="text-xs">
+                                                        <?= lang('Site.page.home.mode'); ?>
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div class="pricing-table-header pb-24">
+                                                <div class="pricing-table-price">
+                                                    <span class="pricing-table-price-amount h1">
+                                                        <?php echo round($currency->random, 2); ?>
+                                                    </span>
+                                                    <span class="pricing-table-price-currency h2">
+                                                        %
+                                                    </span>
+                                                    <span class="text-xs">
+                                                        <?= lang('Site.page.home.random'); ?>
+                                                    </span>
+                                                </div>
                                             </div>
 
                                             <?php

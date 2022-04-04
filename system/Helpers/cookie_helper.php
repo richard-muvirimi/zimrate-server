@@ -17,8 +17,7 @@ use Config\Services;
 /**
  * CodeIgniter Cookie Helpers
  */
-if (! function_exists('set_cookie'))
-{
+if (!function_exists('set_cookie')) {
 	/**
 	 * Set cookie
 	 *
@@ -50,8 +49,7 @@ if (! function_exists('set_cookie'))
 		bool $secure = false,
 		bool $httpOnly = false,
 		string $sameSite = null
-	)
-	{
+	) {
 		// The following line shows as a syntax error in NetBeans IDE
 		//(\Config\Services::response())->setcookie
 		$response = Services::response();
@@ -61,8 +59,7 @@ if (! function_exists('set_cookie'))
 
 //--------------------------------------------------------------------
 
-if (! function_exists('get_cookie'))
-{
+if (!function_exists('get_cookie')) {
 	/**
 	 * Fetch an item from the COOKIE array
 	 *
@@ -81,7 +78,7 @@ if (! function_exists('get_cookie'))
 		$prefix          = isset($_COOKIE[$index]) ? '' : $appCookiePrefix;
 
 		$request = Services::request();
-		$filter  = true === $xssClean ? FILTER_SANITIZE_STRING : null;
+		$filter  = true === $xssClean ? FILTER_DEFAULT : null;
 
 		return $request->getCookie($prefix . $index, $filter);
 	}
@@ -89,8 +86,7 @@ if (! function_exists('get_cookie'))
 
 //--------------------------------------------------------------------
 
-if (! function_exists('delete_cookie'))
-{
+if (!function_exists('delete_cookie')) {
 	/**
 	 * Delete a COOKIE
 	 *

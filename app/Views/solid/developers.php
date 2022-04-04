@@ -30,7 +30,8 @@
                 <div class="container">
                     <div class="features-inner has-bottom-divider">
 
-                        <p class="text-sm mb-0"> <?= lang('Site.page.developers.api_access', [anchor(base_url("api/v1"))]); ?></p>
+                        <p class="text-sm mb-0">
+                            <?= lang('Site.page.developers.api_access', [anchor(base_url("api/v1"))]); ?></p>
 
                         <h4><?= lang('Site.page.developers.api_parameters'); ?></h4>
                         <p class="text-sm mb-0"><?= lang('Site.page.developers.api_brief'); ?></p>
@@ -46,7 +47,7 @@
                             <dd>- <?= lang('Site.page.developers.param_date'); ?></dd>
 
                             <dt><?= lang('Site.page.developers.param_prefer_title'); ?></dt>
-                            <dd>- <?= lang('Site.page.developers.param_prefer'); ?></dd>
+                            <dd>- <?= lang('Site.page.developers.param_prefer', [implode(", ", $prefers)]); ?></dd>
                         </dl>
 
                         <p class="text-sm mb-0"><?= lang('Site.page.developers.param_emphasis'); ?></p>

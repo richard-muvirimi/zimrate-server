@@ -28,6 +28,9 @@ return [
             'average' => "Average",
             'maximum' => "Highest",
             'minimum' => "Lowest",
+            'median' => "Median",
+            'mode' => "Mode",
+            'random' => "Random",
             'rate_usd' => "Against the United States Dollar",
 
             'sample_app' => "Official apps using this service",
@@ -59,7 +62,7 @@ return [
             'param_date' => 'When provided only matching rate after this date will be returned.',
 
             'param_prefer_title' => '<code>prefer</code>',
-            'param_prefer' => 'Can only be either of <code>MEAN, MAX, MIN</code>. or empty to return the whole list.',
+            'param_prefer' => 'Can only be either of <code>{0}</code> or empty to return the whole list.',
 
             'param_emphasis' => "All these parameters are optional and are there only as a convenience to get the specific data that you need.",
             'usage_emphasis' => "Avoid accessing returned values based on their position as if a site goes down or is removed that site's rates may not be included thus distorting their position. A request with the prefer parameter is much more relaible as it includes values from all available sites and not a specific one.",
@@ -89,11 +92,15 @@ return [
             'q7' => "Are donations welcome",
             'qa7' => "Yes of course, Visit {0}",
         ],
+        'privacy' => [
+            'title' => 'Privacy Policy'
+        ],
         'footer' => [
             'copywrite' => "&copy; 2020 Tyganeutronics, all rights reserved",
 
             'about' => "About",
             'contact' => "Contact",
+            'privacy' => "Privacy Policy",
             'faqs' => "FAQ's",
             'support' => "Support",
 

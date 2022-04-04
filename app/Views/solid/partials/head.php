@@ -13,16 +13,16 @@
 <script src="https://unpkg.com/scrollreveal@4.0.0/dist/scrollreveal.min.js"></script>
 
 <!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-67829308-7"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=" <?php echo getenv("app.google.analytics") ?>></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
+window.dataLayer = window.dataLayer || [];
 
-  function gtag() {
+function gtag() {
     dataLayer.push(arguments);
-  }
-  gtag('js', new Date());
+}
+gtag('js', new Date());
 
-  gtag('config', 'UA-67829308-8');
+gtag('config', getenv("app.google.analytics"));
 </script>
 
 <link rel="stylesheet" href="<?= base_url("public/css/gh-fork-ribbon.min.css") ?>">

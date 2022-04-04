@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use \App\Models\RateModel;
 use CodeIgniter\API\ResponseTrait;
+use CodeIgniter\HTTP\Exceptions\HTTPException;
 
 class Api extends BaseController
 {
@@ -61,28 +62,35 @@ class Api extends BaseController
     private function __logVisit()
     {
 
-        ob_start();
+        if (getenv("app.google.analytics")) {
 
-        $request = \Config\Services::request();
+            ob_start();
 
-        $client = \Config\Services::curlrequest();
+            try {
 
-        $data = array(
-            "v" => 1, // Version.
-            "tid" => "UA-67829308-8", // Tracking ID / Property ID.
-            "dh" => base_url(), // Document hostname.
-            "cid" => $request->getIPAddress(), // Anonymous Client ID.
-            "t" => "pageview", // Hit Type.
-            "dp" => "api", // Page.
-        );
+                $request = \Config\Services::request();
 
-        $client->post("https://www.google-analytics.com/collect", array(
-            'user_agent' => $request->getUserAgent()->getAgentString() ?: "Zimrate/1.0",
-            "form_params" => $data,
-            'verify' => false
-        ));
+                $client = \Config\Services::curlrequest();
 
-        ob_clean();
+                $data = array(
+                    "v" => 1, // Version.
+                    "tid" => getenv("app.google.analytics"), // Tracking ID / Property ID.
+                    "dh" => base_url(), // Document hostname.
+                    "cid" => $request->getIPAddress(), // Anonymous Client ID.
+                    "t" => "pageview", // Hit Type.
+                    "dp" => "api", // Page.
+                );
+
+                $client->post("https://www.google-analytics.com/collect", array(
+                    'user_agent' => $request->getUserAgent()->getAgentString() ?: "Zimrate/1.0",
+                    "form_params" => $data,
+                    'verify' => false
+                ));
+            } catch (HTTPException $e) {
+            }
+
+            ob_clean();
+        }
     }
 
     /**
@@ -147,17 +155,13 @@ class Api extends BaseController
     {
 
         $request = \Config\Services::request();
+        $rateModel = new RateModel();
 
         $prefer = strtolower($request->getPostGet("prefer"));
 
         //value to get
-        switch ($prefer) {
-            case "max":
-            case "min";
-            case "mean":
-                break;
-            default:
-                $prefer = "";
+        if (!in_array(strtolower($prefer), $rateModel->supportedPrefers())) {
+            $prefer = "";
         }
 
         return $prefer;

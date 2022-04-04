@@ -2,8 +2,12 @@
 
 namespace App\Entities;
 
+use App\Models\RateModel;
 use CodeIgniter\Entity;
+use Exception;
 use voku\helper\HtmlDomParser;
+use Symfony\Component\Panther\Client;
+use PhpCss\Ast\Visitor\Xpath;
 
 class Rate extends Entity
 {
@@ -16,30 +20,25 @@ class Rate extends Entity
     public function crawl_site()
     {
 
-        $status = false;
-
         //if enabled and half an hour has passed since last check
-        if (intval($this->enabled) === 1 && (abs(time() - $this->last_checked) > (60 * 30) || intval($this->status) !== 1)) {
+        if (intval($this->enabled) === 1 && (abs(time() - $this->last_checked) > (MINUTE * 30) || intval($this->status) !== 1)) {
 
             /**
              * Get site html file and scan for required fields
              */
-            if (empty($this->site)) {
+            if (!$this->site) {
                 $this->get_html_contents();
             }
 
-            if ($this->site !== false) {
-                $this->__parse_html($this->site);
+            if ($this->site) {
+                $this->status =  $this->__parse_html($this->site) == true ? 1 : 0;
 
                 //last checked
                 $this->last_checked = time();
-
-                //status
-                $status = is_numeric($this->rate) ? 1 : 0;
+            } else {
+                $this->status = 0;
             }
         }
-
-        $this->status = $status;
     }
 
     /**
@@ -53,12 +52,18 @@ class Rate extends Entity
         $dom = HtmlDomParser::str_get_html($html);
 
         //rate
-        $this->rate = $this->__clean_rate($dom->findOneOrFalse($this->selector));
+        $rate = $this->__clean_rate($dom->findOneOrFalse($this->selector));
+        if ($rate) {
+            $this->rate = $rate;
 
-        $date = $this->__clean_date($dom->findOneOrFalse($this->last_updated_selector)) ?: ($this->rate ? time() : 0);
+            $date = $this->__clean_date($dom->findOneOrFalse($this->last_updated_selector)) ?: ($this->rate ? time() : 0);
 
-        //date
-        $this->last_updated = $this->__fixDateOffset($date);
+            //date
+            $this->last_updated = $this->__fixDateOffset($date);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
@@ -103,6 +108,31 @@ class Rate extends Entity
             $figures = preg_split("/[^0-9,.]/", $numbers, -1, PREG_SPLIT_NO_EMPTY);
 
             $amount = count($figures) > 0 ? max($figures) : 0;
+        }
+
+        /**
+         * Normalize the value
+         * 
+         * There could be better ways but the premise here is
+         * 
+         * if value is not within a ten percentaile range then it is invalid
+         * Handles cases where it may be in cents
+         */
+        $rateModel = new RateModel();
+        $max =  array_column($rateModel->getByFilter("", $this->currency, "", "MAX", true), "rate");
+        $min =  array_column($rateModel->getByFilter("", $this->currency, "", "MIN", true), "rate");
+
+        if ($min && $max) {
+            $amount = floatval($amount);
+
+            if ($amount > ($max[0] * 1.3) || $amount < ($min[0] * 0.7)) {
+
+                $amount /= 100;
+
+                if ($amount > ($max[0] * 1.3) || $amount < ($min[0] * 0.7)) {
+                    $amount = 0;
+                }
+            }
         }
 
         return $amount;
@@ -165,7 +195,7 @@ class Rate extends Entity
     private function __clean($value)
     {
 
-        if (is_a($value, "HtmlDomParser")) {
+        while (is_a($value, "HtmlDomParser")) {
             $value = $value->innerhtml();
         }
 
@@ -191,6 +221,21 @@ class Rate extends Entity
     public function get_html_contents()
     {
 
+        if (intval($this->javascript) == 1) {
+            if (getenv("app.panther")) {
+                $this->get_html_content_browser();
+            } else {
+                #skip
+
+                $this->site = "";
+            }
+        } else {
+            $this->get_html_contents_text();
+        }
+    }
+
+    public function get_html_contents_text()
+    {
         $client = \Config\Services::curlrequest();
 
         $headers = array(
@@ -202,12 +247,114 @@ class Rate extends Entity
             "Cache-Control" => "max-age=0",
         );
 
-        $response  = $client->get($this->url, array(
-            'headers' => $headers,
-            'user_agent' => "Zimrate/1.0",
-            'verify' => false
-        ));
+        $tries = 0;
 
-        $this->site = ($response->getStatusCode() < 400) ? $this->site = $response->getBody() : false;
+        try {
+
+            do {
+
+                try {
+
+                    $response  = $client->get($this->url, array(
+                        'headers' => $headers,
+                        'user_agent' => "Zimrate/1.0",
+                        'verify' => false
+                    ));
+
+                    if ($response->getStatusCode() == 200) {
+                        $this->site =  $response->getBody();
+
+                        break;
+                    }
+                } catch (Exception $e) {
+                    //echo $e->getMessage();
+
+                    $this->site = "";
+                } finally {
+                    $tries++;
+
+                    if ($tries >= 5) {
+                        throw $e;
+                    }
+                }
+            } while ($tries < 5);
+        } catch (Exception $e) {
+            //failed to parse site
+
+            if ($this->status) { //first time only
+                $this->mail($e->getMessage());
+            }
+        }
+    }
+
+    private function get_html_content_browser()
+    {
+
+        //$_SERVER["PANTHER_FIREFOX_BINARY"] = ROOTPATH . "drivers/firefox/firefox-bin";
+        //$_SERVER["PANTHER_CHROME_BINARY"] = ROOTPATH . "drivers/chrome-linux/chrome";
+
+        $_SERVER["PANTHER_CHROME_ARGUMENTS"] = "--no-sandbox"; // - -port=5001";
+
+        $options = array(
+            "connection_timeout_in_ms" => MINUTE * 1000 * 3,
+            "request_timeout_in_ms" => MINUTE * 1000 * 3
+        );
+
+        $tries = 0;
+
+        try {
+
+            $client = Client::createChromeClient(null, null, $options);
+
+            if (str_starts_with($this->selector, "//")) {
+                $xpath = $this->selector;
+            } else {
+                $xpath = \PhpCss::toXpath($this->selector, Xpath::OPTION_USE_CONTEXT_DOCUMENT);
+            }
+
+            $crawler = $client->request('GET', $this->url);
+
+            do {
+
+                try {
+
+                    $client->wait(MINUTE);
+                    $client->waitForVisibility($xpath, MINUTE * 3);
+
+                    $this->site = $crawler->html();
+
+                    break;
+                } catch (\Exception $e) {
+                    //echo $e->getMessage();
+
+                    $client->reload();
+                } finally {
+                    $tries++;
+                }
+            } while ($tries < 5);
+        } catch (\Exception $e) {
+            #driver does not exist
+
+            if ($this->status) { //first time only
+                $this->mail($e->getMessage());
+            }
+        } finally {
+            if ($client) {
+                $client->quit();
+            }
+        }
+    }
+
+    private function  mail($message)
+    {
+        $email = \Config\Services::email();
+
+        $email->setFrom(getenv("email.from"), 'Zimrate Crawler');
+
+        $email->setTo(getenv("email.to"));
+        $email->setSubject('Failed to parse site');
+        $email->setMessage('Failed to parse ' . $this->url . ' with error message ' . $message);
+
+        $email->send();
     }
 }

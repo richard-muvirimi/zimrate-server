@@ -126,3 +126,6 @@ nb-configuration.xml
 /results/
 /phpunit*.xml
 /.phpunit.*.cache
+
+rsync.sh
+app/Controllers/Mantainance.php
