@@ -4,7 +4,8 @@
 
 <link rel="icon" type="image/png" href="public/images/logo.svg">
 
-<meta property="og:image" content="<?= base_url("public/images/zimrate_screenshot.png"); ?>">
+<meta property="og:image"
+    content="<?= base_url("public/images/zimrate_screenshot.png"); ?>">
 <meta property="og:url" content="<?= base_url(); ?>">
 
 <link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,600" rel="stylesheet">
@@ -13,16 +14,19 @@
 <script src="https://unpkg.com/scrollreveal@4.0.0/dist/scrollreveal.min.js"></script>
 
 <!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=" <?php echo getenv("app.google.analytics") ?>></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id="
+    <?php echo getenv("app.google.analytics") ?>%pcs-comment-end#* />
+</script>
 <script>
-window.dataLayer = window.dataLayer || [];
+    window.dataLayer = window.dataLayer || [];
 
-function gtag() {
-    dataLayer.push(arguments);
-}
-gtag('js', new Date());
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag('js', new Date());
 
-gtag('config', getenv("app.google.analytics"));
+    gtag('config', getenv("app.google.analytics"));
 </script>
 
-<link rel="stylesheet" href="<?= base_url("public/css/gh-fork-ribbon.min.css") ?>">
+<link rel="stylesheet"
+    href="<?= base_url("public/css/gh-fork-ribbon.min.css") ?>">

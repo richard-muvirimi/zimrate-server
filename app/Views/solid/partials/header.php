@@ -1,5 +1,8 @@
 <!-- Fork -->
-<a class="github-fork-ribbon" href="https://github.com/tygalive/Zimrate-Server" data-ribbon="<?= lang("Site.default.fork") ?>" title="<?= lang("Site.default.fork") ?>" target=" _blank"><?= lang("Site.default.fork") ?></a>
+<a class="github-fork-ribbon" href="https://github.com/tygalive/Zimrate-Server"
+    data-ribbon="<?= lang("Site.default.fork") ?>"
+    title="<?= lang("Site.default.fork") ?>"
+    target=" _blank"><?= lang("Site.default.fork") ?></a>
 
 <header class="site-header">
     <div class="container">

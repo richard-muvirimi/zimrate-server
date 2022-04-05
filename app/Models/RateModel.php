@@ -10,7 +10,7 @@ class RateModel extends Model
 {
     protected $table         = 'zimrate';
     protected $allowedFields = [
-        'status', 'enabled', 'name', 'currency', 'url', 'selector', 'rate', "last_checked", "last_updated_selector", "last_updated", "timezone"
+        'status', 'enabled', 'javascript','name', 'currency', 'url', 'selector', 'rate', "last_checked", "last_updated_selector", "last_updated", "timezone"
     ];
     protected $returnType    = 'App\Entities\Rate';
     protected $useTimestamps = false;
@@ -18,6 +18,10 @@ class RateModel extends Model
 
     /**
      * get all records
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return array
      */
     public function getAll()
     {
@@ -28,14 +32,17 @@ class RateModel extends Model
     /**
      * Get rows matching provided filters
      *
+     * @since 1.0.0
+     * @version 1.0.0
      * @param string $source
      * @param string $currency
      * @param integer $date
      * @param string $prefer
+     * @param bool $enabled
+     * @return array
      */
-    public function getByFilter($source, $currency, $date, $prefer, $enabled = false)
+    public function getByFilter(string $source, string $currency, int $date, string $prefer, bool $enabled = false)
     {
-
         $columns = array(
             "currency",
             "rate",
@@ -110,6 +117,8 @@ class RateModel extends Model
     /**
      * Get list of supported prefers
      *
+     * @since 1.0.0
+     * @version 1.0.0
      * @return array
      */
     public function supportedPrefers()
@@ -117,9 +126,16 @@ class RateModel extends Model
         return array("min", "max", "mean", "median", "random", "mode");
     }
 
-    private function groupRates($prefer)
+    /**
+     * Apply addtional grouping on rates not natively supported by the database
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @param string $prefer
+     * @return array
+     */
+    private function groupRates(string $prefer)
     {
-
         $__rates = $this->findAll();
 
         $_rates = array();
@@ -204,10 +220,13 @@ class RateModel extends Model
 
     /**
      * get list of all available currencies
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return array
      */
     public function getCurrencies()
     {
-
         $this->distinct();
         $this->select("currency");
         $this->where('enabled', 1);
@@ -227,10 +246,13 @@ class RateModel extends Model
 
     /**
      * Get last modified date
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return string
      */
     public function getLastChecked()
     {
-
         $this->select("last_checked");
         $this->limit(1);
         $this->orderBy('last_checked', 'DESC');
@@ -240,10 +262,13 @@ class RateModel extends Model
 
     /**
      * get list of all available currencies
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return array
      */
     public function getDisplayCurrencies()
     {
-
         $this->select("currency");
         $this->selectAvg('rate', "mean");
         $this->selectMax('rate', "max");
@@ -271,9 +296,12 @@ class RateModel extends Model
     /**
      * Get the sources of currency
      *
+     * @since 1.0.0
+     * @version 1.0.0
      * @param string $currency
+     * @return array
      */
-    public function getCurrencySources($currency)
+    public function getCurrencySources(string $currency)
     {
         $this->distinct();
         $this->select("url");

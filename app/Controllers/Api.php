@@ -8,18 +8,30 @@ use CodeIgniter\HTTP\Exceptions\HTTPException;
 
 class Api extends BaseController
 {
-
     use ResponseTrait;
 
+    /**
+     * Version 0 api endpoint
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return \Codeignitor\HTTP\Response
+     */
     public function index()
     {
-        return $this->response->setJSON($this->_getData());
+        return $this->response->setJSON($this->getData());
     }
 
+    /**
+     * Version 1 api endpoint
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return \Codeignitor\HTTP\Response
+     */
     public function v1()
     {
-
-        $response["USD"] = $this->_getData();
+        $response["USD"] = $this->getData();
 
         $request = \Config\Services::request();
 
@@ -35,7 +47,6 @@ class Api extends BaseController
 
             return $this->respond($callback . "(" . $json . ");");
         } else {
-
             if (filter_var($request->getPostGet("cors"), FILTER_VALIDATE_BOOLEAN)) {
                 $this->response->setHeader('Access-Control-Allow-Origin', '*');
             }
@@ -44,30 +55,40 @@ class Api extends BaseController
         }
     }
 
-    private function _getData()
+    /**
+     * Retrieve data from the data base
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return void
+     */
+    private function getData()
     {
-
         $rateModel = new RateModel();
 
-        $this->__logVisit();
+        $this->logVisit();
 
-        $source = $this->__normaliseName();
-        $currency = $this->__normaliseCurrency();
-        $date = $this->__normaliseDate();
-        $prefer = $this->__normalisePrefer();
+        $source = $this->normaliseName();
+        $currency = $this->normaliseCurrency();
+        $date = $this->normaliseDate();
+        $prefer = $this->normalisePrefer();
 
         return $rateModel->getByFilter($source, $currency, $date, $prefer, true);
     }
 
-    private function __logVisit()
+    /**
+     * Log visit to google analytics
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return void
+     */
+    private function logVisit()
     {
-
         if (getenv("app.google.analytics")) {
-
             ob_start();
 
             try {
-
                 $request = \Config\Services::request();
 
                 $client = \Config\Services::curlrequest();
@@ -96,11 +117,12 @@ class Api extends BaseController
     /**
      * Normalise search term
      *
+     * @since 1.0.0
+     * @version 1.0.0
      * @return string
      */
-    private function __normaliseName()
+    private function normaliseName()
     {
-
         $request = \Config\Services::request();
 
         //if source fails try name
@@ -112,12 +134,13 @@ class Api extends BaseController
 
     /**
      * Normalise currency
-     * 
+     *
+     * @since 1.0.0
+     * @version 1.0.0
      * @return string
      */
-    private function __normaliseCurrency()
+    private function normaliseCurrency()
     {
-
         $request = \Config\Services::request();
         $rateModel = new RateModel();
 
@@ -131,11 +154,12 @@ class Api extends BaseController
     /**
      * Normalise given date
      *
+     * @since 1.0.0
+     * @version 1.0.0
      * @return string
      */
-    private function __normaliseDate()
+    private function normaliseDate()
     {
-
         $request = \Config\Services::request();
 
         $date = $request->getPostGet("date");
@@ -149,11 +173,12 @@ class Api extends BaseController
     /**
      * Normalise preferred return value
      *
+     * @since 1.0.0
+     * @version 1.0.0
      * @return string
      */
-    private function __normalisePrefer()
+    private function normalisePrefer()
     {
-
         $request = \Config\Services::request();
         $rateModel = new RateModel();
 

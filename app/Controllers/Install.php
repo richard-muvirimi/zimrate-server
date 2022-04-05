@@ -1,19 +1,22 @@
 <?php
+
 namespace App\Controllers;
 
 class Install extends BaseController
 {
 
     /**
-     * @return mixed
+     * Install application endpoint
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return void
      */
     public function index()
     {
-
         $migrate = \Config\Services::migrations();
 
-        try
-        {
+        try {
             $migrate->latest();
 
             echo 'success';
@@ -22,7 +25,5 @@ class Install extends BaseController
 
             echo $e->getMessage();
         }
-
     }
-
 }

@@ -34,7 +34,8 @@
         <ul>
                 <li><span><span><span>Visit our
                                                 website<bdt class="block-component"></bdt> at <bdt class="question"><a
-                                                                href="<?php echo base_url() ?>" target="_blank">
+                                                                href="<?php echo base_url() ?>"
+                                                                target="_blank">
                                                                 <?php echo base_url() ?>
                                                         </a>
                                                 </bdt><span><span><span><span><span>

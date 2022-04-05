@@ -5,9 +5,15 @@ namespace App\Controllers;
 class Tester extends BaseController
 {
 
+    /**
+     * Page testing endpoint
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return void
+     */
     public function index()
     {
-
         $request = \Config\Services::request();
 
         $site = new \App\Entities\Rate();
@@ -18,7 +24,7 @@ class Tester extends BaseController
         $site->javascript = filter_var(getenv("app.panther"), FILTER_VALIDATE_BOOL);
         $site->selector  = $request->getPostGet("css") ?? "*";
 
-        $site->get_html_contents();
+        $site->getHtmlContent();
 
         if (empty($site->site)) {
             echo "Failed to scan site";

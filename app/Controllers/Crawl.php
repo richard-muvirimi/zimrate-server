@@ -7,9 +7,15 @@ use \App\Models\RateModel;
 class Crawl extends BaseController
 {
 
+    /**
+     * Initiate site crawling to get rates
+     *
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return void
+     */
     public function index()
     {
-
         $rateModel = new RateModel();
 
         if (!filter_var(getenv("app.panther"), FILTER_VALIDATE_BOOL)) {
@@ -21,13 +27,12 @@ class Crawl extends BaseController
         $cache = array();
 
         foreach ($sites as $site) {
-
             if (intval($site->enabled) == 1) {
 
                 //set cache if same site
                 $site->site = isset($cache[$site->url]) ? $cache[$site->url] : "";
 
-                $site->crawl_site();
+                $site->crawlSite();
 
                 //set cache
                 $cache[$site->url] =  $site->site;

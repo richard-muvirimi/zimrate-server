@@ -8,7 +8,8 @@
             </div>
             <ul class="footer-links list-reset">
                 <li>
-                    <a href="<?= base_url("privacy") ?>"><?= lang('Site.page.footer.privacy'); ?></a>
+                    <a
+                        href="<?= base_url("privacy") ?>"><?= lang('Site.page.footer.privacy'); ?></a>
                 </li>
                 <li>
                     <a href="https://tyganeutronics.com"><?= lang('Site.page.footer.contact'); ?></a>
@@ -54,7 +55,8 @@
                     <?= mailto('tygalive@gmail.com', ob_get_clean()) ?>
                 </li>
             </ul>
-            <div class="footer-copyright"><?= lang('Site.page.footer.copywrite'); ?></div>
+            <div class="footer-copyright"><?= lang('Site.page.footer.copywrite'); ?>
+            </div>
         </div>
     </div>
 </footer>

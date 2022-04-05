@@ -15,9 +15,11 @@ class Rate extends Entity
     /**
      * crawl given site for values
      *
-     * @return bool
+     * @since 1.0.0
+     * @version 1.0.0
+     * @return void
      */
-    public function crawl_site()
+    public function crawlSite()
     {
 
         //if enabled and half an hour has passed since last check
@@ -27,11 +29,11 @@ class Rate extends Entity
              * Get site html file and scan for required fields
              */
             if (!$this->site) {
-                $this->get_html_contents();
+                $this->getHtmlContent();
             }
 
             if ($this->site) {
-                $this->status =  $this->__parse_html($this->site) == true ? 1 : 0;
+                $this->status =  $this->parseHtml($this->site) == true ? 1 : 0;
 
                 //last checked
                 $this->last_checked = time();
@@ -44,22 +46,25 @@ class Rate extends Entity
     /**
      * parse given html for required values
      *
+     * @since 1.0.0
+     * @version 1.0.0
      * @param string $html
+     * @return bool
      */
-    private function __parse_html($html)
+    private function parseHtml(string $html)
     {
         //get html dom
         $dom = HtmlDomParser::str_get_html($html);
 
         //rate
-        $rate = $this->__clean_rate($dom->findOneOrFalse($this->selector));
+        $rate = $this->cleanRate($dom->findOneOrFalse($this->selector));
         if ($rate) {
             $this->rate = $rate;
 
-            $date = $this->__clean_date($dom->findOneOrFalse($this->last_updated_selector)) ?: ($this->rate ? time() : 0);
+            $date = $this->cleanDate($dom->findOneOrFalse($this->last_updated_selector)) ?: ($this->rate ? time() : 0);
 
             //date
-            $this->last_updated = $this->__fixDateOffset($date);
+            $this->last_updated = $this->fixDateOffset($date);
             return true;
         } else {
             return false;
@@ -69,11 +74,13 @@ class Rate extends Entity
     /**
      * Fix date offset
      *
+     * @since 1.0.0
+     * @version 1.0.0
      * @param int $date
+     * @return int
      */
-    private function __fixDateOffset($date)
+    private function fixDateOffset(int $date)
     {
-
         $timezone = $this->timezone;
 
         return $date - date_offset_get(date_create("now", timezone_open($timezone)));
@@ -82,16 +89,16 @@ class Rate extends Entity
     /**
      * Convert number to an int
      *
-     * @param string $value
+     * @since 1.0.0
+     * @version 1.0.0
+     * @param string|HtmlDomParser $value
      * @return int
      */
-    private function __clean_rate($value)
+    private function cleanRate($value)
     {
-
-        $amount = $this->__clean($value);
+        $amount = $this->clean($value);
 
         if (!is_numeric($amount)) {
-
             $words = explode(" ", $amount);
 
             //remove non numeric words
@@ -112,9 +119,9 @@ class Rate extends Entity
 
         /**
          * Normalize the value
-         * 
+         *
          * There could be better ways but the premise here is
-         * 
+         *
          * if value is not within a ten percentaile range then it is invalid
          * Handles cases where it may be in cents
          */
@@ -126,7 +133,6 @@ class Rate extends Entity
             $amount = floatval($amount);
 
             if ($amount > ($max[0] * 1.3) || $amount < ($min[0] * 0.7)) {
-
                 $amount /= 100;
 
                 if ($amount > ($max[0] * 1.3) || $amount < ($min[0] * 0.7)) {
@@ -141,17 +147,18 @@ class Rate extends Entity
     /**
      * Convert date to a unix time stamp
      *
-     * @param string $value
+     * @since 1.0.0
+     * @version 1.0.0
+     * @param string|HtmlDomParser $value
      * @return int
      */
-    private function __clean_date($value)
+    private function cleanDate($value)
     {
-
-        $raw_date = $this->__clean($value);
+        $raw_date = $this->clean($value);
 
         /**
          * bug: php_parse fails when there is no year but time right after month e.g => "19 January 11:22"
-         * 
+         *
          * hack: wrap time in brackets or some other non alpha-numeric characters :)
          */
         $raw_date = preg_replace("/[0-9]{1,2}:[0-9]{1,2}/", "($0)", $raw_date);
@@ -163,9 +170,9 @@ class Rate extends Entity
 
         /**
          * filter all text not related to dates
-         * 
+         *
          * Method: will only leave text (months) in the form jan or january
-         * 
+         *
          */
         $months = array();
         for ($i = 1; $i <= 12; $i++) {
@@ -189,12 +196,13 @@ class Rate extends Entity
     /**
      * Remove all html and php tags from given string
      *
+     * @since 1.0.0
+     * @version 1.0.0
      * @param string|HtmlDomParser $value
      * @return string
      */
-    private function __clean($value)
+    private function clean($value)
     {
-
         while (is_a($value, "HtmlDomParser")) {
             $value = $value->innerhtml();
         }
@@ -208,7 +216,6 @@ class Rate extends Entity
         // $value = strip_tags(trim(html_entity_decode($value), " \t\n\r\0\x0B\xC2\xA0"));
 
         return implode(" ", array_map(function ($word) {
-
             return trim($word, "-,");
         }, explode(" ", $value)));
     }
@@ -216,32 +223,33 @@ class Rate extends Entity
     /**
      * get content of given url
      *
+     * @since 1.0.0
+     * @version 1.0.0
      * @param string $url
      */
-    public function get_html_contents()
+    public function getHtmlContent()
     {
-
         if (intval($this->javascript) == 1) {
             if (filter_var(getenv("app.panther"), FILTER_VALIDATE_BOOL)) {
-                $this->get_html_content_browser();
+                $this->getHtmlContentBrowser();
             } else {
                 #skip
 
                 $this->site = "";
             }
         } else {
-            $this->get_html_contents_text();
+            $this->getHtmlContentText();
         }
     }
 
     /**
      * Parse a site using curl
-     * 
+     *
      * @since 1.0.0
      * @version 1.0.0
      * @return void
      */
-    public function get_html_contents_text()
+    public function getHtmlContentText()
     {
         $client = \Config\Services::curlrequest();
 
@@ -254,11 +262,8 @@ class Rate extends Entity
         $tries = 0;
 
         try {
-
             do {
-
                 try {
-
                     $response  = $client->get($this->url, array(
                         'headers' => $headers,
                         'user_agent' => "Zimrate/1.0",
@@ -289,7 +294,7 @@ class Rate extends Entity
             if (filter_var(getenv("app.panther"), FILTER_VALIDATE_BOOL)) {
                 //try with panther
 
-                $this->get_html_content_browser();
+                $this->getHtmlContentBrowser();
             } else {
                 if ($this->status) { //first time only
                     $this->mail($e->getMessage());
@@ -300,12 +305,12 @@ class Rate extends Entity
 
     /**
      * Parse a site using selenium
-     * 
+     *
      * @since 1.0.0
      * @version 1.0.0
      * @return void
      */
-    private function get_html_content_browser()
+    private function getHtmlContentBrowser()
     {
 
         //$_SERVER["PANTHER_FIREFOX_BINARY"] = ROOTPATH . "drivers/firefox/firefox-bin";
@@ -326,7 +331,6 @@ class Rate extends Entity
         $tries = 0;
 
         try {
-
             $client = Client::createChromeClient(null, $args, $options);
 
             if (str_starts_with($this->selector, "//")) {
@@ -338,9 +342,7 @@ class Rate extends Entity
             $crawler = $client->request('GET', $this->url);
 
             do {
-
                 try {
-
                     $client->wait(MINUTE);
                     $client->waitForVisibility($xpath, MINUTE * 3);
 
@@ -376,7 +378,7 @@ class Rate extends Entity
      * @param string $message
      * @return void
      */
-    private function mail($message)
+    private function mail(string $message)
     {
         $email = \Config\Services::email();
 
@@ -398,7 +400,6 @@ class Rate extends Entity
      */
     private function getUserAgent()
     {
-
         $agent = cache("user-agent");
 
         if (!$agent) {

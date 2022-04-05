@@ -5,8 +5,10 @@
 
     <?= view('solid/partials/head'); ?>
 
-    <title><?= lang('Site.page.privacy.title'); ?></title>
-    <meta property="og:title" content="<?= lang('Site.page.privacy.title'); ?>">
+    <title><?= lang('Site.page.privacy.title'); ?>
+    </title>
+    <meta property="og:title"
+        content="<?= lang('Site.page.privacy.title'); ?>">
 
 </head>
 
@@ -20,7 +22,8 @@
                 <div class="container">
                     <div class="hero-inner">
                         <div class="hero-copy">
-                            <h1 class="hero-title mt-0"><?= lang('Site.page.privacy.title'); ?></h1>
+                            <h1 class="hero-title mt-0"><?= lang('Site.page.privacy.title'); ?>
+                            </h1>
                         </div>
                         <?= view("solid/partials/animation") ?>
                     </div>
@@ -30,7 +33,8 @@
             <section class="features section">
                 <div class="container">
                     <div class="features-inner has-bottom-divider">
-                        <?= view('solid/partials/privacy'); ?></div>
+                        <?= view('solid/partials/privacy'); ?>
+                    </div>
                 </div>
             </section>
 

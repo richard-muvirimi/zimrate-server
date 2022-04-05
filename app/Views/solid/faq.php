@@ -5,8 +5,10 @@
 
     <?= view('solid/partials/head'); ?>
 
-    <title><?= lang('Site.page.faq.title'); ?></title>
-    <meta property="og:title" content="<?= lang('Site.page.faq.title'); ?>">
+    <title><?= lang('Site.page.faq.title'); ?>
+    </title>
+    <meta property="og:title"
+        content="<?= lang('Site.page.faq.title'); ?>">
 
 </head>
 
@@ -20,7 +22,8 @@
                 <div class="container">
                     <div class="hero-inner">
                         <div class="hero-copy">
-                            <h1 class="hero-title mt-0"><?= lang('Site.page.faq.title'); ?></h1>
+                            <h1 class="hero-title mt-0"><?= lang('Site.page.faq.title'); ?>
+                            </h1>
                         </div>
                         <?= view("solid/partials/animation") ?>
                     </div>
@@ -32,8 +35,10 @@
                     <div class="features-inner has-bottom-divider">
                         <dl class="">
                             <?php for ($i = 1; $i <= 7; $i++) : ?>
-                                <dt><?= lang('Site.page.faq.q' . $i); ?></dt>
-                                <dd>- <?= lang('Site.page.faq.qa' . $i, [anchor("https://tyganeutronics.com")]); ?></dd>
+                            <dt><?= lang('Site.page.faq.q' . $i); ?>
+                            </dt>
+                            <dd>- <?= lang('Site.page.faq.qa' . $i, [anchor("https://tyganeutronics.com")]); ?>
+                            </dd>
                             <?php endfor; ?>
                         </dl>
                     </div>
