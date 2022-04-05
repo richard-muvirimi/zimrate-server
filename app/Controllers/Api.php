@@ -23,7 +23,7 @@ class Api extends BaseController
 
         $request = \Config\Services::request();
 
-        if (filter_var($request->getPostGet("info"), FILTER_VALIDATE_BOOLEAN) != false) {
+        if (filter_var($request->getPostGet("info") ?: true, FILTER_VALIDATE_BOOLEAN)) {
             $response["info"] = strip_tags(file_get_contents(FCPATH . "public" . DIRECTORY_SEPARATOR . "misc" . DIRECTORY_SEPARATOR . "notice.txt"));
         }
 
