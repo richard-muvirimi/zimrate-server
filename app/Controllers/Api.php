@@ -23,7 +23,7 @@ class Api extends BaseController
 
         $request = \Config\Services::request();
 
-        if ($request->getPostGet("info") != "false") {
+        if (filter_var($request->getPostGet("info"), FILTER_VALIDATE_BOOLEAN) != false) {
             $response["info"] = strip_tags(file_get_contents(FCPATH . "public" . DIRECTORY_SEPARATOR . "misc" . DIRECTORY_SEPARATOR . "notice.txt"));
         }
 
@@ -36,7 +36,7 @@ class Api extends BaseController
             return $this->respond($callback . "(" . $json . ");");
         } else {
 
-            if ($request->getPostGet("cors") ==  "true") {
+            if (filter_var($request->getPostGet("cors"), FILTER_VALIDATE_BOOLEAN)) {
                 $this->response->setHeader('Access-Control-Allow-Origin', '*');
             }
 

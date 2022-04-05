@@ -12,6 +12,10 @@ class Crawl extends BaseController
 
         $rateModel = new RateModel();
 
+        if (!filter_var(getenv("app.panther"), FILTER_VALIDATE_BOOL)) {
+            $rateModel->where('javascript', 0);
+        }
+
         $sites = $rateModel->getAll();
 
         $cache = array();

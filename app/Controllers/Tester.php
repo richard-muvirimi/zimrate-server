@@ -15,7 +15,7 @@ class Tester extends BaseController
         $site->enabled = true;
         $site->status = false; //also prevents mail
         $site->site = false;
-        $site->javascript = getenv("app.panther");
+        $site->javascript = filter_var(getenv("app.panther"), FILTER_VALIDATE_BOOL);
         $site->selector  = $request->getPostGet("css") ?? "*";
 
         $site->get_html_contents();

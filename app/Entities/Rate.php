@@ -222,7 +222,7 @@ class Rate extends Entity
     {
 
         if (intval($this->javascript) == 1) {
-            if (getenv("app.panther")) {
+            if (filter_var(getenv("app.panther"), FILTER_VALIDATE_BOOL)) {
                 $this->get_html_content_browser();
             } else {
                 #skip
@@ -286,7 +286,7 @@ class Rate extends Entity
         } catch (Exception $e) {
             //failed to parse site
 
-            if (getenv("app.panther")) {
+            if (filter_var(getenv("app.panther"), FILTER_VALIDATE_BOOL)) {
                 //try with panther
 
                 $this->get_html_content_browser();
@@ -402,12 +402,17 @@ class Rate extends Entity
         $agent = cache("user-agent");
 
         if (!$agent) {
-            $client = Client::createChromeClient();
-            $client->request('GET', "chrome://version");
+            try {
+                $client = Client::createChromeClient();
+                $client->request('GET', "chrome://version");
 
-            $agent =  $client->executeScript("return navigator.userAgent;");
-
-            $client->quit();
+                $agent =  $client->executeScript("return navigator.userAgent;");
+            } catch (\Exception $e) {
+            } finally {
+                if ($client) {
+                    $client->quit();
+                }
+            }
 
             if (!$agent) {
                 $agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36";
