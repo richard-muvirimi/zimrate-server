@@ -41,7 +41,7 @@ class RateModel extends Model
      * @param bool $enabled
      * @return array
      */
-    public function getByFilter(string $source, string $currency, int $date, string $prefer, bool $enabled = false)
+    public function getByFilter(string $source, string $currency, string $date, string $prefer, bool $enabled = false)
     {
         $columns = array(
             "currency",
