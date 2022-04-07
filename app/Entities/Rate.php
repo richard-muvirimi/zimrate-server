@@ -282,12 +282,12 @@ class Rate extends Entity
                     $this->site = "";
                 } finally {
                     $tries++;
-
-                    if ($tries >= 5) {
-                        throw $e;
-                    }
                 }
             } while ($tries < 5);
+
+            if (empty($this->site)) {
+                throw new \Exception("Failed to scan site", "tryout");
+            }
         } catch (Exception $e) {
             //failed to parse site
 
