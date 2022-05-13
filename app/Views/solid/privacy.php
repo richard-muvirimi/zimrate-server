@@ -3,29 +3,29 @@
 
 <head>
 
-    <?= view('solid/partials/head'); ?>
+    <?php echo view('solid/partials/head'); ?>
 
-    <title><?= lang('Site.page.privacy.title'); ?>
+    <title><?php echo lang('Site.page.privacy.title'); ?>
     </title>
     <meta property="og:title"
-        content="<?= lang('Site.page.privacy.title'); ?>">
+        content="<?php echo lang('Site.page.privacy.title'); ?>">
 
 </head>
 
 <body class="is-boxed has-animations">
     <div class="body-wrap">
 
-        <?= view("solid/partials/header") ?>
+        <?php echo view("solid/partials/header") ?>
 
         <main>
             <section class="hero">
                 <div class="container">
                     <div class="hero-inner">
                         <div class="hero-copy">
-                            <h1 class="hero-title mt-0"><?= lang('Site.page.privacy.title'); ?>
+                            <h1 class="hero-title mt-0"><?php echo lang('Site.page.privacy.title'); ?>
                             </h1>
                         </div>
-                        <?= view("solid/partials/animation") ?>
+                        <?php echo view("solid/partials/animation") ?>
                     </div>
                 </div>
             </section>
@@ -33,14 +33,14 @@
             <section class="features section">
                 <div class="container">
                     <div class="features-inner has-bottom-divider">
-                        <?= view('solid/partials/privacy'); ?>
+                        <?php echo view('solid/partials/privacy'); ?>
                     </div>
                 </div>
             </section>
 
         </main>
 
-        <?= view('solid/partials/footer'); ?>
+        <?php echo view('solid/partials/footer'); ?>
 
     </div>
 

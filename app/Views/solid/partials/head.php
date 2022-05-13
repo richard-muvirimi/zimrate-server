@@ -5,8 +5,8 @@
 <link rel="icon" type="image/png" href="public/images/logo.svg">
 
 <meta property="og:image"
-    content="<?= base_url("public/images/zimrate_screenshot.png"); ?>">
-<meta property="og:url" content="<?= base_url(); ?>">
+    content="<?php echo base_url("public/images/zimrate_screenshot.png"); ?>">
+<meta property="og:url" content="<?php echo base_url(); ?>">
 
 <link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,600" rel="stylesheet">
 <link rel="stylesheet" href="public/css/style.css">
@@ -29,4 +29,4 @@
 </script>
 
 <link rel="stylesheet"
-    href="<?= base_url("public/css/gh-fork-ribbon.min.css") ?>">
+    href="<?php echo base_url("public/css/gh-fork-ribbon.min.css") ?>">

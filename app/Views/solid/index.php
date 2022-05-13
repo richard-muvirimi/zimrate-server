@@ -3,19 +3,19 @@
 
 <head>
 
-    <?= view('solid/partials/head'); ?>
+    <?php echo view('solid/partials/head'); ?>
 
     <meta name="description"
-        content="<?= lang('Site.default.description'); ?>" />
+        content="<?php echo lang('Site.default.description'); ?>" />
     <meta name="keywords" content="Zimbabwe, Rate, Bond, Rtgs, Zwl, Currency, Exchange, MarketWatch, Rbz">
     <meta name="author" content="Richard Muvirimi">
 
     <meta property="og:title"
-        content="<?= lang('Site.default.title'); ?>">
+        content="<?php echo lang('Site.default.title'); ?>">
     <meta property="og:description"
-        content="<?= lang('Site.default.description'); ?>">
+        content="<?php echo lang('Site.default.description'); ?>">
 
-    <title><?= lang('Site.default.title'); ?>
+    <title><?php echo lang('Site.default.title'); ?>
     </title>
 
     <script src="public/js/luxon.min.js"></script>
@@ -26,22 +26,22 @@
 <body class="is-boxed has-animations" onload="setDate()">
     <div class="body-wrap">
 
-        <?= view("solid/partials/header") ?>
+        <?php echo view("solid/partials/header") ?>
 
         <main>
             <section class="hero">
                 <div class="container">
                     <div class="hero-inner">
                         <div class="hero-copy">
-                            <h1 class="hero-title mt-0"><?= lang('Site.default.title'); ?>
+                            <h1 class="hero-title mt-0"><?php echo lang('Site.default.title'); ?>
                             </h1>
-                            <p class="hero-paragraph"><?= lang('Site.default.description'); ?>
+                            <p class="hero-paragraph"><?php echo lang('Site.default.description'); ?>
                             </p>
-                            <div class="hero-cta"><a class="button button-primary" href="#rates"><?= lang('Site.page.home.rates'); ?></a><a
-                                    class="button" href="developers"><?= lang('Site.page.home.developers'); ?></a>
+                            <div class="hero-cta"><a class="button button-primary" href="#rates"><?php echo lang('Site.page.home.rates'); ?></a><a
+                                    class="button" href="developers"><?php echo lang('Site.page.home.developers'); ?></a>
                             </div>
                         </div>
-                        <?= view("solid/partials/animation") ?>
+                        <?php echo view("solid/partials/animation") ?>
                     </div>
                 </div>
             </section>
@@ -52,7 +52,7 @@
 
                         <div class="text-center">
                             <h2 class="section-title mt-0">
-                                <?= lang('Site.page.home.title_why'); ?>
+                                <?php echo lang('Site.page.home.title_why'); ?>
                             </h2>
                         </div>
 
@@ -63,9 +63,9 @@
                                         <img src="public/images/feature-icon-01.svg" alt="Feature 01">
                                     </div>
                                     <h4 class="feature-title mt-24">
-                                        <?= lang('Site.page.home.benefit_productive_title'); ?>
+                                        <?php echo lang('Site.page.home.benefit_productive_title'); ?>
                                     </h4>
-                                    <p class="text-sm mb-0"><?= lang('Site.page.home.benefit_productive'); ?>
+                                    <p class="text-sm mb-0"><?php echo lang('Site.page.home.benefit_productive'); ?>
                                     </p>
                                 </div>
                             </div>
@@ -75,9 +75,9 @@
                                         <img src="public/images/feature-icon-02.svg" alt="Feature 02">
                                     </div>
                                     <h4 class="feature-title mt-24">
-                                        <?= lang('Site.page.home.benefit_time_title'); ?>
+                                        <?php echo lang('Site.page.home.benefit_time_title'); ?>
                                     </h4>
-                                    <p class="text-sm mb-0"><?= lang('Site.page.home.benefit_time'); ?>
+                                    <p class="text-sm mb-0"><?php echo lang('Site.page.home.benefit_time'); ?>
                                     </p>
                                 </div>
                             </div>
@@ -87,9 +87,9 @@
                                         <img src="public/images/feature-icon-03.svg" alt="Feature 03">
                                     </div>
                                     <h4 class="feature-title mt-24">
-                                        <?= lang('Site.page.home.benefit_free_title'); ?>
+                                        <?php echo lang('Site.page.home.benefit_free_title'); ?>
                                     </h4>
-                                    <p class="text-sm mb-0"><?= lang('Site.page.home.benefit_free'); ?>
+                                    <p class="text-sm mb-0"><?php echo lang('Site.page.home.benefit_free'); ?>
                                     </p>
                                 </div>
                             </div>
@@ -102,7 +102,7 @@
                 <div class="container-sm">
                     <div class="pricing-inner section-inner">
                         <div class="pricing-header text-center">
-                            <p class="section-paragraph mb-0"><?= lang('Site.page.home.last_checked'); ?>
+                            <p class="section-paragraph mb-0"><?php echo lang('Site.page.home.last_checked'); ?>
                             </p>
                             <h2 id="last_checked_date" class="section-title mt-0"
                                 data-checked="<?php echo $last_checked; ?>">
@@ -110,7 +110,7 @@
                         </div>
 
                         <div class="section-paragraph mb-0">
-                            <?= file_get_contents(FCPATH .  "public" . DIRECTORY_SEPARATOR . 'misc' . DIRECTORY_SEPARATOR . "notice.txt"); ?>
+                            <?php echo file_get_contents(FCPATH .  "public" . DIRECTORY_SEPARATOR . 'misc' . DIRECTORY_SEPARATOR . "notice.txt"); ?>
                         </div>
 
                         <div class="pricing-tables-wrap">
@@ -122,7 +122,7 @@
                                     <div class="pricing-table-main">
 
                                         <div class="pricing-table-features-title text-xs pt-24 pb-24">
-                                            <?= lang('Site.page.home.usd_rate', [$currency->currency]); ?>
+                                            <?php echo lang('Site.page.home.usd_rate', [$currency->currency]); ?>
                                         </div>
 
                                         <div class="pricing-table-header pb-24">
@@ -134,7 +134,7 @@
                                                     %
                                                 </span>
                                                 <span class="text-xs">
-                                                    <?= lang('Site.page.home.maximum'); ?>
+                                                    <?php echo lang('Site.page.home.maximum'); ?>
                                                 </span>
                                             </div>
                                         </div>
@@ -148,7 +148,7 @@
                                                     %
                                                 </span>
                                                 <span class="text-xs">
-                                                    <?= lang('Site.page.home.average'); ?>
+                                                    <?php echo lang('Site.page.home.average'); ?>
                                                 </span>
                                             </div>
                                         </div>
@@ -162,7 +162,7 @@
                                                     %
                                                 </span>
                                                 <span class="text-xs">
-                                                    <?= lang('Site.page.home.minimum'); ?>
+                                                    <?php echo lang('Site.page.home.minimum'); ?>
                                                 </span>
                                             </div>
                                         </div>
@@ -176,7 +176,7 @@
                                                     %
                                                 </span>
                                                 <span class="text-xs">
-                                                    <?= lang('Site.page.home.median'); ?>
+                                                    <?php echo lang('Site.page.home.median'); ?>
                                                 </span>
                                             </div>
                                         </div>
@@ -190,7 +190,7 @@
                                                     %
                                                 </span>
                                                 <span class="text-xs">
-                                                    <?= lang('Site.page.home.mode'); ?>
+                                                    <?php echo lang('Site.page.home.mode'); ?>
                                                 </span>
                                             </div>
                                         </div>
@@ -204,7 +204,7 @@
                                                     %
                                                 </span>
                                                 <span class="text-xs">
-                                                    <?= lang('Site.page.home.random'); ?>
+                                                    <?php echo lang('Site.page.home.random'); ?>
                                                 </span>
                                             </div>
                                         </div>
@@ -216,10 +216,10 @@
                                         <ul class="pricing-table-features list-reset text-xs">
                                             <?php foreach ($sources as $key => $source) : ?>
                                             <li>
-                                                <span><?= auto_link(prep_url(parse_url($source->url, PHP_URL_HOST), strtolower(parse_url($source->url, PHP_URL_SCHEME)) == "https")); ?></span>
+                                                <span><?php echo auto_link(prep_url(parse_url($source->url, PHP_URL_HOST), strtolower(parse_url($source->url, PHP_URL_SCHEME)) == "https")); ?></span>
                                             </li>
                                             <?php endforeach;
-                                                ?>
+                                            ?>
                                         </ul>
 
                                     </div>
@@ -231,22 +231,22 @@
                         </div>
 
                         <div class="pricing-header">
-                            <p class="section-paragraph mb-0 text-center"><?= lang('Site.page.home.rate_usd'); ?>
+                            <p class="section-paragraph mb-0 text-center"><?php echo lang('Site.page.home.rate_usd'); ?>
                             </p>
                         </div>
 
                         <div class="pricing-header text-center">
-                            <p class="section-paragraph mb-16"><?= lang('Site.page.home.sample_app'); ?>
+                            <p class="section-paragraph mb-16"><?php echo lang('Site.page.home.sample_app'); ?>
                             </p>
                             <div class="cta-cta">
                                 <a class="button button-primary button-wide-mobile mb-8"
                                     href='https://play.google.com/store/apps/details?id=com.tyganeutronics.myratecalculator&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'
                                     target="_blank">
-                                    <?= lang('Site.page.home.google_play'); ?>
+                                    <?php echo lang('Site.page.home.google_play'); ?>
                                 </a>
                                 <a class="button button-primary button-wide-mobile mb-8"
                                     href='https://wordpress.org/plugins/zimrate' target="_blank">
-                                    <?= lang('Site.page.home.wordpress'); ?>
+                                    <?php echo lang('Site.page.home.wordpress'); ?>
                                 </a>
                             </div>
                         </div>
@@ -258,17 +258,17 @@
     <section class="cta section">
         <div class="container">
             <div class="cta-inner section-inner">
-                <h3 class="section-title mt-0"><?= lang('Site.page.home.not_convinced'); ?>
+                <h3 class="section-title mt-0"><?php echo lang('Site.page.home.not_convinced'); ?>
                 </h3>
                 <div class="cta-cta">
-                    <a class="button button-primary button-wide-mobile" href="https://tyganeutronics.com"><?= lang('Site.page.home.contact_btn'); ?></a>
+                    <a class="button button-primary button-wide-mobile" href="https://tyganeutronics.com"><?php echo lang('Site.page.home.contact_btn'); ?></a>
                 </div>
             </div>
         </div>
     </section>
     </main>
 
-    <?= view('solid/partials/footer'); ?>
+    <?php echo view('solid/partials/footer'); ?>
 
     </div>
 
