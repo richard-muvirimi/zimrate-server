@@ -95,23 +95,14 @@ class Api extends BaseController
 	 */
 	private function prepareResponse(array $response):Response
 	{
-		$callback = $this->request->getPostGet('callback');
-		if ($callback)
+		if ($this->response->hasHeader('X-Callback'))
 		{
-			$this->response->setContentType('text/javascript; charset=UTF-8');
+			$this->response->setContentType('application/javascript;');
 
-			return $this->respond($callback . '(' . json_encode($response) . ');');
+			return $this->respond($this->response->getHeaderLine('X-Callback') . '(' . json_encode($response) . ');');
 		}
-		else
-		{
-			$cors = $this->request->getPostGet('cors');
-			if (filter_var($cors, FILTER_VALIDATE_BOOL))
-			{
-				$this->response->setHeader('Access-Control-Allow-Origin', '*');
-			}
 
-			return $this->response->setJSON($response);
-		}
+		return $this->response->setJSON($response);
 	}
 
 	/**
@@ -194,8 +185,28 @@ class Api extends BaseController
 							'type'         => $preferType,
 							'defaultValue' => '',
 						],
+						'callback' => [
+							'type'         => Type::string(),
+							'defaultValue' => '',
+						],
+						'cors'     => [
+							'type'         => Type::boolean(),
+							'defaultValue' => false,
+						],
 					],
-					'resolve' => fn ($queryType, array $args):array => $model->getByFilter($args['search'], $args['currency'], $args['date'], $args['prefer'], true),
+					'resolve' => function ($queryType, array $args) use ($model):array {
+						if ($args['cors'])
+						{
+							$this->response->setHeader('Access-Control-Allow-Origin', '*');
+						}
+
+						if (! empty($args['callback']))
+						{
+							$this->response->setHeader('X-CallBack', $args['callback']);
+						}
+
+						return $model->getByFilter($args['search'], $args['currency'], $args['date'], $args['prefer'], true);
+					},
 				],
 				'info' => [
 					'type'    => Type::string(),
@@ -247,6 +258,8 @@ class Api extends BaseController
 			'currency' => $this->normaliseCurrency(),
 			'date'     => $this->normaliseDate(),
 			'prefer'   => $this->normalisePrefer(),
+			'cors'     => $this->request->getPostGet('cors'),
+			'callback' => '"' . $this->request->getPostGet('callback') . '"',
 		]);
 
 		$params = array_map(function ($value, $key) {
@@ -349,7 +362,7 @@ class Api extends BaseController
 	private function normaliseDate():int
 	{
 		$date = $this->request->getPostGet('date') ?: 0;
-		if (! is_numeric( $date))
+		if ($date && ! is_numeric( $date))
 		{
 			$date = strtotime($date);
 		}

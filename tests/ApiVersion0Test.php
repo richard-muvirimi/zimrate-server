@@ -26,7 +26,7 @@ class ApiVersion0Test extends TestCase{
 	{
 		$client = Services::curlrequest();
 
-		$response = $client->post($_SERVER['app.baseURL'] . '/api', [
+		$response = $client->get($_SERVER['app.baseURL'] . 'api', [
 			'user_agent' => 'Zimrate/1.0',
 			'verify'     => false,
 		]);
@@ -57,10 +57,10 @@ class ApiVersion0Test extends TestCase{
 	{
 		$client = Services::curlrequest();
 
-		$response = $client->post($_SERVER['app.baseURL'] . '/api', [
-			'user_agent'  => 'Zimrate/1.0',
-			'verify'      => false,
-			'form_params' => ['prefer' => 'MEDIAN'],
+		$response = $client->get($_SERVER['app.baseURL'] . 'api', [
+			'user_agent' => 'Zimrate/1.0',
+			'verify'     => false,
+			'query'      => ['prefer' => 'MEDIAN'],
 		]);
 
 		$this->assertEquals (200, $response->getStatusCode(), 'The response code from api version 0 was not 200');
@@ -94,10 +94,10 @@ class ApiVersion0Test extends TestCase{
 
 		$client = Services::curlrequest();
 
-		$response = $client->post($_SERVER['app.baseURL'] . '/api', [
-			'user_agent'  => 'Zimrate/1.0',
-			'verify'      => false,
-			'form_params' => ['currency' => $currencies[0]->currency],
+		$response = $client->get($_SERVER['app.baseURL'] . 'api', [
+			'user_agent' => 'Zimrate/1.0',
+			'verify'     => false,
+			'query'      => ['currency' => $currencies[0]->currency],
 		]);
 
 		$this->assertEquals (200, $response->getStatusCode(), 'The response code from api version 0 was not 200');
@@ -125,10 +125,10 @@ class ApiVersion0Test extends TestCase{
 	{
 		$client = Services::curlrequest();
 
-		$response = $client->post($_SERVER['app.baseURL'] . '/api', [
-			'user_agent'  => 'Zimrate/1.0',
-			'verify'      => false,
-			'form_params' => ['date' => time() - DAY],
+		$response = $client->get($_SERVER['app.baseURL'] . 'api', [
+			'user_agent' => 'Zimrate/1.0',
+			'verify'     => false,
+			'query'      => ['date' => time() - DAY],
 		]);
 
 		$this->assertEquals (200, $response->getStatusCode(), 'The response code from api version 0 was not 200');
