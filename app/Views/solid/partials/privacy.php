@@ -23,7 +23,7 @@
 					questions or
 					concerns about this privacy notice or our practices with regard to your personal
 					information, please
-					contact us at <bdt class="question">tygalive@gmail.com</bdt>
+					contact us at <bdt class="question"><?php echo mailto('rich4rdmuvirimi@gmail.com', 'rich4rdmuvirimi@gmail.com') ?></bdt>
 					.</span></span></span></div>
 	<div><br></div>
 	<div><span><span><span>This privacy notice describes how we might use your information
@@ -3970,7 +3970,7 @@
 																		email
 																		at </span><span><span>
 																			<bdt class="question">
-																				tygalive@gmail.com
+																				<?php echo mailto('rich4rdmuvirimi@gmail.com', 'rich4rdmuvirimi@gmail.com') ?>
 																			</bdt>
 																			,
 																			<bdt class="block-component">
@@ -5223,7 +5223,7 @@
 																												at
 																												<bdt
 																													class="question">
-																													tygalive@gmail.com
+																													<?php echo mailto('rich4rdmuvirimi@gmail.com', 'rich4rdmuvirimi@gmail.com') ?>
 																												</bdt>
 																												,
 																												<bdt
@@ -5457,7 +5457,7 @@
 																											at
 																											<bdt
 																												class="question">
-																												tygalive@gmail.com
+																											<?php echo mailto('rich4rdmuvirimi@gmail.com', 'rich4rdmuvirimi@gmail.com') ?>
 																											</bdt>
 																											<bdt
 																												class="statement-end-if-in-editor">
