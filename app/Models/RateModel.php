@@ -95,8 +95,7 @@ class RateModel extends Model
 			$this->where('currency', $currency);
 		}
 
-		//
-		if ($date !== 0)
+		if ($date > 0)
 		{
 			$this->where('last_updated >', $date);
 		}
@@ -170,88 +169,87 @@ class RateModel extends Model
 	 */
 	private function groupRates(string $prefer):array
 	{
-		$allRates = $this->findAll();
+		$rates = $this->findAll();
 
-		$_rates = [];
-
-		//group by currency
-		foreach ($allRates as $rate)
+		if (strlen($prefer) !== 0)
 		{
-			$currency = $rate->currency;
+			$_rates = [];
 
-			$_rates[$currency]['rate'][]         = $rate->rate;
-			$_rates[$currency]['last_checked'][] = $rate->last_checked;
-			$_rates[$currency]['last_updated'][] = $rate->last_updated;
-		}
+			//group by currency
+			foreach ($rates as $rate)
+			{
+				$currency = $rate->currency;
 
-		$rates = [];
+				$_rates[$currency]['rate'][]         = $rate->rate;
+				$_rates[$currency]['last_checked'][] = $rate->last_checked;
+				$_rates[$currency]['last_updated'][] = $rate->last_updated;
+			}
 
-		//compile groupings
-		foreach ($_rates as $currency => $rate)
-		{
-			switch ($prefer) {
-				case 'median':
-					sort($rate['rate']);
+			$rates = [];
 
-					$count = count($rate['rate']);
+			//compile groupings
+			foreach ($_rates as $currency => $rate)
+			{
+				switch ($prefer) {
+					case 'median':
+						sort($rate['rate']);
 
-					if ($count % 2 === 0)
-					{
-						//even get central average
+						$count = count($rate['rate']);
 
-						$lower = ($count / 2);
-						$upper = $lower + 1;
+						if ($count % 2 === 0)
+						{
+							//even get central average
 
-						$_rate = ($rate['rate'][$upper - 1] + $rate['rate'][$lower - 1]) / 2;
-					}
-					else
-					{
-						//odd get central
-						$_rate = $rate['rate'][ceil($count / 2) - 1];
-					}
+							$lower = ($count / 2);
+							$upper = $lower + 1;
 
-					$rates[] = [
-						'currency'     => $currency,
-						'last_checked' => max($rate['last_checked']),
-						'last_updated' => min($rate['last_updated']),
-						'rate'         => $_rate,
-					];
-					break;
-				case 'mode':
-					$occurs = [];
+							$_rate = ($rate['rate'][$upper - 1] + $rate['rate'][$lower - 1]) / 2;
+						}
+						else
+						{
+							//odd get central
+							$_rate = $rate['rate'][ceil($count / 2) - 1];
+						}
 
-					foreach ($rate['rate'] as $_rate)
-					{
-						$occurs[strval($_rate)] = (isset($occurs[$_rate]) ? $occurs[$_rate] : 0) + 1;
-					}
+						$rates[] = [
+							'currency'     => $currency,
+							'last_checked' => max($rate['last_checked']),
+							'last_updated' => min($rate['last_updated']),
+							'rate'         => $_rate,
+						];
+						break;
+					case 'mode':
+						$occurs = [];
 
-					$_rate = floatval(array_search(max($occurs), $occurs));
+						foreach ($rate['rate'] as $_rate)
+						{
+							$occurs[strval($_rate)] = (isset($occurs[$_rate]) ? $occurs[$_rate] : 0) + 1;
+						}
 
-					$position = array_search($_rate, $rate['rate']);
+						$_rate = floatval(array_search(max($occurs), $occurs));
 
-					$rates[] = [
-						'currency'     => $currency,
-						'last_checked' => $rate['last_checked'][$position],
-						'last_updated' => $rate['last_updated'][$position],
-						'rate'         => $_rate,
-					];
-					break;
-				case 'random':
-					$position = array_rand($rate['rate']);
+						$position = array_search($_rate, $rate['rate']);
 
-					$_rate = $rate['rate'][$position];
+						$rates[] = [
+							'currency'     => $currency,
+							'last_checked' => $rate['last_checked'][$position],
+							'last_updated' => $rate['last_updated'][$position],
+							'rate'         => $_rate,
+						];
+						break;
+					case 'random':
+						$position = array_rand($rate['rate']);
 
-					$rates[] = [
-						'currency'     => $currency,
-						'last_checked' => $rate['last_checked'][$position],
-						'last_updated' => $rate['last_updated'][$position],
-						'rate'         => $_rate,
-					];
-					break;
-				default:
-					//all
-					$rates = $allRates;
-					break;
+						$_rate = $rate['rate'][$position];
+
+						$rates[] = [
+							'currency'     => $currency,
+							'last_checked' => $rate['last_checked'][$position],
+							'last_updated' => $rate['last_updated'][$position],
+							'rate'         => $_rate,
+						];
+						break;
+				}
 			}
 		}
 

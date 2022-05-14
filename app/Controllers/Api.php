@@ -42,28 +42,28 @@ class Api extends BaseController
 	{
 		$response['USD'] = $this->getData();
 
-		if ($this->request->getPostGet('info', FILTER_VALIDATE_BOOLEAN) ?: true)
+		$info = $this->request->getPostGet('info') ?: true;
+		if (filter_var($info, FILTER_VALIDATE_BOOL))
 		{
 			$response['info'] = strip_tags(file_get_contents(FCPATH . 'public' . DIRECTORY_SEPARATOR . 'misc' . DIRECTORY_SEPARATOR . 'notice.txt'));
 		}
 
-		$json = json_encode($response);
-
 		$callback = $this->request->getPostGet('callback');
 		if ($callback)
 		{
-			$this->response->setContentType('application/javascript');
+			$this->response->setContentType('text/javascript; charset=UTF-8');
 
-			return $this->respond($callback . '(' . $json . ');');
+			return $this->respond($callback . '(' . json_encode($response) . ');');
 		}
 		else
 		{
-			if ($this->request->getPostGet('cors', FILTER_VALIDATE_BOOLEAN))
+			$cors = $this->request->getPostGet('cors');
+			if (filter_var($cors, FILTER_VALIDATE_BOOL))
 			{
 				$this->response->setHeader('Access-Control-Allow-Origin', '*');
 			}
 
-			return $this->response->setJSON($json);
+			return $this->response->setJSON($response);
 		}
 	}
 
