@@ -33,7 +33,7 @@
 					</a>
 				</li>
 				<li>
-					<a href="https://twitter.com/Yang_Richyy">
+					<a href="https://twitter.com/rich4rdmuvirimi">
 						<span class="screen-reader-text"><?php echo lang('Site.page.footer.twitter'); ?></span>
 						<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg">
 							<path
@@ -53,7 +53,7 @@
 							fill="#0270D7" />
 					</svg>
 
-					<?php echo mailto('tygalive@gmail.com', ob_get_clean()) ?>
+					<?php echo mailto('rich4rdmuvirimi@gmail.com', ob_get_clean()) ?>
 				</li>
 			</ul>
 			<div class="footer-copyright"><?php echo lang('Site.page.footer.copywrite'); ?>
