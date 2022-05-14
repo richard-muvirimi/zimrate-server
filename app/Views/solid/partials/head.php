@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" href="public/images/logo.svg">
 
 <meta property="og:image"
-    content="<?php echo base_url("public/images/zimrate_screenshot.png"); ?>">
+	content="<?php echo base_url('public/images/zimrate_screenshot.png'); ?>">
 <meta property="og:url" content="<?php echo base_url(); ?>">
 
 <link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,600" rel="stylesheet">
@@ -15,18 +15,18 @@
 
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id="
-    <?php echo getenv("app.google.analytics") ?>%pcs-comment-end#* />
+	<?php echo getenv('app.google.analytics') ?>%pcs-comment-end#* />
 </script>
 <script>
-    window.dataLayer = window.dataLayer || [];
+	window.dataLayer = window.dataLayer || [];
 
-    function gtag() {
-        dataLayer.push(arguments);
-    }
-    gtag('js', new Date());
+	function gtag() {
+		dataLayer.push(arguments);
+	}
+	gtag('js', new Date());
 
-    gtag('config', getenv("app.google.analytics"));
+	gtag('config', getenv("app.google.analytics"));
 </script>
 
 <link rel="stylesheet"
-    href="<?php echo base_url("public/css/gh-fork-ribbon.min.css") ?>">
+	href="<?php echo base_url('public/css/gh-fork-ribbon.min.css') ?>">

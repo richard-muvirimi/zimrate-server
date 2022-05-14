@@ -33,6 +33,24 @@ $routes->setAutoRoute(true);
 // We get a performance increase by specifying the default
 // route since we don't have to scan directories.
 $routes->get('/', 'Home::index');
+$routes->get('faq', 'Home::faq');
+$routes->get('developers', 'Home::developers');
+$routes->get('privacy', 'Home::privacy');
+$routes->get('tester', 'Home::tester');
+
+/**
+ * Api Routes
+ */
+$routes->group(
+    "api",function ($routes) {
+		$apiRoutes = [
+			"/" => "Api::version0",
+			"v1" => "Api::version1",
+		];
+
+        $routes->map($apiRoutes, []);
+	}
+);
 
 /*
  * --------------------------------------------------------------------

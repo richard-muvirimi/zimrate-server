@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<ruleset name="Zimrate Standard" namespace="RichardMuvirimi\Zimrate\">
+<description>Coding Standards for Codeignitor and Php 7.4</description>
+<exclude-pattern>*/vendor/*</exclude-pattern>
+ <exclude-pattern>*/app/Config/*</exclude-pattern>
+ <exclude-pattern>*/app/Database/*</exclude-pattern>
+
+ <config name="testVersion" value="7.4-"/>
+
+ <rule ref="CodeIgniter4"/>
+ <rule ref="PHPCompatibility">
+    <exclude name="CodeIgniter4.Commenting.FileComment.Missing" />
+    <exclude name="CodeIgniter4.NamingConventions.ValidVariableName.ObjectVariableNotLowerCamelCase" />
+ </rule>
+</ruleset>

@@ -3,48 +3,48 @@
 
 <head>
 
-    <?php echo view('solid/partials/head'); ?>
+	<?php echo view('solid/partials/head'); ?>
 
-    <title><?php echo lang('Site.page.privacy.title'); ?>
-    </title>
-    <meta property="og:title"
-        content="<?php echo lang('Site.page.privacy.title'); ?>">
+	<title><?php echo lang('Site.page.privacy.title'); ?>
+	</title>
+	<meta property="og:title"
+		content="<?php echo lang('Site.page.privacy.title'); ?>">
 
 </head>
 
 <body class="is-boxed has-animations">
-    <div class="body-wrap">
+	<div class="body-wrap">
 
-        <?php echo view("solid/partials/header") ?>
+		<?php echo view('solid/partials/header') ?>
 
-        <main>
-            <section class="hero">
-                <div class="container">
-                    <div class="hero-inner">
-                        <div class="hero-copy">
-                            <h1 class="hero-title mt-0"><?php echo lang('Site.page.privacy.title'); ?>
-                            </h1>
-                        </div>
-                        <?php echo view("solid/partials/animation") ?>
-                    </div>
-                </div>
-            </section>
+		<main>
+			<section class="hero">
+				<div class="container">
+					<div class="hero-inner">
+						<div class="hero-copy">
+							<h1 class="hero-title mt-0"><?php echo lang('Site.page.privacy.title'); ?>
+							</h1>
+						</div>
+						<?php echo view('solid/partials/animation') ?>
+					</div>
+				</div>
+			</section>
 
-            <section class="features section">
-                <div class="container">
-                    <div class="features-inner has-bottom-divider">
-                        <?php echo view('solid/partials/privacy'); ?>
-                    </div>
-                </div>
-            </section>
+			<section class="features section">
+				<div class="container">
+					<div class="features-inner has-bottom-divider">
+						<?php echo view('solid/partials/privacy'); ?>
+					</div>
+				</div>
+			</section>
 
-        </main>
+		</main>
 
-        <?php echo view('solid/partials/footer'); ?>
+		<?php echo view('solid/partials/footer'); ?>
 
-    </div>
+	</div>
 
-    <script src="public/js/main.min.js"></script>
+	<script src="public/js/main.min.js"></script>
 </body>
 
 </html>

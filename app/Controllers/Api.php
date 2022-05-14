@@ -5,190 +5,206 @@ namespace App\Controllers;
 use \App\Models\RateModel;
 use CodeIgniter\API\ResponseTrait;
 use CodeIgniter\HTTP\Exceptions\HTTPException;
+use CodeIgniter\HTTP\Response;
+use Config\Services;
 
+/**
+ * Api Handling Class
+ *
+ * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+ * @since   1.0.0
+ * @version 1.0.0
+ */
 class Api extends BaseController
 {
-    use ResponseTrait;
+	use ResponseTrait;
 
-    /**
-     * Version 0 api endpoint
-     *
-     * @since 1.0.0
-     * @version 1.0.0
-     * @return \Codeignitor\HTTP\Response
-     */
-    public function index()
-    {
-        return $this->response->setJSON($this->getData());
-    }
+	/**
+	 * Version 0 api endpoint
+	 *
+	 * @since   1.0.0
+	 * @version 1.0.0
+	 * @return  Response
+	 */
+	public function version0():Response
+	{
+		return $this->response->setJSON($this->getData());
+	}
 
-    /**
-     * Version 1 api endpoint
-     *
-     * @since 1.0.0
-     * @version 1.0.0
-     * @return \Codeignitor\HTTP\Response
-     */
-    public function v1()
-    {
-        $response["USD"] = $this->getData();
+	/**
+	 * Version 1 api endpoint
+	 *
+	 * @since   1.0.0
+	 * @version 1.0.0
+	 * @return  Response
+	 */
+	public function version1():Response
+	{
+		$response['USD'] = $this->getData();
 
-        $request = \Config\Services::request();
+		if ($this->request->getPostGet('info', FILTER_VALIDATE_BOOLEAN) ?: true)
+		{
+			$response['info'] = strip_tags(file_get_contents(FCPATH . 'public' . DIRECTORY_SEPARATOR . 'misc' . DIRECTORY_SEPARATOR . 'notice.txt'));
+		}
 
-        if (filter_var($request->getPostGet("info") ?: true, FILTER_VALIDATE_BOOLEAN)) {
-            $response["info"] = strip_tags(file_get_contents(FCPATH . "public" . DIRECTORY_SEPARATOR . "misc" . DIRECTORY_SEPARATOR . "notice.txt"));
-        }
+		$json = json_encode($response);
 
-        $json = json_encode($response);
+		$callback = $this->request->getPostGet('callback');
+		if ($callback)
+		{
+			$this->response->setContentType('application/javascript');
 
-        $callback = $request->getPostGet("callback");
-        if ($callback) {
-            $this->response->setContentType("application/javascript");
+			return $this->respond($callback . '(' . $json . ');');
+		}
+		else
+		{
+			if ($this->request->getPostGet('cors', FILTER_VALIDATE_BOOLEAN))
+			{
+				$this->response->setHeader('Access-Control-Allow-Origin', '*');
+			}
 
-            return $this->respond($callback . "(" . $json . ");");
-        } else {
-            if (filter_var($request->getPostGet("cors"), FILTER_VALIDATE_BOOLEAN)) {
-                $this->response->setHeader('Access-Control-Allow-Origin', '*');
-            }
+			return $this->response->setJSON($json);
+		}
+	}
 
-            return $this->response->setJSON($json);
-        }
-    }
+	/**
+	 * Retrieve data from the data base
+	 *
+	 * @since   1.0.0
+	 * @version 1.0.0
+	 * @return  array
+	 */
+	private function getData():array
+	{
+		$model = new RateModel();
 
-    /**
-     * Retrieve data from the data base
-     *
-     * @since 1.0.0
-     * @version 1.0.0
-     * @return void
-     */
-    private function getData()
-    {
-        $rateModel = new RateModel();
+		$this->logVisit();
 
-        $this->logVisit();
+		$source   = $this->normaliseName();
+		$currency = $this->normaliseCurrency();
+		$date     = $this->normaliseDate();
+		$prefer   = $this->normalisePrefer();
 
-        $source = $this->normaliseName();
-        $currency = $this->normaliseCurrency();
-        $date = $this->normaliseDate();
-        $prefer = $this->normalisePrefer();
+		return $model->getByFilter($source, $currency, $date, $prefer, true);
+	}
 
-        return $rateModel->getByFilter($source, $currency, $date, $prefer, true);
-    }
+	/**
+	 * Log visit to google analytics
+	 *
+	 * @since   1.0.0
+	 * @version 1.0.0
+	 * @return  void
+	 */
+	private function logVisit():void
+	{
+		if (getenv('app.google.analytics'))
+		{
+			try
+			{
+				ob_start();
 
-    /**
-     * Log visit to google analytics
-     *
-     * @since 1.0.0
-     * @version 1.0.0
-     * @return void
-     */
-    private function logVisit()
-    {
-        if (getenv("app.google.analytics")) {
-            ob_start();
+				$client = Services::curlrequest();
 
-            try {
-                $request = \Config\Services::request();
+				$data = [
+					// Version.
+					'v'   => 1,
+					// Tracking ID / Property ID.
+					'tid' => getenv('app.google.analytics'),
+					// Document hostname.
+					'dh'  => base_url(),
+					 // Anonymous Client ID.
+					'cid' => $this->request->getIPAddress(),
+					 // Hit Type.
+					't'   => 'pageview',
+					// Page.
+					'dp'  => 'api',
+				];
 
-                $client = \Config\Services::curlrequest();
+				$client->post('https://www.google-analytics.com/collect', [
+					'user_agent'  => $this->request->getUserAgent()->getAgentString() ?: 'Zimrate/1.0',
+					'form_params' => $data,
+					'verify'      => false,
+				]);
+			}
+			catch (HTTPException $e)
+			{
+			}finally{
+				ob_clean();
+			}
+		}
+	}
 
-                $data = array(
-                    "v" => 1, // Version.
-                    "tid" => getenv("app.google.analytics"), // Tracking ID / Property ID.
-                    "dh" => base_url(), // Document hostname.
-                    "cid" => $request->getIPAddress(), // Anonymous Client ID.
-                    "t" => "pageview", // Hit Type.
-                    "dp" => "api", // Page.
-                );
+	/**
+	 * Normalise search term
+	 *
+	 * @since   1.0.0
+	 * @version 1.0.0
+	 * @return  string
+	 */
+	private function normaliseName():string
+	{
+		//if source fails try name
+		$name = $this->request->getPostGet('source') ?: $this->request->getPostGet('name');
 
-                $client->post("https://www.google-analytics.com/collect", array(
-                    'user_agent' => $request->getUserAgent()->getAgentString() ?: "Zimrate/1.0",
-                    "form_params" => $data,
-                    'verify' => false
-                ));
-            } catch (HTTPException $e) {
-            }
+		//allow only alpha numeric text
+		return preg_match('/^[a-zA-Z0-9 ]+$/', $name) === 1 ? $name : '';
+	}
 
-            ob_clean();
-        }
-    }
+	/**
+	 * Normalise currency
+	 *
+	 * @since   1.0.0
+	 * @version 1.0.0
+	 * @return  string
+	 */
+	private function normaliseCurrency():string
+	{
+		$model = new RateModel();
 
-    /**
-     * Normalise search term
-     *
-     * @since 1.0.0
-     * @version 1.0.0
-     * @return string
-     */
-    private function normaliseName()
-    {
-        $request = \Config\Services::request();
+		$currency = strtoupper($this->request->getPostGet('currency'));
 
-        //if source fails try name
-        $name = $request->getPostGet("source") ?: $request->getPostGet("name");
+		$currencies = $model->getCurrencies();
 
-        //allow only alpha numeric text
-        return preg_match('/^[a-zA-Z0-9 ]+$/', $name) == 1 ? $name : "";
-    }
+		return in_array($currency, array_column($currencies, 'currency')) ? $currency : '';
+	}
 
-    /**
-     * Normalise currency
-     *
-     * @since 1.0.0
-     * @version 1.0.0
-     * @return string
-     */
-    private function normaliseCurrency()
-    {
-        $request = \Config\Services::request();
-        $rateModel = new RateModel();
+	/**
+	 * Normalise given date
+	 *
+	 * @since   1.0.0
+	 * @version 1.0.0
+	 * @return  integer
+	 */
+	private function normaliseDate():int
+	{
+		$date = $this->request->getPostGet('date', FILTER_VALIDATE_INT);
+		if (! $date)
+		{
+			$date = 0;
+		}
 
-        $currency = strtoupper($request->getPostGet("currency"));
+		return $date;
+	}
 
-        $currencies = $rateModel->getCurrencies();
+	/**
+	 * Normalise preferred return value
+	 *
+	 * @since   1.0.0
+	 * @version 1.0.0
+	 * @return  string
+	 */
+	private function normalisePrefer():string
+	{
+		$model = new RateModel();
 
-        return in_array($currency, array_column($currencies, "currency")) ? $currency : "";
-    }
+		$prefer = strtolower($this->request->getPostGet('prefer'));
 
-    /**
-     * Normalise given date
-     *
-     * @since 1.0.0
-     * @version 1.0.0
-     * @return string
-     */
-    private function normaliseDate()
-    {
-        $request = \Config\Services::request();
+		//value to get
+		if (! in_array($prefer, $model->supportedPrefers()))
+		{
+			$prefer = '';
+		}
 
-        $date = $request->getPostGet("date");
-        if (!is_numeric($date)) {
-            $date = "";
-        }
-
-        return $date;
-    }
-
-    /**
-     * Normalise preferred return value
-     *
-     * @since 1.0.0
-     * @version 1.0.0
-     * @return string
-     */
-    private function normalisePrefer()
-    {
-        $request = \Config\Services::request();
-        $rateModel = new RateModel();
-
-        $prefer = strtolower($request->getPostGet("prefer"));
-
-        //value to get
-        if (!in_array(strtolower($prefer), $rateModel->supportedPrefers())) {
-            $prefer = "";
-        }
-
-        return $prefer;
-    }
+		return $prefer;
+	}
 }

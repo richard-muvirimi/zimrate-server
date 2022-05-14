@@ -47,7 +47,15 @@
 	},
 	"scripts": {
 		"post-update-cmd": [
-			"CodeIgniter\\ComposerScripts::postUpdate"
+			"CodeIgniter\\ComposerScripts::postUpdate",
+			"@php-cs-setup"
+		],
+		"php-cs-setup": [
+			"@phpcs --config-set installed_paths vendor/phpcompatibility/php-compatibility,vendor/codeigniter4/codeigniter4-standard/CodeIgniter4",
+			"@phpcs -i"
+		],
+		"phpcs": [
+			"vendor/bin/phpcs"
 		],
 		"test": "phpunit"
 	},
