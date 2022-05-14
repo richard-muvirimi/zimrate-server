@@ -23,6 +23,20 @@ class Rate extends Entity
 {
 
 	/**
+	 * Property Casts
+	 *
+	 * @var array
+	 */
+	protected $casts = [
+		'rate'         => 'float',
+		'last_updated' => 'int',
+		'last_checked' => 'int',
+		'enabled'      => 'boolean',
+		'status'       => 'boolean',
+		'javascript'   => 'boolean',
+	];
+
+	/**
 	 * Crawl given site for values
 	 *
 	 * @since   1.0.0

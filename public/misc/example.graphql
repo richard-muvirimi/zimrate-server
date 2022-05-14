@@ -1,0 +1,9 @@
+{
+    USD : rate(prefer : RANDOM ) {
+        currency
+        last_checked
+        last_updated
+        rate
+    }, 
+    info: info
+}

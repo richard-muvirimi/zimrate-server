@@ -46,6 +46,7 @@ $routes->group(
 		$apiRoutes = [
 			"/" => "Api::version0",
 			"v1" => "Api::version1",
+			"graphql" => "Api::graphql",
 		];
 
         $routes->map($apiRoutes, []);

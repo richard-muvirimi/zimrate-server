@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Entities\Rate;
 use CodeIgniter\Model;
 
 /**
@@ -211,12 +212,12 @@ class RateModel extends Model
 							$_rate = $rate['rate'][ceil($count / 2) - 1];
 						}
 
-						$rates[] = [
+						$rates[] = new Rate( [
 							'currency'     => $currency,
 							'last_checked' => max($rate['last_checked']),
 							'last_updated' => min($rate['last_updated']),
 							'rate'         => $_rate,
-						];
+						]);
 						break;
 					case 'mode':
 						$occurs = [];
@@ -230,24 +231,24 @@ class RateModel extends Model
 
 						$position = array_search($_rate, $rate['rate']);
 
-						$rates[] = [
+						$rates[] = new Rate( [
 							'currency'     => $currency,
 							'last_checked' => $rate['last_checked'][$position],
 							'last_updated' => $rate['last_updated'][$position],
 							'rate'         => $_rate,
-						];
+						]);
 						break;
 					case 'random':
 						$position = array_rand($rate['rate']);
 
 						$_rate = $rate['rate'][$position];
 
-						$rates[] = [
+						$rates[] = new Rate( [
 							'currency'     => $currency,
 							'last_checked' => $rate['last_checked'][$position],
 							'last_updated' => $rate['last_updated'][$position],
 							'rate'         => $_rate,
-						];
+						]);
 						break;
 				}
 			}
@@ -360,4 +361,5 @@ class RateModel extends Model
 
 		return $this->findAll();
 	}
+
 }

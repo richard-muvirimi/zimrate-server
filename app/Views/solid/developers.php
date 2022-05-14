@@ -34,7 +34,7 @@
 					<div class="features-inner has-bottom-divider">
 
 						<p class="text-sm mb-0">
-							<?php echo lang('Site.page.developers.api_access', [anchor(base_url('api/v1'))]); ?>
+							<?php echo lang('Site.page.developers.api_access', [anchor(base_url('api/v1')), anchor(base_url('api/graphql'))]); ?>
 						</p>
 
 						<h4><?php echo lang('Site.page.developers.api_parameters'); ?>
@@ -78,13 +78,22 @@
 							<li>
 								<p class="text-sm mb-0"><?php echo lang('Site.page.developers.cors_jsonp'); ?>
 								</p>
-								<p class="text-sm mb-0">
+							
 								<pre><code><?php echo sprintf(file_get_contents(FCPATH . 'public' . DIRECTORY_SEPARATOR . 'misc' . DIRECTORY_SEPARATOR . 'example.js'), base_url('api/v1')) ?></code></pre>
-								</p>
+							
 							</li>
 						</ul>
 
 						<p class="text-sm mb-0"><?php echo lang('Site.page.developers.cors_summary'); ?>
+						</p>
+
+						<h4><?php echo lang('Site.page.developers.graphql_title'); ?>
+						</h4>
+						<p class="text-sm mb-0"><?php echo lang('Site.page.developers.graphql_intro'); ?>
+						</p>
+				
+						<pre><code><?php echo file_get_contents(FCPATH . 'public' . DIRECTORY_SEPARATOR . 'misc' . DIRECTORY_SEPARATOR . 'example.graphql') ?></code></pre>
+					<p class="text-sm mb-0"><?php echo lang('Site.page.developers.graphql_recommend'); ?>
 						</p>
 
 						<h4>...</h4>

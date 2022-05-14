@@ -30,9 +30,9 @@ class Home extends BaseController
 		$model = new RateModel();
 
 		$currencies = array_map(function ($currency) use ($model) {
-			$currency->median = $model->getByFilter('', $currency->currency, 0, 'median', true)[0]['rate'] ?? 0;
-			$currency->mode   = $model->getByFilter('', $currency->currency, 0, 'mode', true)[0]['rate'] ?? 0;
-			$currency->random = $model->getByFilter('', $currency->currency, 0, 'random', true)[0]['rate'] ?? 0;
+			$currency->median = $model->getByFilter('', $currency->currency, 0, 'median', true)[0]->rate ?? 0;
+			$currency->mode   = $model->getByFilter('', $currency->currency, 0, 'mode', true)[0]->rate ?? 0;
+			$currency->random = $model->getByFilter('', $currency->currency, 0, 'random', true)[0]->rate ?? 0;
 
 			return $currency;
 		}, $model->getDisplayCurrencies());
