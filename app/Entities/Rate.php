@@ -160,8 +160,8 @@ class Rate extends Entity
 		 * Handles cases where it may be in cents
 		 */
 		$model = new RateModel();
-		$max   = array_column($model->getByFilter('', $this->currency, '', 'MAX', true), 'rate');
-		$min   = array_column($model->getByFilter('', $this->currency, '', 'MIN', true), 'rate');
+		$max   = array_column($model->getByFilter('', $this->currency, 0, 'MAX', true), 'rate');
+		$min   = array_column($model->getByFilter('', $this->currency, 0, 'MIN', true), 'rate');
 
 		if ($min && $max)
 		{

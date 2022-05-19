@@ -1,0 +1,22 @@
+{
+  "name": "zimrate",
+  "version": "1.0.0",
+  "description": "All Zimbabwean exchange rates from multiple sites in one RESTful / Graphql api. No need to scrounge the internet for the current days rate.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/richard-muvirimi/Zimrate-Server.git"
+  },
+  "author": "Richard Muvirimi <rich4rdmuvirimi@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/richard-muvirimi/Zimrate-Server/issues"
+  },
+  "homepage": "https://github.com/richard-muvirimi/Zimrate-Server#readme"
+}
