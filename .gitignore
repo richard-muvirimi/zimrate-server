@@ -127,5 +127,9 @@ nb-configuration.xml
 /phpunit*.xml
 /.phpunit.*.cache
 
-rsync.sh
 app/Controllers/Mantainance.php
+
+#Docker
+docker_tag
+Dockerfile-php-build
+DOCKER_ENV
