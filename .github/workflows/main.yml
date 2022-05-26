@@ -1,0 +1,57 @@
+name: Update Dependencies
+
+on:
+  # On push or after every 7 days
+  push:
+    branches: [ master ]
+  schedule:
+  - cron: "0 0 1/7 * *"
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+      
+      - name: Cache Composer dependencies
+        uses: actions/cache@v2
+        with:
+          path: /tmp/composer-cache
+          key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+      
+      - name: Composer Setup
+      - uses: php-actions/composer@v6
+        with:
+          dev: no
+          php_version: "7.x"
+          version: latest
+          command: update
+        
+      - name: Commit
+        run: |
+            git config --local user.email "rich4rdmuvirimi@gmail.com"
+            git config --local user.name "Richard Muvirimi"
+            git add -A
+            git status | grep "nothing to commit" || git commit -m "Update dependencies" -a
+                
+      - name: Push changes
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+            branch: master
+        
+      - name: Deploy 
+        uses: burnett01/rsync-deployments@5.2
+        with:
+          switches: -rvztn --exclude 'app/Controllers/Mantainance.php' --delete
+          path: ./
+          remote_path: ${{ secrets.DEPLOY_PATH }}
+          remote_host: ${{ secrets.DEPLOY_HOST }}
+          remote_port: ${{ secrets.DEPLOY_PORT }}
+          remote_user: ${{ secrets.DEPLOY_USER }}
+          remote_key: ${{ secrets.SSH_KEY }}
