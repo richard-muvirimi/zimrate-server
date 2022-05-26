@@ -133,3 +133,4 @@ app/Controllers/Mantainance.php
 docker_tag
 Dockerfile-php-build
 DOCKER_ENV
+output.log
