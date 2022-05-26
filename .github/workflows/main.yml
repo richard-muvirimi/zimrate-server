@@ -28,7 +28,7 @@ jobs:
         uses: php-actions/composer@v6
         with:
           dev: no
-          php_version: "7.x"
+          php_version: 7
           version: latest
           command: update
         
