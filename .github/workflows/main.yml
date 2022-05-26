@@ -30,6 +30,7 @@ jobs:
           dev: no
           php_version: 7
           version: latest
+          php_extensions: intl zip
           command: update
         
       - name: Commit
