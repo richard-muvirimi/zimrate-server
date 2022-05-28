@@ -1,9 +1,16 @@
 <?xml version="1.0"?>
 <ruleset name="Zimrate Standard" namespace="RichardMuvirimi\Zimrate\">
 <description>Coding Standards for Codeignitor and Php 7.4</description>
+
 <exclude-pattern>*/vendor/*</exclude-pattern>
+<exclude-pattern>*/system/*</exclude-pattern>
+<exclude-pattern>*/index.php</exclude-pattern>
  <exclude-pattern>*/app/Config/*</exclude-pattern>
+ <exclude-pattern>*/app/Language/*</exclude-pattern>
+ <exclude-pattern>*/app/Views/errors/*</exclude-pattern>
  <exclude-pattern>*/app/Database/*</exclude-pattern>
+
+ <arg name="extensions" value="php"/>
 
  <config name="testVersion" value="7.4-"/>
 
