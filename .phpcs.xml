@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <ruleset name="Zimrate Standard" namespace="RichardMuvirimi\Zimrate\">
-<description>Coding Standards for Codeignitor and Php 7.4</description>
+<description>Coding Standards for Zimrate and Php 7.4</description>
 
 <exclude-pattern>*/vendor/*</exclude-pattern>
 <exclude-pattern>*/system/*</exclude-pattern>
