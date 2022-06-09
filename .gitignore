@@ -127,8 +127,6 @@ nb-configuration.xml
 /phpunit*.xml
 /.phpunit.*.cache
 
-app/Controllers/Mantainance.php
-
 #Docker
 docker_tag
 Dockerfile-php-build

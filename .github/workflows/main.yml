@@ -49,7 +49,7 @@ jobs:
       - name: Deploy 
         uses: burnett01/rsync-deployments@5.2
         with:
-          switches: -rvzt --include 'vendor' --exclude 'app/Controllers/Mantainance.php' --exclude-from=.gitignore --exclude '.git' --exclude '.github' --delete
+          switches: -rvzt --include 'vendor' --exclude-from=.gitignore --exclude '.git' --exclude '.github' --delete
           path: ./
           remote_path: ${{ secrets.DEPLOY_PATH }}
           remote_host: ${{ secrets.DEPLOY_HOST }}
