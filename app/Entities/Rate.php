@@ -445,7 +445,7 @@ class Rate extends Entity
 				$this->mail($e->getMessage());
 			}
 		} finally {
-			if ($client)
+			if (isset($client) && is_object($client))
 			{
 				$client->quit();
 			}
@@ -497,7 +497,7 @@ class Rate extends Entity
 			catch (Exception $e)
 			{
 			} finally {
-				if ($client)
+				if (isset($client) && is_object($client))
 				{
 					$client->quit();
 				}
