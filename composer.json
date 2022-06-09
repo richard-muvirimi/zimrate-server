@@ -65,6 +65,7 @@
 		"phpcs": [
 			"vendor/bin/phpcs ."
 		],
+		"crawl": "@php ./index.php crawl",
 		"test": "phpunit"
 	},
 	"support": {
