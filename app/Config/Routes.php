@@ -38,6 +38,8 @@ $routes->get('developers', 'Home::developers');
 $routes->get('privacy', 'Home::privacy');
 $routes->get('tester', 'Home::tester');
 
+$routes->add('crawl', 'Crawl::index');
+
 /**
  * Api Routes
  */
