@@ -1,26 +1,29 @@
 {
-	"name": "codeigniter4/framework",
+	"name": "rich4rdmuvirmi/zimrate",
 	"type": "project",
-	"description": "The CodeIgniter framework v4",
-	"homepage": "https://codeigniter.com",
+	"description": "Zimrate Server",
+	"homepage": "http://zimrate.tyganeutronics.com",
 	"license": "MIT",
+	"authors": [
+		{
+			"name": "Richard Muvirimi",
+			"email": "rich4rdmuvirmi@gmail.com",
+			"homepage": "https://richard.co.zw",
+			"role": "Developer"
+		}
+	],
 	"config": {
 		"platform": {
 			"php": "7.4"
 		},
 		"allow-plugins": {
 			"dealerdirect/phpcodesniffer-composer-installer": true
-		}
+		},
+		"process-timeout": 0
 	},
 	"require": {
-		"php": "^7.4",
-		"ext-curl": "*",
-		"ext-intl": "*",
-		"ext-json": "*",
-		"ext-mbstring": "*",
-		"kint-php/kint": "^3.3",
-		"laminas/laminas-escaper": "^2.6",
-		"psr/log": "^1.1",
+		"php": ">=7.4",
+		"codeigniter4/framework": "^4.0",
 		"voku/simple_html_dom": "^4.7",
 		"symfony/polyfill-php80": "*",
 		"symfony/polyfill-php81": "*",
@@ -33,9 +36,7 @@
 		"fakerphp/faker": "^1.9",
 		"mikey179/vfsstream": "^1.6",
 		"phpunit/phpunit": "^9.1",
-		"predis/predis": "^1.1",
 		"squizlabs/php_codesniffer": "^3.3",
-		"dbrekelmans/bdi": "^1.0",
 		"phpcompatibility/php-compatibility": "^9.3",
 		"dealerdirect/phpcodesniffer-composer-installer": "^0.7.2"
 	},
@@ -43,20 +44,19 @@
 		"ext-fileinfo": "Improves mime type detection for files"
 	},
 	"autoload": {
-		"psr-4": {
-			"CodeIgniter\\": "system/"
-		},
 		"exclude-from-classmap": [
 			"**/Database/Migrations/**"
 		]
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Tests\\Support\\": "tests/_support"
+		}
 	},
 	"scripts": {
 		"qc": [
 			"@phpcs",
 			"@test"
-		],
-		"post-update-cmd": [
-			"CodeIgniter\\ComposerScripts::postUpdate"
 		],
 		"php-cs-setup": [
 			"Dealerdirect\\Composer\\Plugin\\Installers\\PHPCodeSniffer\\Plugin::run",

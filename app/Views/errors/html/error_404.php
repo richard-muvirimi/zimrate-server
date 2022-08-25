@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
-	<meta charset="utf-8">
+	<meta charset="utf-8" >
 	<title>404 Page Not Found</title>
 
 	<style>
@@ -69,11 +69,11 @@
 </style>
 </head>
 <body>
-	<div class="wrap">
+	<div class="wrap" >
 		<h1>404 - File Not Found</h1>
 
 		<p>
-			<?php if (! empty($message) && $message !== '(null)') : ?>
+			<?php if (! empty($message) && $message != '(null)') : ?>
 				<?= esc($message) ?>
 			<?php else : ?>
 				Sorry! Cannot seem to find the page you were looking for.

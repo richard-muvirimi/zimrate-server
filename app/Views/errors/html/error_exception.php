@@ -2,61 +2,61 @@
 <!doctype html>
 <html>
 <head>
-	<meta charset="UTF-8">
-	<meta name="robots" content="noindex">
+	<meta charset="UTF-8" >
+	<meta name="robots" content="noindex" >
 
 	<title><?= esc($title) ?></title>
-	<style type="text/css">
+	<style type="text/css" >
 		<?= preg_replace('#[\r\n\t ]+#', ' ', file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'debug.css')) ?>
 	</style>
 
-	<script type="text/javascript">
+	<script type="text/javascript" >
 		<?= file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'debug.js') ?>
 	</script>
 </head>
-<body onload="init()">
+<body onload="init()" >
 
 	<!-- Header -->
-	<div class="header">
-		<div class="container">
+	<div class="header" >
+		<div class="container" >
 			<h1><?= esc($title), esc($exception->getCode() ? ' #' . $exception->getCode() : '') ?></h1>
 			<p>
 				<?= esc($exception->getMessage()) ?>
 				<a href="https://www.google.com/search?q=<?= urlencode($title . ' ' . preg_replace('#\'.*\'|".*"#Us', '', $exception->getMessage())) ?>"
-				   rel="noreferrer" target="_blank">search &rarr;</a>
+				   rel="noreferrer" target="_blank" >search &rarr;</a>
 			</p>
 		</div>
 	</div>
 
 	<!-- Source -->
-	<div class="container">
+	<div class="container" >
 		<p><b><?= esc(static::cleanPath($file, $line)) ?></b> at line <b><?= esc($line) ?></b></p>
 
 		<?php if (is_file($file)) : ?>
-			<div class="source">
+			<div class="source" >
 				<?= static::highlightFile($file, $line, 15); ?>
 			</div>
 		<?php endif; ?>
 	</div>
 
-	<div class="container">
+	<div class="container" >
 
-		<ul class="tabs" id="tabs">
-			<li><a href="#backtrace">Backtrace</a></li>
-				<li><a href="#server">Server</a></li>
-				<li><a href="#request">Request</a></li>
-				<li><a href="#response">Response</a></li>
-				<li><a href="#files">Files</a></li>
-				<li><a href="#memory">Memory</a></li>
+		<ul class="tabs" id="tabs" >
+			<li><a href="#backtrace" >Backtrace</a></li>
+				<li><a href="#server" >Server</a></li>
+				<li><a href="#request" >Request</a></li>
+				<li><a href="#response" >Response</a></li>
+				<li><a href="#files" >Files</a></li>
+				<li><a href="#memory" >Memory</a></li>
 			</li>
 		</ul>
 
-		<div class="tab-content">
+		<div class="tab-content" >
 
 			<!-- Backtrace -->
-			<div class="content" id="backtrace">
+			<div class="content" id="backtrace" >
 
-				<ol class="trace">
+				<ol class="trace" >
 				<?php foreach ($trace as $index => $row) : ?>
 
 					<li>
@@ -82,14 +82,14 @@
 								&nbsp;&nbsp;&mdash;&nbsp;&nbsp;<?= esc($row['class'] . $row['type'] . $row['function']) ?>
 								<?php if (! empty($row['args'])) : ?>
 									<?php $args_id = $error_id . 'args' . $index ?>
-									( <a href="#" onclick="return toggle('<?= esc($args_id, 'attr') ?>');">arguments</a> )
-									<div class="args" id="<?= esc($args_id, 'attr') ?>">
-										<table cellspacing="0">
+									( <a href="#" onclick="return toggle('<?= esc($args_id, 'attr') ?>');" >arguments</a> )
+									<div class="args" id="<?= esc($args_id, 'attr') ?>" >
+										<table cellspacing="0" >
 
 										<?php
 										$params = null;
 										// Reflection by name is not available for closure function
-										if (substr($row['function'], -1) !== '}')
+										if (substr($row['function'], -1) != '}')
 										{
 											$mirror = isset($row['class']) ? new \ReflectionMethod($row['class'], $row['function']) : new \ReflectionFunction($row['function']);
 											$params = $mirror->getParameters();
@@ -115,7 +115,7 @@
 
 						<!-- Source? -->
 						<?php if (isset($row['file']) && is_file($row['file']) && isset($row['class'])) : ?>
-							<div class="source">
+							<div class="source" >
 								<?= static::highlightFile($row['file'], $row['line']) ?>
 							</div>
 						<?php endif; ?>
@@ -127,7 +127,7 @@
 			</div>
 
 			<!-- Server -->
-			<div class="content" id="server">
+			<div class="content" id="server" >
 				<?php foreach (['_SERVER', '_SESSION'] as $var) : ?>
 					<?php if (empty($GLOBALS[$var]) || ! is_array($GLOBALS[$var]))
 					{
@@ -192,13 +192,13 @@
 			</div>
 
 			<!-- Request -->
-			<div class="content" id="request">
+			<div class="content" id="request" >
 				<?php $request = \Config\Services::request(); ?>
 
 				<table>
 					<tbody>
 						<tr>
-							<td style="width: 10em">Path</td>
+							<td style="width: 10em" >Path</td>
 							<td><?= esc($request->uri) ?></td>
 						</tr>
 						<tr>
@@ -210,7 +210,7 @@
 							<td><?= esc($request->getIPAddress()) ?></td>
 						</tr>
 						<tr>
-							<td style="width: 10em">Is AJAX Request?</td>
+							<td style="width: 10em" >Is AJAX Request?</td>
 							<td><?= $request->isAJAX() ? 'yes' : 'no' ?></td>
 						</tr>
 						<tr>
@@ -241,7 +241,7 @@
 
 					<h3>$<?= esc($var) ?></h3>
 
-					<table style="width: 100%">
+					<table style="width: 100%" >
 						<thead>
 							<tr>
 								<th>Key</th>
@@ -268,7 +268,7 @@
 
 				<?php if ($empty) : ?>
 
-					<div class="alert">
+					<div class="alert" >
 						No $_GET, $_POST, or $_COOKIE Information to show.
 					</div>
 
@@ -314,10 +314,10 @@
 				$response = \Config\Services::response();
 				$response->setStatusCode(http_response_code());
 			?>
-			<div class="content" id="response">
+			<div class="content" id="response" >
 				<table>
 					<tr>
-						<td style="width: 15em">Response Status</td>
+						<td style="width: 15em" >Response Status</td>
 						<td><?= esc($response->getStatusCode() . ' - ' . $response->getReason()) ?></td>
 					</tr>
 				</table>
@@ -349,7 +349,7 @@
 			</div>
 
 			<!-- Files -->
-			<div class="content" id="files">
+			<div class="content" id="files" >
 				<?php $files = get_included_files(); ?>
 
 				<ol>
@@ -360,7 +360,7 @@
 			</div>
 
 			<!-- Memory -->
-			<div class="content" id="memory">
+			<div class="content" id="memory" >
 
 				<table>
 					<tbody>
@@ -369,7 +369,7 @@
 							<td><?= esc(static::describeMemory(memory_get_usage(true))) ?></td>
 						</tr>
 						<tr>
-							<td style="width: 12em">Peak Memory Usage:</td>
+							<td style="width: 12em" >Peak Memory Usage:</td>
 							<td><?= esc(static::describeMemory(memory_get_peak_usage(true))) ?></td>
 						</tr>
 						<tr>
@@ -385,8 +385,8 @@
 
 	</div> <!-- /container -->
 
-	<div class="footer">
-		<div class="container">
+	<div class="footer" >
+		<div class="container" >
 
 			<p>
 				Displayed at <?= esc(date('H:i:sa')) ?> &mdash;
