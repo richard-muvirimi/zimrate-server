@@ -25,7 +25,7 @@ class Home extends BaseController
 	 * @version 1.0.0
 	 * @return  string
 	 */
-	public function index()
+	public function index():string
 	{
 		$model = new RateModel();
 

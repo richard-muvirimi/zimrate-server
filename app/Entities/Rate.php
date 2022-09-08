@@ -3,7 +3,7 @@
 namespace App\Entities;
 
 use App\Models\RateModel;
-use CodeIgniter\Entity;
+use CodeIgniter\Entity\Entity;
 use Config\Services;
 use DateTime;
 use Exception;
@@ -465,9 +465,6 @@ class Rate extends Entity
 	{
 		$email = Services::email();
 
-		$email->setFrom(getenv('email.from'), 'Zimrate Crawler');
-
-		$email->setTo(getenv('email.to'));
 		$email->setSubject('Failed to parse site');
 		$email->setMessage('Failed to parse ' . $this->url . ' with error message ' . $message);
 
