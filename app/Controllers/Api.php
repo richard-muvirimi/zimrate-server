@@ -266,11 +266,11 @@ class Api extends BaseController
 			return $key . ' : ' . $value;
 		}, $params, array_keys($params));
 
-		$params = empty($params) ? '' : '(' . implode(', ', $params ) . ')';
+		$params = empty($params) ? '' : ' (' . implode(', ', $params ) . ')';
 
-		$query = '{query : rate' . $params . ' { currency, last_checked, last_updated, name, rate, url }}';
+		$query = '{ query : rate' . $params . ' { currency last_checked last_updated name rate url }}';
 
-		return array_map('array_filter', dot_array_search( 'data.query', $this->resolveData($query)));
+		return array_map('array_filter', dot_array_search( 'data.query', $this->resolveData($query)) ?? []);
 	}
 
 	/**
