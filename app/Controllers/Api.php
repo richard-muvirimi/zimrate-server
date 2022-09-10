@@ -167,11 +167,11 @@ class Api extends BaseController
 			'name'   => 'Query',
 			'fields' => [
 				'rate' => [
-					'type'    => Type::listOf($rateType),
+					'type'    => Type::listOf(Type::nonNull($rateType)),
 					'args'    => [
 						'search'   => [
 							'type'         => new SearchType(),
-							'defaultValue' => '',
+							'defaultValue' => null,
 						],
 						'date'     => [
 							'type'         => Type::int(),
@@ -179,11 +179,11 @@ class Api extends BaseController
 						],
 						'currency' => [
 							'type'         => $currencyType,
-							'defaultValue' => '',
+							'defaultValue' => null,
 						],
 						'prefer'   => [
 							'type'         => $preferType,
-							'defaultValue' => '',
+							'defaultValue' => null,
 						],
 						'callback' => [
 							'type'         => Type::string(),
@@ -205,7 +205,7 @@ class Api extends BaseController
 							$this->response->setHeader('X-CallBack', $args['callback']);
 						}
 
-						return $model->getByFilter($args['search'], $args['currency'], $args['date'], $args['prefer'], true);
+						return $model->getByFilter($args['search'] ?? '', $args['currency'] ?? '', $args['date'], $args['prefer'] ?? '', true);
 					},
 				],
 				'info' => [
