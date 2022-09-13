@@ -70,6 +70,8 @@ class RateModel extends Model
 			'last_updated',
 		];
 
+		$prefer = strtolower($prefer);
+
 		if (in_array($prefer, ['min', 'max', 'mean']))
 		{
 			$this->groupBy('currency');

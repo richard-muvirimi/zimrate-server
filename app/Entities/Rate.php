@@ -156,24 +156,40 @@ class Rate extends Entity
 		 *
 		 * There could be better ways but the premise here is
 		 *
-		 * if value is not within a ten percentaile range then it is invalid
+		 * if value is not within a 30 percentile range then it is invalid
 		 * Handles cases where it may be in cents
 		 */
-		$model = new RateModel();
-		$max   = array_column($model->getByFilter('', $this->currency, 0, 'MAX', true), 'rate');
-		$min   = array_column($model->getByFilter('', $this->currency, 0, 'MIN', true), 'rate');
+		static $max = 0, $min = 0, $model = new RateModel();
 
-		if ($min && $max)
+		try
 		{
-			$amount = floatval($amount);
-
-			if ($amount > ($max[0] * 1.3) || $amount < ($min[0] * 0.7))
+			if ($max === 0)
 			{
-				$amount /= 100;
+				$model->db->reconnect();
+				$max = array_column($model->getByFilter('', $this->currency, 0, 'MAX', true), 'rate');
+			}
+
+			if ($min === 0)
+			{
+				$model->db->reconnect();
+				$min = array_column($model->getByFilter('', $this->currency, 0, 'MIN', true), 'rate');
+			}
+		}
+		catch (Exception $e)
+		{
+		}finally{
+			if ($min !== 0 && $max !== 0)
+			{
+				$amount = floatval($amount);
 
 				if ($amount > ($max[0] * 1.3) || $amount < ($min[0] * 0.7))
 				{
-					$amount = 0;
+					$amount /= 100;
+
+					if ($amount > ($max[0] * 1.3) || $amount < ($min[0] * 0.7))
+					{
+						$amount = 0;
+					}
 				}
 			}
 		}
@@ -226,7 +242,7 @@ class Rate extends Entity
 		$date = date_parse($rawDate);
 
 		/**
-		 * Return parsed date substituting with defaults on none existant parts
+		 * Return parsed date substituting with defaults on none existent parts
 		 */
 		return mktime($date['hour'] ?: 0, $date['minute'] ?: 0, $date['second'] ?: 0, $date['month'] ?: date('n'), $date['day'] ?: date('j'), $date['year'] ?: date('Y'));
 	}
@@ -377,7 +393,7 @@ class Rate extends Entity
 		//$_SERVER["PANTHER_CHROME_BINARY"] = ROOTPATH . "drivers/chrome-linux/chrome";
 
 		/**
-		 * List of commandline options for chromium
+		 * List of command line options for chromium
 		 *
 		 * @see https://peter.sh/experiments/chromium-command-line-switches/
 		 */
