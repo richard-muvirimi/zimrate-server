@@ -11,6 +11,7 @@ use PhpCss;
 use voku\helper\HtmlDomParser;
 use Symfony\Component\Panther\Client;
 use PhpCss\Ast\Visitor\Xpath;
+use function \current as array_first;
 
 /**
  * Rate Entity
@@ -159,37 +160,23 @@ class Rate extends Entity
 		 * if value is not within a 30 percentile range then it is invalid
 		 * Handles cases where it may be in cents
 		 */
-		static $max = 0, $min = 0, $model = new RateModel();
+		 $model = new RateModel();
 
-		try
+		$model->db->reconnect();
+		$max = array_column($model->getByFilter('', $this->currency, 0, 'MAX', true), 'rate');
+		$min = array_column($model->getByFilter('', $this->currency, 0, 'MIN', true), 'rate');
+
+		if ($min && $max)
 		{
-			if ($max === 0)
-			{
-				$model->db->reconnect();
-				$max = array_column($model->getByFilter('', $this->currency, 0, 'MAX', true), 'rate');
-			}
+			$amount = floatval($amount);
 
-			if ($min === 0)
+			if ($amount > (array_first($max) * 1.3) || $amount < (array_first($min) * 0.7))
 			{
-				$model->db->reconnect();
-				$min = array_column($model->getByFilter('', $this->currency, 0, 'MIN', true), 'rate');
-			}
-		}
-		catch (Exception $e)
-		{
-		}finally{
-			if ($min !== 0 && $max !== 0)
-			{
-				$amount = floatval($amount);
+				$amount /= 100;
 
-				if ($amount > ($max[0] * 1.3) || $amount < ($min[0] * 0.7))
+				if ($amount > (array_first($max) * 1.3) || $amount < (array_first($min) * 0.7))
 				{
-					$amount /= 100;
-
-					if ($amount > ($max[0] * 1.3) || $amount < ($min[0] * 0.7))
-					{
-						$amount = 0;
-					}
+					$amount = 0;
 				}
 			}
 		}
