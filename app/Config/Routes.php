@@ -35,13 +35,13 @@ $routes->set404Override();
 
 // We get a performance increase by specifying the default
 // route since we don't have to scan directories.
+$routes->get('crawl', 'Crawl::index');
+
 $routes->get('/', 'Home::index');
 $routes->get('faq', 'Home::faq');
 $routes->get('developers', 'Home::developers');
 $routes->get('privacy', 'Home::privacy');
 $routes->get('tester', 'Home::tester');
-
-$routes->add('crawl', 'Crawl::index');
 
 /**
  * Api Routes
