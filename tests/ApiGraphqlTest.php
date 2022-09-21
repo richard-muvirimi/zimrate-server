@@ -3,6 +3,7 @@
 use App\Models\RateModel;
 use Config\Services;
 use PHPUnit\Framework\TestCase;
+use function current as array_first;
 
 /**
  * Graphql Api Test Class
@@ -43,8 +44,8 @@ class ApiGraphqlTest extends TestCase{
 
 		$response = $response['data'];
 
-		//
 		$model = new RateModel();
+
 		$data  = json_encode($model->getByFilter('', '', 0, 'median', true));
 
 		$this->assertArrayHasKey('USD', $response, 'The response from api graphql does not contain the USD key');
@@ -63,7 +64,8 @@ class ApiGraphqlTest extends TestCase{
 	 */
 	public function testCurrency():void
 	{
-		$model      = new RateModel();
+		$model = new RateModel();
+
 		$currencies = $model->getDisplayCurrencies();
 
 		$this->assertNotEmpty($currencies, 'There are no valid currencies in the system');
@@ -73,7 +75,7 @@ class ApiGraphqlTest extends TestCase{
 		$response = $client->post($_SERVER['app.baseURL'] . 'api/graphql', [
 			'user_agent' => 'Zimrate/1.0',
 			'verify'     => false,
-			'json'       => ['query' => '{USD : rate(currency : ' . strtoupper($currencies[0]->currency) . ' ) {currency last_checked last_updated name rate url}}'],
+			'json'       => ['query' => '{USD : rate(currency : ' . strtoupper(array_first($currencies)->currency) . ' ) {currency last_checked last_updated name rate url}}'],
 		]);
 
 		$this->assertEquals (200, $response->getStatusCode(), 'The response code from api graphql was not 200');
@@ -87,7 +89,7 @@ class ApiGraphqlTest extends TestCase{
 
 		$response = $response['data'];
 
-		$data = json_encode($model->getByFilter('', $currencies[0]->currency, 0, '', true));
+		$data = json_encode($model->getByFilter('', array_first($currencies)->currency, 0, '', true));
 
 		$this->assertArrayHasKey('USD', $response, 'The response from api graphql does not contain the USD key');
 
@@ -107,10 +109,12 @@ class ApiGraphqlTest extends TestCase{
 	{
 		$client = Services::curlrequest();
 
+    $date = time() - DAY;
+
 		$response = $client->post($_SERVER['app.baseURL'] . 'api/graphql', [
 			'user_agent' => 'Zimrate / 1.0',
 			'verify'     => false,
-			'json'       => ['query' => '{USD : rate(date : ' . (time() - DAY ) . ' ) {currency last_checked last_updated name rate url }}'],
+			'json'       => ['query' => '{USD : rate(date : ' . $date . ' ) {currency last_checked last_updated name rate url }}'],
 		]);
 
 		$this->assertEquals (200, $response->getStatusCode(), 'The response code from api graphql was not 200');
@@ -125,7 +129,8 @@ class ApiGraphqlTest extends TestCase{
 		$response = $response['data'];
 
 		$model = new RateModel();
-		$data  = json_encode($model->getByFilter('', '', time() - DAY, '', true));
+
+		$data  = json_encode($model->getByFilter('', '', $date, '', true));
 
 		$this->assertArrayHasKey('USD', $response, 'The response from api graphql does not contain the USD key');
 

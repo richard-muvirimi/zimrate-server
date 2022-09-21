@@ -254,10 +254,10 @@ class Api extends BaseController
 		$this->logVisit($page);
 
 		$params = array_filter( [
-			'search'   => $this->normaliseName(),
-			'currency' => $this->normaliseCurrency(),
-			'date'     => $this->normaliseDate(),
-			'prefer'   => $this->normalisePrefer(),
+			'search'   => $this->normalizeName(),
+			'currency' => $this->normalizeCurrency(),
+			'date'     => $this->normalizeDate(),
+			'prefer'   => $this->normalizePrefer(),
 			'cors'     => $this->request->getPostGet('cors'),
 			'callback' => '"' . $this->request->getPostGet('callback') . '"',
 		]);
@@ -322,26 +322,26 @@ class Api extends BaseController
 	}
 
 	/**
-	 * Normalise search term
+	 * Normalize search term
 	 *
 	 * @since   1.0.0
 	 * @version 1.0.0
 	 * @return  string
 	 */
-	private function normaliseName():string
+	private function normalizeName():string
 	{
 		//search for rate
 		return $this->request->getPostGet('search') ?: $this->request->getPostGet('source') ?: $this->request->getPostGet('name') ?: '';
 	}
 
 	/**
-	 * Normalise currency
+	 * Normalize currency
 	 *
 	 * @since   1.0.0
 	 * @version 1.0.0
 	 * @return  string
 	 */
-	private function normaliseCurrency():string
+	private function normalizeCurrency():string
 	{
 		$model = new RateModel();
 
@@ -353,13 +353,13 @@ class Api extends BaseController
 	}
 
 	/**
-	 * Normalise given date
+	 * Normalize given date
 	 *
 	 * @since   1.0.0
 	 * @version 1.0.0
 	 * @return  integer
 	 */
-	private function normaliseDate():int
+	private function normalizeDate():int
 	{
 		$date = $this->request->getPostGet('date') ?: 0;
 		if ($date && ! is_numeric( $date))
@@ -371,13 +371,13 @@ class Api extends BaseController
 	}
 
 	/**
-	 * Normalise preferred return value
+	 * Normalize preferred return value
 	 *
 	 * @since   1.0.0
 	 * @version 1.0.0
 	 * @return  string
 	 */
-	private function normalisePrefer():string
+	private function normalizePrefer():string
 	{
 		$model = new RateModel();
 

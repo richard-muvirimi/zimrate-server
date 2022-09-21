@@ -107,5 +107,6 @@ class Crawl extends BaseCommand
 
 		CLI::showProgress(false);
 		CLI::print(sprintf('Scanned %d sites', $total));
+		CLI::newLine();
 	}
 }

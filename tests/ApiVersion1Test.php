@@ -3,6 +3,7 @@
 use App\Models\RateModel;
 use Config\Services;
 use PHPUnit\Framework\TestCase;
+use function current as array_first;
 
 /**
  * Version 1 Api Test Class
@@ -40,6 +41,7 @@ class ApiVersion1Test extends TestCase{
 		$this->assertIsArray($response, 'The response from api version 1 is not an array');
 
 		$model = new RateModel();
+
 		$data  = json_encode($model->getByFilter('', '', 0, 'median', true));
 
 		$this->assertArrayHasKey('USD', $response, 'The response from api version 1 does not contain the USD key');
@@ -58,7 +60,8 @@ class ApiVersion1Test extends TestCase{
 	 */
 	public function testCurrency():void
 	{
-		$model      = new RateModel();
+		$model = new RateModel();
+
 		$currencies = $model->getDisplayCurrencies();
 
 		$this->assertNotEmpty($currencies, 'There are no valid currencies in the system');
@@ -68,7 +71,7 @@ class ApiVersion1Test extends TestCase{
 		$response = $client->get($_SERVER['app.baseURL'] . 'api/v1', [
 			'user_agent' => 'Zimrate/1.0',
 			'verify'     => false,
-			'query'      => ['currency' => $currencies[0]->currency],
+			'query'      => ['currency' => array_first($currencies)->currency],
 		]);
 
 		$this->assertEquals (200, $response->getStatusCode(), 'The response code from api version 1 was not 200');
@@ -98,10 +101,12 @@ class ApiVersion1Test extends TestCase{
 	{
 		$client = Services::curlrequest();
 
+    $date = time() - DAY;
+
 		$response = $client->get($_SERVER['app.baseURL'] . 'api/v1', [
 			'user_agent' => 'Zimrate/1.0',
 			'verify'     => false,
-			'query'      => ['date' => time() - DAY],
+			'query'      => compact("date"),
 		]);
 
 		$this->assertEquals (200, $response->getStatusCode(), 'The response code from api version 1 was not 200');
@@ -112,7 +117,8 @@ class ApiVersion1Test extends TestCase{
 		$this->assertIsArray($response, 'The response from api version 1 is not an array');
 
 		$model = new RateModel();
-		$data  = json_encode($model->getByFilter('', '', time() - DAY, '', true));
+
+		$data  = json_encode($model->getByFilter('', '', $date, '', true));
 
 		$this->assertArrayHasKey('USD', $response, 'The response from api version 1 does not contain the USD key');
 

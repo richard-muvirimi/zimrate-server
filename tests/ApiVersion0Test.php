@@ -3,6 +3,7 @@
 use App\Models\RateModel;
 use Config\Services;
 use PHPUnit\Framework\TestCase;
+use function current as array_first;
 
 /**
  * Version 0 Api Test Class
@@ -39,6 +40,7 @@ class ApiVersion0Test extends TestCase{
 		$this->assertIsArray($response, 'The response from api version 0 is not an array');
 
 		$model = new RateModel();
+
 		$data  = json_encode($model->getByFilter('', '', 0, '', true));
 
 		$this->assertJsonStringEqualsJsonString($data, json_encode($response), 'The response from api version 0 does not match the expected response');
@@ -71,6 +73,7 @@ class ApiVersion0Test extends TestCase{
 		$this->assertIsArray($response, 'The response from api version 0 is not an array');
 
 		$model = new RateModel();
+
 		$data  = json_encode($model->getByFilter('', '', 0, 'median', true));
 
 		$this->assertJsonStringEqualsJsonString($data, json_encode($response), 'The response from api version 0 does not match the expected response');
@@ -87,7 +90,8 @@ class ApiVersion0Test extends TestCase{
 	 */
 	public function testCurrency():void
 	{
-		$model      = new RateModel();
+		$model = new RateModel();
+
 		$currencies = $model->getCurrencies();
 
 		$this->assertNotEmpty($currencies, 'There are no valid currencies in the system');
@@ -97,7 +101,7 @@ class ApiVersion0Test extends TestCase{
 		$response = $client->get($_SERVER['app.baseURL'] . 'api', [
 			'user_agent' => 'Zimrate/1.0',
 			'verify'     => false,
-			'query'      => ['currency' => $currencies[0]->currency],
+			'query'      => ['currency' => array_first($currencies)->currency],
 		]);
 
 		$this->assertEquals (200, $response->getStatusCode(), 'The response code from api version 0 was not 200');
@@ -125,10 +129,12 @@ class ApiVersion0Test extends TestCase{
 	{
 		$client = Services::curlrequest();
 
+    $date = time() - DAY;
+
 		$response = $client->get($_SERVER['app.baseURL'] . 'api', [
 			'user_agent' => 'Zimrate/1.0',
 			'verify'     => false,
-			'query'      => ['date' => time() - DAY],
+			'query'      => compact("date"),
 		]);
 
 		$this->assertEquals (200, $response->getStatusCode(), 'The response code from api version 0 was not 200');
@@ -139,7 +145,8 @@ class ApiVersion0Test extends TestCase{
 		$this->assertIsArray($response, 'The response from api version 0 is not an array');
 
 		$model = new RateModel();
-		$data  = json_encode($model->getByFilter('', '', time() - DAY, '', true));
+
+		$data  = json_encode($model->getByFilter('', '', $date, '', true));
 
 		$this->assertJsonStringEqualsJsonString($data, json_encode($response), 'The response from api version 0 does not match the expected response');
 	}

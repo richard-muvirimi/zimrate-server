@@ -1,76 +1,76 @@
 {
-	"name": "rich4rdmuvirmi/zimrate",
-	"type": "project",
-	"description": "Zimrate Server",
-	"homepage": "http://zimrate.tyganeutronics.com",
-	"license": "MIT",
-	"authors": [
-		{
-			"name": "Richard Muvirimi",
-			"email": "rich4rdmuvirmi@gmail.com",
-			"homepage": "https://richard.co.zw",
-			"role": "Developer"
-		}
-	],
-	"config": {
-		"platform": {
-			"php": "7.4"
-		},
-		"allow-plugins": {
-			"dealerdirect/phpcodesniffer-composer-installer": true
-		},
-		"process-timeout": 0
-	},
-	"require": {
-		"php": ">=7.4",
-		"codeigniter4/framework": "^4.0",
-		"voku/simple_html_dom": "^4.7",
-		"symfony/polyfill-php80": "*",
-		"symfony/polyfill-php81": "*",
-		"carica/phpcss": "^2.0",
-		"symfony/panther": "^1.1",
-		"webonyx/graphql-php": "^14.11"
-	},
-	"require-dev": {
-		"codeigniter4/codeigniter4-standard": "^1.0",
-		"fakerphp/faker": "^1.9",
-		"mikey179/vfsstream": "^1.6",
-		"phpunit/phpunit": "^9.1",
-		"squizlabs/php_codesniffer": "^3.3",
-		"phpcompatibility/php-compatibility": "^9.3",
-		"dealerdirect/phpcodesniffer-composer-installer": "^0.7.2"
-	},
-	"suggest": {
-		"ext-fileinfo": "Improves mime type detection for files"
-	},
-	"autoload": {
-		"exclude-from-classmap": [
-			"**/Database/Migrations/**"
-		]
-	},
-	"autoload-dev": {
-		"psr-4": {
-			"Tests\\Support\\": "tests/_support"
-		}
-	},
-	"scripts": {
-		"qc": [
-			"@phpcs",
-			"@test"
-		],
-		"php-cs-setup": [
-			"Dealerdirect\\Composer\\Plugin\\Installers\\PHPCodeSniffer\\Plugin::run",
-			"@phpcs -i"
-		],
-		"phpcs": [
-			"vendor/bin/phpcs ."
-		],
-		"crawl": "@php ./index.php crawl",
-		"test": "phpunit"
-	},
-	"support": {
-		"forum": "http://forum.codeigniter.com/",
-		"source": "https://github.com/codeigniter4/CodeIgniter4",
-		"slack": "https://codeigniterchat.slack.com"
-	}
+  "name": "rich4rdmuvirmi/zimrate",
+  "type": "project",
+  "description": "Zimrate Server",
+  "homepage": "http://zimrate.tyganeutronics.com",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Richard Muvirimi",
+      "email": "rich4rdmuvirmi@gmail.com",
+      "homepage": "https://richard.co.zw",
+      "role": "Developer"
+    }
+  ],
+  "config": {
+    "platform": {
+      "php": "7.4"
+    },
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    },
+    "process-timeout": 0
+  },
+  "require": {
+    "php": ">=7.4",
+    "codeigniter4/framework": "^4.0",
+    "voku/simple_html_dom": "^4.7",
+    "symfony/polyfill-php80": "*",
+    "symfony/polyfill-php81": "*",
+    "carica/phpcss": "^2.0",
+    "symfony/panther": "^1.1",
+    "webonyx/graphql-php": "^14.11"
+  },
+  "require-dev": {
+    "codeigniter4/codeigniter4-standard": "^1.0",
+    "fakerphp/faker": "^1.9",
+    "mikey179/vfsstream": "^1.6",
+    "phpunit/phpunit": "^9.1",
+    "squizlabs/php_codesniffer": "^3.3",
+    "phpcompatibility/php-compatibility": "^9.3",
+    "dealerdirect/phpcodesniffer-composer-installer": "^0.7.2"
+  },
+  "suggest": {
+    "ext-fileinfo": "Improves mime type detection for files"
+  },
+  "autoload": {
+    "exclude-from-classmap": [
+      "**/Database/Migrations/**"
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\Support\\": "tests/_support"
+    }
+  },
+  "scripts": {
+    "qc": [
+      "@phpcs",
+      "@test"
+    ],
+    "php-cs-setup": [
+      "Dealerdirect\\Composer\\Plugin\\Installers\\PHPCodeSniffer\\Plugin::run",
+      "@phpcs -i"
+    ],
+    "phpcs": [
+      "vendor/bin/phpcs ."
+    ],
+    "crawl": "@php spark crawl",
+    "test": "phpunit"
+  },
+  "support": {
+    "forum": "http://forum.codeigniter.com/",
+    "source": "https://github.com/codeigniter4/CodeIgniter4",
+    "slack": "https://codeigniterchat.slack.com"
+  }
 }

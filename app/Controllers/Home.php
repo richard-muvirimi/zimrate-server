@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Entities\Rate;
 use \App\Models\RateModel;
 use CodeIgniter\API\ResponseTrait;
+use CodeIgniter\HTTP\IncomingRequest;
 
 /**
  * Front Page Controller
@@ -100,15 +101,22 @@ class Home extends BaseController
 	 */
 	public function tester():string
 	{
+		/**
+		 * Incoming Request.
+		 *
+		 * @var IncomingRequest $request
+		 */
+		$request = $this->request;
+
 		$site          = new Rate();
-		$site->url     = $this->request->getPostGet('site');
+		$site->url     = $request->getPostGet('site');
 		$site->enabled = true;
 
 		 //also prevents mail
 		$site->status     = false;
 		$site->site       = false;
 		$site->javascript = filter_var(getenv('app.panther'), FILTER_VALIDATE_BOOL);
-		$site->selector   = $this->request->getPostGet('css') ?? '*';
+		$site->selector   = $request->getPostGet('css') ?? '*';
 
 		$site->getHtmlContent();
 
