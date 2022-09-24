@@ -104,7 +104,6 @@ _modules/*
 nbproject/
 build/
 nbbuild/
-dist/
 nbdist/
 nbactions.xml
 nb-configuration.xml
@@ -136,13 +135,13 @@ output.log
 # See http://help.github.com/ignore-files/ for more about ignoring files.
 
 # Compiled output
-/dist
+dist
 /tmp
 /out-tsc
 /bazel-out
 
 # Node
-/node_modules
+node_modules
 npm-debug.log
 yarn-error.log
 
@@ -164,7 +163,7 @@ yarn-error.log
 .history/*
 
 # Miscellaneous
-/.angular/cache
+.angular
 .sass-cache/
 /connect.lock
 /coverage
@@ -175,4 +174,9 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
-.angular
+
+.composer_compiled_assets
+
+ng/assets/js/anime.min.js
+ng/assets/js/scrollreveal.min.js
+ng/assets/js/safe-email.min.js

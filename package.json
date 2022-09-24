@@ -9,7 +9,8 @@
 	"scripts": {
 		"ng": "ng",
 		"start": "ng serve",
-		"build": "ng build --deploy-url='./app/Views/dist/'",
+		"cp-deps": "cp node_modules/safe-email/dist/safe-email.min.js node_modules/scrollreveal/dist/scrollreveal.min.js node_modules/animejs/lib/anime.min.js ng/assets/js/",
+		"build": "npm run cp-deps && ng build --deploy-url='./app/Views/dist/'",
 		"watch": "ng build --watch --configuration development --deploy-url='./app/Views/dist/'",
 		"test": "ng test"
 	},
