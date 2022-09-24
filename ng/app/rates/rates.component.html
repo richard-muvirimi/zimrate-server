@@ -1,0 +1,132 @@
+<section class="pricing section" id="rates">
+	<div class="container-sm">
+		<div class="pricing-inner section-inner">
+			<div class="pricing-header text-center">
+				<p class="section-paragraph mb-0">
+					Last Checked
+				</p>
+				<h2 id="last_checked_date" class="section-title mt-0" [attr.data-checked]="lastChecked$"
+					*ngIf="lastChecked$">
+					{{ lastChecked$ }}
+				</h2>
+			</div>
+
+			<div class="section-paragraph mb-0" *ngIf="notice$">
+				{{ notice$ }}
+			</div>
+
+			<div class="pricing-tables-wrap">
+
+				<div class="pricing-table" *ngFor="let currency of currencies$">
+					<div class="pricing-table-inner is-revealing" style="height: initial;">
+						<div class="pricing-table-main">
+
+							<div class="pricing-table-features-title text-xs pt-24 pb-24">
+								{{ currency }}
+							</div>
+
+							<div class="pricing-table-header pb-24">
+								<div class="pricing-table-price">
+									<span class="pricing-table-price-amount h1">
+										{{ data$["max"][currency][0].rate }}
+									</span>
+									<span class="pricing-table-price-currency h2">
+										%
+									</span>
+									<span class="text-xs">
+										Highest
+									</span>
+								</div>
+							</div>
+
+							<div class="pricing-table-header pb-24">
+								<div class="pricing-table-price">
+									<span class="pricing-table-price-amount h1">
+										{{ data$["mean"][currency][0].rate }}
+									</span>
+									<span class="pricing-table-price-currency h2">
+										%
+									</span>
+									<span class="text-xs">
+										Average
+									</span>
+								</div>
+							</div>
+
+							<div class="pricing-table-header pb-24">
+								<div class="pricing-table-price">
+									<span class="pricing-table-price-amount h1">
+										{{ data$["min"][currency][0].rate }}
+									</span>
+									<span class="pricing-table-price-currency h2">
+										%
+									</span>
+									<span class="text-xs">
+										Lowest
+									</span>
+								</div>
+							</div>
+
+							<div class="pricing-table-header pb-24">
+								<div class="pricing-table-price">
+									<span class="pricing-table-price-amount h1">
+										{{ data$["median"][currency][0].rate }}
+									</span>
+									<span class="pricing-table-price-currency h2">
+										%
+									</span>
+									<span class="text-xs">
+										Median
+									</span>
+								</div>
+							</div>
+
+							<div class="pricing-table-header pb-24">
+								<div class="pricing-table-price">
+									<span class="pricing-table-price-amount h1">
+										{{ data$["mode"][currency][0].rate }}
+									</span>
+									<span class="pricing-table-price-currency h2">
+										%
+									</span>
+									<span class="text-xs">
+										Mode
+									</span>
+								</div>
+							</div>
+
+							<div class="pricing-table-header pb-24">
+								<div class="pricing-table-price">
+									<span class="pricing-table-price-amount h1">
+										{{ data$["random"][currency][0].rate }}
+									</span>
+									<span class="pricing-table-price-currency h2">
+										%
+									</span>
+									<span class="text-xs">
+										Random
+									</span>
+								</div>
+							</div>
+
+
+							<ul class="pricing-table-features list-reset text-xs">
+
+								<li *ngFor="let url of urls$[currency]">
+									<span>
+										<a [href]="url.url">{{url.domain}}</a>
+									</span>
+								</li>
+
+							</ul>
+
+						</div>
+					</div>
+				</div>
+
+			</div>
+
+			<app-official></app-official>
+		</div>
+	</div>
+</section>

@@ -1,0 +1,49 @@
+import { Component, OnInit } from '@angular/core';
+import { uniqBy } from 'lodash';
+import { sprintf } from 'sprintf-js';
+import { RatesService } from '../rates.service';
+
+type Currency = {
+	currency: string
+}
+
+@Component({
+	selector: 'app-developers',
+	templateUrl: './developers.component.html',
+	styleUrls: ['./developers.component.scss']
+})
+export class DevelopersComponent implements OnInit {
+
+	currencies$: string;
+	prefer$: string;
+
+	exampleCallback$: string;
+	exampleGraphql$: string;
+
+	baseUrl$: string;
+
+	constructor(private data: RatesService) {
+		this.currencies$ = "";
+		this.prefer$ = ["MAX", "MIN", "MEAN", "MEDIAN", "RANDOM", "MODE"].join(", ");
+
+		this.exampleCallback$ = "";
+		this.exampleGraphql$ = "";
+
+		this.baseUrl$ = window.location.href.replace("/developers", "");
+	}
+
+	ngOnInit(): void {
+		this.data.getCurrencies().subscribe(data => {
+			this.currencies$ = uniqBy(data["rates"].map((item: Currency) => item.currency), currency => currency).join(", ");
+		});
+
+		this.data.getCallBackExample().subscribe((data: string) => {
+			this.exampleCallback$ = sprintf(data, this.baseUrl$)
+		});
+
+		this.data.getGraphqlExample().subscribe((data: string) => {
+			this.exampleGraphql$ = data
+		});
+	}
+
+}

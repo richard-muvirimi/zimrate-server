@@ -210,7 +210,7 @@ class Api extends BaseController
 				],
 				'info' => [
 					'type'    => Type::string(),
-					'resolve' => fn ():string=> strip_tags(file_get_contents(FCPATH . 'public' . DIRECTORY_SEPARATOR . 'misc' . DIRECTORY_SEPARATOR . 'notice.txt')),
+					'resolve' => fn ():string=> view('notice.txt'),
 				],
 			],
 		]);

@@ -1,0 +1,9 @@
+{
+    USD : rate ( prefer : RANDOM, cors: true ) {
+        currency
+        last_checked
+        last_updated
+        rate
+    },
+    notice: info
+}

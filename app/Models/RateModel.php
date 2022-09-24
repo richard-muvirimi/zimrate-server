@@ -286,22 +286,6 @@ class RateModel extends Model
 	}
 
 	/**
-	 * Get last modified date
-	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
-	 * @return  string
-	 */
-	public function getLastChecked():string
-	{
-		$this->select('last_checked');
-		$this->limit(1);
-		$this->orderBy('last_checked', 'DESC');
-
-		return $this->first()->{'last_checked'};
-	}
-
-	/**
 	 * Get list of all available currencies
 	 *
 	 * @since   1.0.0
@@ -330,36 +314,6 @@ class RateModel extends Model
 
 		$this->groupBy('currency');
 		$this->orderBy('COUNT(DISTINCT url)', 'DESC');
-
-		return $this->findAll();
-	}
-
-	/**
-	 * Get the sources of currency
-	 *
-	 * @param string $currency Currency.
-	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
-	 * @return  array
-	 */
-	public function getCurrencySources(string $currency):array
-	{
-		$this->distinct();
-		$this->select('url');
-
-		$this->where('currency', $currency);
-		$this->where('enabled', 1);
-
-		$this->groupStart();
-		$this->where('status', 1);
-
-		$this->orWhere([
-			'status'         => 0,
-			'last_updated >' => time() - WEEK,
-		]);
-
-		$this->groupEnd();
 
 		return $this->findAll();
 	}

@@ -1,0 +1,144 @@
+<section class="hero">
+	<div class="container">
+		<div class="hero-inner">
+			<div class="hero-copy">
+				<h1 class="hero-title mt-0">
+					For Software Developers
+				</h1>
+			</div>
+
+			<app-hero></app-hero>
+
+		</div>
+	</div>
+</section>
+
+<section class="features section">
+	<div class="container">
+		<div class="features-inner has-bottom-divider">
+
+			<p class="text-sm mb-0">
+				The api can be accessed through
+			</p>
+			<ul>
+				<li>
+					REST:&nbsp;<a href="./api/v1">{{ baseUrl$ }}/api/v1</a>
+				</li>
+				<li>
+					Graphql:&nbsp;<a href="./api/graphql">{{ baseUrl$ }}/api/graphql</a>
+				</li>
+			</ul>
+
+			<h4>
+				Accessing Rates
+			</h4>
+			<p class="text-sm mb-0">
+				There are a total of four possible query parameter combinations (GET | POST) that can be passed to get
+				data from both the RESTful and Graphql Api namely:
+			</p>
+
+			<dl>
+				<dt>
+					<code>search</code>
+				</dt>
+				<dd>-
+					Allows you to get currency rates using only part of a name of said currency
+				</dd>
+
+				<dt>
+					<code>currency</code>
+				</dt>
+				<dd>-
+					Can only be either of <code>{{ currencies$ }}</code>, this is only for when you require a specific
+					currency.
+				</dd>
+
+				<dt>
+					<code>date</code>
+				</dt>
+				<dd>-
+					When provided only matching rate after this date will be returned. Accepts common date formats,
+					though a unix time stamp is preferred.
+				</dd>
+
+				<dt>
+					<code>prefer</code>
+				</dt>
+				<dd>-
+					Can only be either of <code>{{prefer$}}</code> or empty to return the whole list.
+				</dd>
+			</dl>
+
+			<p class="text-sm mb-0">
+				All these parameters are optional and are there only as a convenience to get the specific data that you
+				need.
+			</p>
+
+			<h4>
+				Javascript CORS (Cross Origin Resource Sharing)
+			</h4>
+			<p class="text-sm mb-0">
+				By default the api does not allow CORS but in cases where you require it there are two options:
+			</p>
+
+			<ul>
+				<li>
+					Adding <code>cors=true</code> to your request
+				</li>
+				<li>
+					<p class="text-sm mb-0">
+						Or using the <code>script</code> tag with the url having the parameter <code>callback</code>
+						where the value will be the name of the function you want called after the tag is loaded. For
+						example <code>callback=myFunction</code> will return wrapped in a function call as
+						<code>myFunction({{'{'}}...{{'}'}});</code>
+					</p>
+
+					<pre><code>{{ exampleCallback$ }}</code></pre>
+
+				</li>
+			</ul>
+
+			<p class="text-sm mb-0">
+				Both achieve the same result with the later being applicable whilst the document is still loading.
+			</p>
+
+			<h4>
+				Graphql
+			</h4>
+			<p class="text-sm mb-0">
+				Unlike REST, graphql allows you to structure the responses however you like, even reducing the number of
+				requests made to the server in one go.
+			</p>
+
+			<pre><code>{{ exampleGraphql$ }}</code></pre>
+			<p class="text-sm mb-0">
+				Using a Graphql schema browser is highly recommended to fully explore the api. You may use the example
+				as a starting point as the possibilities of graphql are beyond the scope of this documentation.
+			</p>
+
+			<h4>...</h4>
+
+			<ul>
+				<li>
+					Avoid accessing returned values based on their position as if a site goes down or is removed that
+					site's rates may not be included thus distorting their position. A request with the prefer parameter
+					is much more reliable as it includes values from all available sites and not a specific one.
+				</li>
+				<li>
+					You can disable <code>info</code> from the response by passing <code>info=false</code> in your
+					request.
+				</li>
+			</ul>
+
+			<h4>
+				Disclaimer:
+			</h4>
+			<p class="text-sm mb-0">
+				As a developer, I guess your are familiar with how we (as software developers) hate to write
+				documentation for software. After all we are not bloggers. But I have tried to be as extensive as
+				possible, please contact me if all this does not make sense after reading through a few times.
+			</p>
+
+		</div>
+	</div>
+</section>

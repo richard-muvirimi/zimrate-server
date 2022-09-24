@@ -38,9 +38,9 @@ $routes->set404Override();
 $routes->get('crawl', 'Crawl::index');
 
 $routes->get('/', 'Home::index');
-$routes->get('faq', 'Home::faq');
-$routes->get('developers', 'Home::developers');
-$routes->get('privacy', 'Home::privacy');
+$routes->get('faq', 'Home::index');
+$routes->get('developers', 'Home::index');
+$routes->get('privacy', 'Home::index');
 $routes->get('tester', 'Home::tester');
 
 /**
