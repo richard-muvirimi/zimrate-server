@@ -17,7 +17,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
-	  - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v1
         with:
           node-version: '17.x'
 
@@ -37,7 +37,7 @@ jobs:
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
 
-	  - name: Cache node modules
+      - name: Cache node modules
         id: cache-npm
         uses: actions/cache@v3
         env:
@@ -51,7 +51,7 @@ jobs:
             ${{ runner.os }}-build-
             ${{ runner.os }}-
 
-	  - if: ${{ steps.cache-npm.outputs.cache-hit == false }}
+      - if: ${{ steps.cache-npm.outputs.cache-hit == false }}
         name: List the state of node modules
         continue-on-error: true
         run: npm list
