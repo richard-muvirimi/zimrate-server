@@ -65,6 +65,16 @@ export class RatesComponent implements OnInit {
 
 		this.lastChecked$ = DateTime.fromSeconds(date).toLocaleString(DateTime.DATETIME_MED)
 
+		// Set item visibility as they where loaded after animation
+		setTimeout(() => {
+			let elements = document.getElementsByClassName("pricing-table-inner");
+			for (let index = 0; index < elements.length; index++) {
+				const element = elements[index] as HTMLElement;
+				if (element.style.visibility == "hidden") {
+					element.style.visibility = "visible";
+				}
+			}
+		}, 1000);
 	}
 
 }

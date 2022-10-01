@@ -8,11 +8,14 @@ indent_size = 4
 tab_width = 4
 insert_final_newline = true
 trim_trailing_whitespace = true
-end_of_line = crlf
+end_of_line = lf
 
 [*.{ts,js}]
 quote_type = single
 
 [*.md]
 max_line_length = off
+trim_trailing_whitespace = false
+
+[*.php]
 trim_trailing_whitespace = false
