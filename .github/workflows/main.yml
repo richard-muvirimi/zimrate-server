@@ -3,13 +3,12 @@ name: Update Dependencies
 on:
   # On push or after every 7 days
   push:
-    branches: [ master ]
+    branches: [master]
   schedule:
-  - cron: "0 0 1/7 * *"
+    - cron: "0 0 1/7 * *"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-
 
 jobs:
   build:
@@ -19,11 +18,11 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v1
         with:
-          node-version: '16.x'
+          node-version: "18.x"
 
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '7.4'
+          php-version: "7.4"
           extensions: intl zip
 
       - name: Get composer cache directory
@@ -64,21 +63,21 @@ jobs:
 
       - name: Commit
         run: |
-            git config --local user.email "rich4rdmuvirimi@gmail.com"
-            git config --local user.name "Richard Muvirimi"
-            git add -A
-            git status | grep "nothing to commit" || git commit -m "Update dependencies" -a
+          git config --local user.email "rich4rdmuvirimi@gmail.com"
+          git config --local user.name "Richard Muvirimi"
+          git add -A
+          git status | grep "nothing to commit" || git commit -m "Update dependencies" -a
 
       - name: Push changes
         uses: ad-m/github-push-action@v0.6.0
         with:
-            github_token: ${{ secrets.GITHUB_TOKEN }}
-            branch: master
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: master
 
       - name: Prepare Deploy
         run: rsync -rvzt --include 'vendor' --include 'app/Views/dist' --exclude-from=.gitignore --exclude '.git' --exclude '.github' --exclude 'ng' ./ ./distribution/
-        
-      - name: Deploy 
+
+      - name: Deploy
         uses: SamKirkland/FTP-Deploy-Action@4.3.2
         with:
           local-dir: distribution/

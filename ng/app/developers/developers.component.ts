@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { uniqBy } from 'lodash';
 import { sprintf } from 'sprintf-js';
-import { RatesService } from '../rates.service';
+import { AnimeService } from '../services/anime.service';
+import { RatesService } from '../services/rates.service';
 
 type Currency = {
 	currency: string
@@ -22,7 +23,7 @@ export class DevelopersComponent implements OnInit {
 
 	baseUrl$: string;
 
-	constructor(private data: RatesService) {
+	constructor(private ratesService: RatesService, private animeService: AnimeService) {
 		this.currencies$ = "";
 		this.prefer$ = ["MAX", "MIN", "MEAN", "MEDIAN", "RANDOM", "MODE"].join(", ");
 
@@ -33,17 +34,21 @@ export class DevelopersComponent implements OnInit {
 	}
 
 	ngOnInit(): void {
-		this.data.getCurrencies().subscribe(data => {
+		this.ratesService.getCurrencies().subscribe(data => {
 			this.currencies$ = uniqBy(data["rates"].map((item: Currency) => item.currency), currency => currency).join(", ");
 		});
 
-		this.data.getCallBackExample().subscribe((data: string) => {
+		this.ratesService.getCallBackExample().subscribe((data: string) => {
 			this.exampleCallback$ = sprintf(data, this.baseUrl$)
 		});
 
-		this.data.getGraphqlExample().subscribe((data: string) => {
+		this.ratesService.getGraphqlExample().subscribe((data: string) => {
 			this.exampleGraphql$ = data
 		});
+
+		setTimeout(() => {
+			this.animeService.reviewComponents();
+		}, 0);
 	}
 
 }

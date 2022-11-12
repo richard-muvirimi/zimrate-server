@@ -15,10 +15,6 @@
 
 		<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,600" rel="stylesheet">
 
-		<script src="app/Views/dist/assets/js/anime.min.js"></script>
-		<script src="app/Views/dist/assets/js/scrollreveal.min.js"></script>
-		<script type="text/javascript" src="app/Views/dist/assets/js/safe-email.min.js"></script>
-
 		<meta name="description"
 			content="All Zimbabwean exchange rates from multiple sites in one RESTful / Graphql api. No need to scrounge the internet for the current days rate." />
 		<meta name="keywords" content="Zimbabwe, Rate, Bond, Rtgs, Zwl, Currency, Exchange, MarketWatch, Rbz">

@@ -30,7 +30,11 @@
 						"styles": [
 							"ng/styles.scss"
 						],
-						"scripts": []
+						"scripts": [
+							"node_modules/safe-email/dist/safe-email.min.js",
+							"node_modules/scrollreveal/dist/scrollreveal.min.js",
+							"node_modules/animejs/lib/anime.min.js"
+						]
 					},
 					"configurations": {
 						"production": {
