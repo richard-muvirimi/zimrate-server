@@ -30,7 +30,9 @@
 						"styles": [
 							"ng/styles.scss"
 						],
-						"scripts": []
+						"scripts": [
+							"node_modules/safe-email/dist/safe-email.min.js"
+						]
 					},
 					"configurations": {
 						"production": {

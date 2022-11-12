@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
-import { RatesService } from '../rates.service';
+import { RatesService } from '../services/rates.service';
 import { DateTime } from "luxon";
 import { Dictionary, groupBy, map, mapValues, maxBy, uniqBy } from "lodash";
+import { AnimeService } from '../services/anime.service';
+
 
 type Rate = {
 	domain: string,
@@ -23,58 +25,50 @@ export class RatesComponent implements OnInit {
 	data$: Dictionary<any>;
 	notice$: String;
 
-	constructor(private data: RatesService) {
+	constructor(private rateService: RatesService, private animeService: AnimeService) {
 		this.currencies$ = [];
 		this.urls$ = {};
 		this.data$ = {};
 		this.lastChecked$ = "...";
 		this.notice$ = "";
-
-		this.onData = this.onData.bind(this);
 	}
 
 	ngOnInit() {
-		this.data.getRates().subscribe(this.onData);
-	}
+		this.rateService.getRates().subscribe({
+			next: (data: Dictionary<any>) => {
+				// Notice
+				this.notice$ = data["notice"];
 
-	onData(data: Dictionary<any>) {
+				const { max, min, mean, median, random, mode } = data;
+				this.data$ = mapValues({ max, min, mean, median, random, mode }, items => {
+					items = map(items, item => {
+						item.rate = item.rate.toFixed(2);
+						return item;
+					});
+					return groupBy(items, item => item.currency);
+				});
 
-		// Notice
-		this.notice$ = data["notice"];
+				// Rates
+				this.currencies$ = uniqBy(data["rates"].map((item: Rate) => item.currency), currency => currency);
 
-		const { max, min, mean, median, random, mode } = data;
-		this.data$ = mapValues({ max, min, mean, median, random, mode }, items => {
-			items = map(items, item => {
-				item.rate = item.rate.toFixed(2);
-				return item;
-			});
-			return groupBy(items, item => item.currency);
-		});
+				// Urls
+				this.urls$ = mapValues(groupBy(data["rates"], (rate: Rate) => rate.currency), (items: Rate[]) => uniqBy(items.map(item => {
+					item.domain = (new URL(item.url)).hostname;
+					return item;
+				}), (item: Rate) => item.url));
 
-		// Rates
-		this.currencies$ = uniqBy(data["rates"].map((item: Rate) => item.currency), currency => currency);
+				// Last Checked
+				const date = maxBy(data["rates"], (rate: Rate) => rate.last_checked)?.last_checked || DateTime.now().toSeconds();
 
-		// Urls
-		this.urls$ = mapValues(groupBy(data["rates"], (rate: Rate) => rate.currency), (items: Rate[]) => uniqBy(items.map(item => {
-			item.domain = (new URL(item.url)).hostname;
-			return item;
-		}), (item: Rate) => item.url));
+				this.lastChecked$ = DateTime.fromSeconds(date).toLocaleString(DateTime.DATETIME_MED);
 
-		// Last Checked
-		const date = maxBy(data["rates"], (rate: Rate) => rate.last_checked)?.last_checked || DateTime.now().toSeconds();
-
-		this.lastChecked$ = DateTime.fromSeconds(date).toLocaleString(DateTime.DATETIME_MED)
-
-		// Set item visibility as they where loaded after animation
-		setTimeout(() => {
-			let elements = document.getElementsByClassName("pricing-table-inner");
-			for (let index = 0; index < elements.length; index++) {
-				const element = elements[index] as HTMLElement;
-				if (element.style.visibility == "hidden") {
-					element.style.visibility = "visible";
-				}
+				setTimeout(() => {
+					this.animeService.reviewComponents();
+				}, 0);
 			}
-		}, 1000);
+		});
 	}
+
+
 
 }

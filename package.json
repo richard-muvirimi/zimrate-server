@@ -9,8 +9,7 @@
 	"scripts": {
 		"ng": "ng",
 		"start": "ng serve",
-		"cp-deps": "cp node_modules/safe-email/dist/safe-email.min.js node_modules/scrollreveal/dist/scrollreveal.min.js node_modules/animejs/lib/anime.min.js ng/assets/js/",
-		"build": "npm run cp-deps && ng build --deploy-url='./app/Views/dist/'",
+		"build": "ng build --deploy-url='./app/Views/dist/'",
 		"watch": "ng build --watch --configuration development --deploy-url='./app/Views/dist/'",
 		"test": "ng test"
 	},
@@ -43,10 +42,12 @@
 		"@angular-devkit/build-angular": "^14.2.1",
 		"@angular/cli": "~14.2.1",
 		"@angular/compiler-cli": "^14.0.0",
+		"@types/animejs": "^3.1.6",
 		"@types/base-64": "^1.0.0",
 		"@types/jasmine": "~4.0.0",
 		"@types/lodash": "^4.14.185",
 		"@types/luxon": "^3.0.1",
+		"@types/scrollreveal": "^0.0.8",
 		"@types/sprintf-js": "^1.1.2",
 		"jasmine-core": "~4.3.0",
 		"karma": "~6.4.0",

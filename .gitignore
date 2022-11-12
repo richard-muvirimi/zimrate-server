@@ -180,3 +180,5 @@ Thumbs.db
 ng/assets/js/anime.min.js
 ng/assets/js/scrollreveal.min.js
 ng/assets/js/safe-email.min.js
+
+*.lock
