@@ -31,9 +31,7 @@
 							"ng/styles.scss"
 						],
 						"scripts": [
-							"node_modules/safe-email/dist/safe-email.min.js",
-							"node_modules/scrollreveal/dist/scrollreveal.min.js",
-							"node_modules/animejs/lib/anime.min.js"
+							"node_modules/safe-email/dist/safe-email.min.js"
 						]
 					},
 					"configurations": {
