@@ -55,6 +55,9 @@ jobs:
         continue-on-error: true
         run: npm list
 
+      - name: Install Yarn Dependencies
+        run: yarn
+
       - name: Composer Setup
         run: composer update
 
