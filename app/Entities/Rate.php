@@ -7,10 +7,7 @@ use CodeIgniter\Entity\Entity;
 use Config\Services;
 use DateTime;
 use Exception;
-use PhpCss;
 use voku\helper\HtmlDomParser;
-use Symfony\Component\Panther\Client;
-use PhpCss\Ast\Visitor\Xpath;
 use function \current as array_first;
 
 /**
@@ -40,32 +37,27 @@ class Rate extends Entity
 	/**
 	 * Crawl given site for values
 	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
 	 * @return  void
+	 * @version 1.0.0
+	 * @since   1.0.0
 	 */
-	public function crawlSite():void
+	public function crawlSite(): void
 	{
 		//if enabled and half an hour has passed since last check
-		if (intval($this->enabled) === 1 && (abs(time() - $this->last_checked) > (MINUTE * 30) || intval($this->status) !== 1))
-		{
+		if (intval($this->enabled) === 1 && (abs(time() - $this->last_checked) > (MINUTE * 30) || intval($this->status) !== 1)) {
 			/**
 			 * Get site html file and scan for required fields
 			 */
-			if (! $this->site)
-			{
+			if (!$this->site) {
 				$this->getHtmlContent();
 			}
 
-			if ($this->site)
-			{
+			if ($this->site) {
 				$this->status = $this->parseHtml($this->site) === true ? 1 : 0;
 
 				//last checked
 				$this->last_checked = time();
-			}
-			else
-			{
+			} else {
 				$this->status = 0;
 			}
 		}
@@ -76,19 +68,18 @@ class Rate extends Entity
 	 *
 	 * @param string $html Site Html
 	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
 	 * @return  boolean
+	 * @version 1.0.0
+	 * @since   1.0.0
 	 */
-	private function parseHtml(string $html):bool
+	private function parseHtml(string $html): bool
 	{
 		//get html dom
 		$dom = HtmlDomParser::str_get_html($html);
 
 		//rate
 		$rate = $this->cleanRate($dom->findOneOrFalse($this->selector));
-		if ($rate)
-		{
+		if ($rate) {
 			$this->rate = $rate;
 
 			$date = $this->cleanDate($dom->findOneOrFalse($this->last_updated_selector)) ?: ($this->rate ? time() : 0);
@@ -96,9 +87,7 @@ class Rate extends Entity
 			//date
 			$this->last_updated = $this->fixDateOffset($date);
 			return true;
-		}
-		else
-		{
+		} else {
 			return false;
 		}
 	}
@@ -108,11 +97,11 @@ class Rate extends Entity
 	 *
 	 * @param integer $date Date.
 	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
 	 * @return  integer
+	 * @version 1.0.0
+	 * @since   1.0.0
 	 */
-	private function fixDateOffset(int $date):int
+	private function fixDateOffset(int $date): int
 	{
 		$timezone = $this->timezone;
 
@@ -124,16 +113,15 @@ class Rate extends Entity
 	 *
 	 * @param string|HtmlDomParser $value Rate.
 	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
 	 * @return  float
+	 * @version 1.0.0
+	 * @since   1.0.0
 	 */
-	private function cleanRate($value):float
+	private function cleanRate($value): float
 	{
 		$amount = $this->clean($value);
 
-		if (! is_numeric($amount))
-		{
+		if (!is_numeric($amount)) {
 			$words = explode(' ', $amount);
 
 			//remove non numeric words
@@ -160,7 +148,7 @@ class Rate extends Entity
 		 * if value is not within a 30 percentile range then it is invalid
 		 * Handles cases where it may be in cents
 		 */
-		 $model = new RateModel();
+		$model = new RateModel();
 
 		$model->db->reconnect();
 		$max = array_column($model->getByFilter('', $this->currency, 0, 'MAX', true), 'rate');
@@ -189,11 +177,11 @@ class Rate extends Entity
 	 *
 	 * @param string|HtmlDomParser $value Date.
 	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
 	 * @return  integer
+	 * @version 1.0.0
+	 * @since   1.0.0
 	 */
-	private function cleanDate($value):int
+	private function cleanDate($value): int
 	{
 		$rawDate = $this->clean($value);
 
@@ -239,14 +227,13 @@ class Rate extends Entity
 	 *
 	 * @param string|HtmlDomParser $value Value.
 	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
 	 * @return  string
+	 * @version 1.0.0
+	 * @since   1.0.0
 	 */
-	private function clean($value):string
+	private function clean($value): string
 	{
-		while (is_a($value, 'HtmlDomParser'))
-		{
+		while (is_a($value, 'HtmlDomParser')) {
 			$value = $value->innerhtml();
 		}
 
@@ -266,247 +253,61 @@ class Rate extends Entity
 	/**
 	 * Get content of given url
 	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
 	 * @return  void
-	 */
-	public function getHtmlContent():void
-	{
-		if (intval($this->javascript) === 1)
-		{
-			if (filter_var(getenv('app.panther'), FILTER_VALIDATE_BOOL))
-			{
-				$this->getHtmlContentBrowser();
-			}
-			else
-			{
-				#skip
-
-				$this->site = '';
-			}
-		}
-		else
-		{
-			$this->getHtmlContentText();
-		}
-	}
-
-	/**
-	 * Parse a site using curl
-	 *
-	 * @since   1.0.0
 	 * @version 1.0.0
-	 * @return  void
+	 * @since   1.0.0
 	 */
-	public function getHtmlContentText():void
+	public function getHtmlContent(): void
 	{
 		$client = Services::curlrequest();
 
-		$headers = [
-			'Accept'         => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-			'Accept-Charset' => 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
-			'Cache-Control'  => 'max-age=0',
+		$data = [
+			'url' => $this->url,
+			'format' => 'html',
+			'timeout' => getenv('scrappy.timeout'),
+			"user_agent"=> $this->getUserAgent(),
+			"css" => "body"
 		];
 
-		$tries = 0;
+		try {
 
-		try
-		{
-			do
-			{
-				try
-				{
-					$response = $client->get($this->url, [
-						'headers'    => $headers,
-						'user_agent' => 'Zimrate/1.0',
-						'verify'     => false,
-						'timeout'    => MINUTE * 3,
-					]);
+			$response = $client->post(getenv('scrappy.server') . "/scrape", [
+				'user_agent' => $this->getUserAgent(),
+				'multipart' => $data,
+				'verify' => false,
+				"headers" => [
+					"Authorization" => "Bearer " . getenv("scrappy.authKey")
+				]
+			]);
 
-					if ($response->getStatusCode() === 200)
-					{
-						$this->site = $response->getBody();
-
-						break;
-					}
-				}
-				catch (Exception $e)
-				{
-					//echo $e->getMessage();
-
-					$this->site = '';
-				} finally {
-					$tries++;
+			if ($response->getStatusCode() === 200) {
+				$content = $response->getBody();
+				$content = json_decode($content, true);
+				
+				if ($content['data'] !== 'false') {
+					$this->site = $content["data"];
 				}
 			}
-			while ($tries < 5);
+		} catch (Exception $e) {
+			// echo $e->getMessage();
 
-			if (empty($this->site))
-			{
-				throw new Exception('Failed to scan site');
-			}
+			$this->site = '';
 		}
-		catch (Exception $e)
-		{
-			//failed to parse site
-
-			if (filter_var(getenv('app.panther'), FILTER_VALIDATE_BOOL))
-			{
-				//try with panther
-
-				$this->getHtmlContentBrowser();
-			}
-			else
-			{
-				if ($this->status)
-				{
-					//first time only
-					$this->mail($e->getMessage());
-				}
-			}
-		}
-	}
-
-	/**
-	 * Parse a site using selenium
-	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
-	 * @return  void
-	 */
-	private function getHtmlContentBrowser():void
-	{
-		//$_SERVER["PANTHER_FIREFOX_BINARY"] = ROOTPATH . "drivers/firefox/firefox-bin";
-		//$_SERVER["PANTHER_CHROME_BINARY"] = ROOTPATH . "drivers/chrome-linux/chrome";
-
-		/**
-		 * List of command line options for chromium
-		 *
-		 * @see https://peter.sh/experiments/chromium-command-line-switches/
-		 */
-		$args = [
-			'--no-sandbox',
-			'--disable-gpu',
-			'--incognito',
-			'--window-size=1920,1080',
-			'start-maximized',
-			'--user-agent=' . $this->getUserAgent(),
-			'--headless',
-		];
-
-		$options = [
-			'connection_timeout_in_ms' => MINUTE * 1000 * 3,
-			'request_timeout_in_ms'    => MINUTE * 1000 * 3,
-		];
-
-		$tries = 0;
-
-		try
-		{
-			$client = Client::createChromeClient(null, $args, $options);
-
-			if (str_starts_with($this->selector, '//'))
-			{
-				$xpath = $this->selector;
-			}
-			else
-			{
-				$xpath = PhpCss::toXpath($this->selector, Xpath::OPTION_USE_CONTEXT_DOCUMENT);
-			}
-
-			$crawler = $client->request('GET', $this->url);
-
-			do
-			{
-				try
-				{
-					$client->wait(MINUTE);
-					$client->waitForVisibility($xpath, MINUTE * 3);
-
-					$this->site = $crawler->html();
-
-					break;
-				}
-				catch (Exception $e)
-				{
-					//echo $e->getMessage();
-
-					$client->reload();
-				} finally {
-					$tries++;
-				}
-			}
-			while ($tries < 5);
-		}
-		catch (Exception $e)
-		{
-			#driver does not exist
-
-			if ($this->status)
-			{
-				//first time only
-				$this->mail($e->getMessage());
-			}
-		} finally {
-			if (isset($client) && is_object($client))
-			{
-				$client->quit();
-			}
-		}
-	}
-
-	/**
-	 * Send mail when there is an error parsing a site
-	 *
-	 * @param string $message Message.
-	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
-	 * @return  void
-	 */
-	private function mail(string $message):void
-	{
-		$email = Services::email();
-
-		$email->setSubject('Failed to parse site');
-		$email->setMessage('Failed to parse ' . $this->url . ' with error message ' . $message);
-
-		$email->send();
 	}
 
 	/**
 	 * Get user agent string and cache if possible
 	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
 	 * @return  string
+	 * @version 1.0.0
+	 * @since   1.0.0
 	 */
-	private function getUserAgent():string
+	private function getUserAgent(): string
 	{
 		$agent = cache('user-agent');
 
-		if (! $agent)
-		{
-			try
-			{
-				$client = Client::createChromeClient();
-				$client->request('GET', 'chrome://version');
-
-				$agent = $client->executeScript('return navigator.userAgent;');
-			}
-			catch (Exception $e)
-			{
-			} finally {
-				if (isset($client) && is_object($client))
-				{
-					$client->quit();
-				}
-			}
-
-			if (! $agent)
-			{
-				$agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36';
-			}
+		if (!$agent) {
+			$agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36';
 
 			$agent = preg_replace('/headless/i', '', $agent);
 

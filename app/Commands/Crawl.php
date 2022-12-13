@@ -69,11 +69,6 @@ class Crawl extends BaseCommand
 	{
 		$model = new RateModel();
 
-		if (! filter_var(getenv('app.panther'), FILTER_VALIDATE_BOOL))
-		{
-			$model->where('javascript', 0);
-		}
-
 		$sites = $model->getAll();
 
 		$cache = [];
@@ -88,7 +83,7 @@ class Crawl extends BaseCommand
 			if (intval($site->enabled) === 1)
 			{
 				//set cache if same site
-				$site->site = isset($cache[$site->url]) ? $cache[$site->url] : '';
+				$site->site = $cache[$site->url] ?? '';
 
 				$site->crawlSite();
 

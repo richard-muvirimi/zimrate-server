@@ -23,7 +23,6 @@
 app.baseURL = 'http://zimrate'
 app.forceGlobalSecureRequests = false
 app.appTimezone = 'Africa/Harare'
-app.panther = false
 
 app.google.analytics = 'UA-67829308-8'
 
@@ -65,7 +64,7 @@ email.to = 'rich4rdmuvirimi@gmail.com'
 database.default.hostname = localhost
 database.default.database = zimrate
 database.default.username = tygalive@gmail.com
-database.default.password = 
+database.default.password =
 database.default.DBDriver = MySQLi
 
 # database.tests.hostname = localhost
@@ -132,3 +131,7 @@ database.default.DBDriver = MySQLi
 #--------------------------------------------------------------------
 
 # logger.threshold = 4
+
+scrappy.authKey=
+scrappy.server="https://scrappy.tyganeutronics.com"
+scrappy.timeout=110
