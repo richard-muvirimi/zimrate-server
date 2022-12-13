@@ -23,6 +23,8 @@ class Crawl extends BaseController
 	 */
 	public function index():void
 	{
+		set_time_limit(0);
+
 		execute('crawl');
 	}
 }
