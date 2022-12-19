@@ -26,15 +26,15 @@ class SearchType extends ScalarType{
 	 *
 	 * @param string $value Value.
 	 *
-	 * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
-	 * @since   1.0.0
-	 * @version 1.0.0
-	 *
 	 * @return string
 	 *
-     * phpcs:disable Squiz.Commenting.FunctionComment.ScalarTypeHintMissing
+	 * @throws  Error
+	 * @version 1.0.0
+	 *
+	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @since  1.0.0
 	 */
-	public function serialize($value)
+	public function serialize($value): string
 	{
 		if (preg_match('/^[a-zA-Z0-9 ]+$/', $value) !== 1)
 		{
@@ -49,13 +49,14 @@ class SearchType extends ScalarType{
 	 *
 	 * @param string $value Value.
 	 *
-	 * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
-	 * @since   1.0.0
+	 * @return  string
+	 * @throws  Error
 	 * @version 1.0.0
 	 *
-	 * @return string
+	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @since  1.0.0
 	 */
-	public function parseValue($value)
+	public function parseValue($value): string
 	{
 		if (preg_match('/^[a-zA-Z0-9 ]+$/', $value) !== 1)
 		{
@@ -71,11 +72,12 @@ class SearchType extends ScalarType{
 	 * @param Node       $valueNode Value Node.
 	 * @param array|null $variables Variables.
 	 *
-	 * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
-	 * @since   1.0.0
+	 * @return  string
+	 * @throws  Error
 	 * @version 1.0.0
 	 *
-	 * @return string
+	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @since  1.0.0
 	 */
 	public function parseLiteral(Node $valueNode, ?array $variables = null):string
 	{

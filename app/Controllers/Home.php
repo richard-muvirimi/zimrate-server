@@ -53,7 +53,7 @@ class Home extends BaseController
 		 //also prevents mail
 		$site->status     = false;
 		$site->site       = false;
-		$site->javascript = filter_var(getenv('app.panther'), FILTER_VALIDATE_BOOL);
+		$site->javascript = true;
 		$site->selector   = $request->getPostGet('css') ?? '*';
 
 		$site->getHtmlContent();

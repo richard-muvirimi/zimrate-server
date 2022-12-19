@@ -12,11 +12,13 @@ use CodeIgniter\Model;
  * @since   1.0.0
  * @version 1.0.0
  *
- * phpcs:disable Squiz.Commenting.VariableComment.Missing
+ * @method groupEnd()
+ * @method groupStart()
+ * @method distinct()
  */
 class RateModel extends Model
 {
-	protected $table = 'zimrate';
+	protected $table         = 'zimrate';
 	protected $allowedFields = [
 		'status',
 		'enabled',
@@ -31,9 +33,9 @@ class RateModel extends Model
 		'last_updated',
 		'timezone',
 	];
-	protected $returnType = 'App\Entities\Rate';
+	protected $returnType    = 'App\Entities\Rate';
 	protected $useTimestamps = false;
-	protected $dateFormat = 'int';
+	protected $dateFormat    = 'int';
 
 	/**
 	 * Get all records
@@ -51,11 +53,11 @@ class RateModel extends Model
 	/**
 	 * Get rows matching provided filters
 	 *
-	 * @param string $source Source.
-	 * @param string $currency Currency.
-	 * @param integer $date Date.
-	 * @param string $prefer Prefer.
-	 * @param boolean $enabled Enabled.
+	 * @param string  $source   Source.
+	 * @param string  $currency Currency.
+	 * @param integer $date     Date.
+	 * @param string  $prefer   Prefer.
+	 * @param boolean $enabled  Enabled.
 	 *
 	 * @return  array
 	 * @version 1.0.0
@@ -63,14 +65,13 @@ class RateModel extends Model
 	 */
 	public function getByFilter(string $source, string $currency, int $date, string $prefer, bool $enabled = false): array
 	{
-
 		$columns = [
 			'currency',
 			'rate',
 			'last_checked',
 			'last_updated',
 			'name',
-			'url'
+			'url',
 		];
 
 		sort($columns);
@@ -78,20 +79,24 @@ class RateModel extends Model
 		$this->select($columns);
 
 		//source name
-		if (strlen($source) !== 0) {
+		if (strlen($source) !== 0)
+		{
 			$this->like('name', $source);
 		}
 
 		//currency name
-		if (strlen($currency) !== 0) {
+		if (strlen($currency) !== 0)
+		{
 			$this->where('currency', $currency);
 		}
 
-		if ($date > 0) {
+		if ($date > 0)
+		{
 			$this->where('last_updated >', $date);
 		}
 
-		if ($enabled) {
+		if ($enabled)
+		{
 			$this->where('enabled', 1);
 		}
 
@@ -99,7 +104,7 @@ class RateModel extends Model
 		$this->where('status', 1);
 
 		$this->orWhere([
-			'status' => 0,
+			'status'         => 0,
 			'last_updated >' => time() - WEEK,
 		]);
 
@@ -142,14 +147,16 @@ class RateModel extends Model
 	{
 		$rates = $this->findAll();
 
-		if (strlen($prefer) !== 0) {
+		if (strlen($prefer) !== 0)
+		{
 			$_rates = [];
 
 			//group by currency
-			foreach ($rates as $rate) {
+			foreach ($rates as $rate)
+			{
 				$currency = $rate->currency;
 
-				$_rates[$currency]['rate'][] = $rate->rate;
+				$_rates[$currency]['rate'][]         = $rate->rate;
 				$_rates[$currency]['last_checked'][] = $rate->last_checked;
 				$_rates[$currency]['last_updated'][] = $rate->last_updated;
 			}
@@ -157,30 +164,31 @@ class RateModel extends Model
 			$rates = [];
 
 			//compile groupings
-			foreach ($_rates as $currency => $rate) {
+			foreach ($_rates as $currency => $rate)
+			{
 				switch ($prefer) {
 					case 'max':
 						$rates[] = new Rate([
-							'currency' => $currency,
+							'currency'     => $currency,
 							'last_checked' => max($rate['last_checked']),
 							'last_updated' => min($rate['last_updated']),
-							'rate' => max($rate['rate']),
+							'rate'         => max($rate['rate']),
 						]);
 						break;
 					case 'min':
 						$rates[] = new Rate([
-							'currency' => $currency,
+							'currency'     => $currency,
 							'last_checked' => max($rate['last_checked']),
 							'last_updated' => min($rate['last_updated']),
-							'rate' => min($rate['rate']),
+							'rate'         => min($rate['rate']),
 						]);
 						break;
 					case 'mean':
 						$rates[] = new Rate([
-							'currency' => $currency,
+							'currency'     => $currency,
 							'last_checked' => max($rate['last_checked']),
 							'last_updated' => min($rate['last_updated']),
-							'rate' => array_sum($rate['rate']) / count($rate['rate']),
+							'rate'         => array_sum($rate['rate']) / count($rate['rate']),
 						]);
 						break;
 					case 'median':
@@ -188,29 +196,33 @@ class RateModel extends Model
 
 						$count = count($rate['rate']);
 
-						if ($count % 2 === 0) {
+						if ($count % 2 === 0)
+						{
 							//even get central average
 
 							$lower = ($count / 2);
 							$upper = $lower + 1;
 
 							$_rate = ($rate['rate'][$upper - 1] + $rate['rate'][$lower - 1]) / 2;
-						} else {
+						}
+						else
+						{
 							//odd get central
 							$_rate = $rate['rate'][ceil($count / 2) - 1];
 						}
 
 						$rates[] = new Rate([
-							'currency' => $currency,
+							'currency'     => $currency,
 							'last_checked' => max($rate['last_checked']),
 							'last_updated' => min($rate['last_updated']),
-							'rate' => $_rate,
+							'rate'         => $_rate,
 						]);
 						break;
 					case 'mode':
 						$occurs = [];
 
-						foreach ($rate['rate'] as $_rate) {
+						foreach ($rate['rate'] as $_rate)
+						{
 							$occurs[strval($_rate)] = ($occurs[$_rate] ?? 0) + 1;
 						}
 
@@ -219,10 +231,10 @@ class RateModel extends Model
 						$position = array_search($_rate, $rate['rate']);
 
 						$rates[] = new Rate([
-							'currency' => $currency,
+							'currency'     => $currency,
 							'last_checked' => $rate['last_checked'][$position],
 							'last_updated' => $rate['last_updated'][$position],
-							'rate' => $_rate,
+							'rate'         => $_rate,
 						]);
 						break;
 					case 'random':
@@ -231,10 +243,10 @@ class RateModel extends Model
 						$_rate = $rate['rate'][$position];
 
 						$rates[] = new Rate([
-							'currency' => $currency,
+							'currency'     => $currency,
 							'last_checked' => $rate['last_checked'][$position],
 							'last_updated' => $rate['last_updated'][$position],
-							'rate' => $_rate,
+							'rate'         => $_rate,
 						]);
 						break;
 				}
@@ -261,7 +273,7 @@ class RateModel extends Model
 		$this->where('status', 1);
 
 		$this->orWhere([
-			'status' => 0,
+			'status'         => 0,
 			'last_updated >' => time() - WEEK,
 		]);
 
@@ -290,7 +302,7 @@ class RateModel extends Model
 		$this->where('status', 1);
 
 		$this->orWhere([
-			'status' => 0,
+			'status'         => 0,
 			'last_updated >' => time() - WEEK,
 		]);
 

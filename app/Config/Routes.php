@@ -7,8 +7,9 @@ $routes = Services::routes();
 
 // Load the system's routing file first, so that the app and ENVIRONMENT
 // can override as needed.
-if (is_file(SYSTEMPATH . 'Config/Routes.php')) {
-    require SYSTEMPATH . 'Config/Routes.php';
+if (is_file(SYSTEMPATH . 'Config/Routes.php'))
+{
+	require SYSTEMPATH . 'Config/Routes.php';
 }
 
 /*
@@ -47,14 +48,14 @@ $routes->get('tester', 'Home::tester');
  * Api Routes
  */
 $routes->group(
-    "api",function ($routes) {
+	'api', function ($routes) {
 		$apiRoutes = [
-			"/" => "Api::version0",
-			"v1" => "Api::version1",
-			"graphql" => "Api::graphql",
+			'/'       => 'Api::version0',
+			'v1'      => 'Api::version1',
+			'graphql' => 'Api::graphql',
 		];
 
-        $routes->map($apiRoutes, []);
+		$routes->map($apiRoutes, []);
 	}
 );
 
@@ -71,6 +72,7 @@ $routes->group(
  * You will have access to the $routes object within that file without
  * needing to reload it.
  */
-if (is_file(APPPATH . 'Config/' . ENVIRONMENT . '/Routes.php')) {
-    require APPPATH . 'Config/' . ENVIRONMENT . '/Routes.php';
+if (is_file(APPPATH . 'Config/' . ENVIRONMENT . '/Routes.php'))
+{
+	require APPPATH . 'Config/' . ENVIRONMENT . '/Routes.php';
 }

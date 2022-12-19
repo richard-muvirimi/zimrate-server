@@ -13,9 +13,22 @@ use function \current as array_first;
 /**
  * Rate Entity
  *
- * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
- * @since   1.0.0
- * @version 1.0.0
+ * @property int $enabled
+ * @property int $status
+ * @property int $id
+ * @property false|string $site
+ * @property int $last_checked
+ * @property string $last_updated_selector
+ * @property string $selector
+ * @property float $rate
+ * @property int $last_updated
+ * @property string $timezone
+ * @property string $currency
+ * @property string $url
+ * @property int $javascript
+ * @author   Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+ * @since    1.0.0
+ * @version  1.0.0
  */
 class Rate extends Entity
 {
@@ -43,21 +56,28 @@ class Rate extends Entity
 	 */
 	public function crawlSite(): void
 	{
+		$throttler = Services::throttler();
+
 		//if enabled and half an hour has passed since last check
-		if (intval($this->enabled) === 1 && (abs(time() - $this->last_checked) > (MINUTE * 30) || intval($this->status) !== 1)) {
+		if ($this->enabled === 1 && ( $this->status !== 1 || $throttler->check($this->id, 1, MINUTE * 30)))
+		{
 			/**
 			 * Get site html file and scan for required fields
 			 */
-			if (!$this->site) {
+			if (! $this->site)
+			{
 				$this->getHtmlContent();
 			}
 
-			if ($this->site) {
+			if ($this->site)
+			{
 				$this->status = $this->parseHtml($this->site) === true ? 1 : 0;
 
 				//last checked
 				$this->last_checked = time();
-			} else {
+			}
+			else
+			{
 				$this->status = 0;
 			}
 		}
@@ -79,7 +99,8 @@ class Rate extends Entity
 
 		//rate
 		$rate = $this->cleanRate($dom->findOneOrFalse($this->selector));
-		if ($rate) {
+		if ($rate)
+		{
 			$this->rate = $rate;
 
 			$date = $this->cleanDate($dom->findOneOrFalse($this->last_updated_selector)) ?: ($this->rate ? time() : 0);
@@ -87,7 +108,9 @@ class Rate extends Entity
 			//date
 			$this->last_updated = $this->fixDateOffset($date);
 			return true;
-		} else {
+		}
+		else
+		{
 			return false;
 		}
 	}
@@ -121,20 +144,21 @@ class Rate extends Entity
 	{
 		$amount = $this->clean($value);
 
-		if (!is_numeric($amount)) {
+		if (! is_numeric($amount))
+		{
 			$words = explode(' ', $amount);
 
-			//remove non numeric words
+			//remove non-numeric words
 			$numbered = array_filter($words, function ($word) {
 				preg_match('/[0-9]/', $word, $matches);
 
 				return count($matches) > 0;
 			});
 
-			//join to allow removing non numeric characters
+			//join to allow removing non-numeric characters
 			$numbers = implode(' ', $numbered);
 
-			//split by non numeric
+			//split by non-numeric
 			$figures = preg_split('/[^0-9,.]/', $numbers, -1, PREG_SPLIT_NO_EMPTY);
 
 			$amount = count($figures) > 0 ? max($figures) : 0;
@@ -188,7 +212,7 @@ class Rate extends Entity
 		/**
 		 * Bug: php_parse fails when there is no year but time right after month e.g => "19 January 11:22"
 		 *
-		 * Hack: wrap time in brackets or some other non alpha-numeric characters :)
+		 * Hack: wrap time in brackets or some other non-alphanumeric characters :)
 		 */
 		$rawDate = preg_replace('/[0-9]{1,2}:[0-9]{1,2}/', '($0)', $rawDate);
 
@@ -233,7 +257,8 @@ class Rate extends Entity
 	 */
 	private function clean($value): string
 	{
-		while (is_a($value, 'HtmlDomParser')) {
+		while (is_a($value, 'HtmlDomParser'))
+		{
 			$value = $value->innerhtml();
 		}
 
@@ -245,7 +270,7 @@ class Rate extends Entity
 
 		// $value = strip_tags(trim(html_entity_decode($value), " \t\n\r\0\x0B\xC2\xA0"));
 
-		return implode(' ', array_map(function ($word) {
+		return implode(' ', array_map(function (string $word):string {
 			return trim($word, '-,');
 		}, explode(' ', $value)));
 	}
@@ -262,33 +287,37 @@ class Rate extends Entity
 		$client = Services::curlrequest();
 
 		$data = [
-			'url' => $this->url,
-			'format' => 'html',
-			'timeout' => getenv('scrappy.timeout'),
-			"user_agent"=> $this->getUserAgent(),
-			"css" => "body"
+			'url'        => $this->url,
+			'format'     => 'html',
+			'timeout'    => getenv('scrappy.timeout'),
+			'user_agent' => $this->getUserAgent(),
+			'css'        => 'body',
 		];
 
-		try {
-
-			$response = $client->post(getenv('scrappy.server') . "/scrape", [
+		try
+		{
+			$response = $client->post(getenv('scrappy.server') . '/scrape', [
 				'user_agent' => $this->getUserAgent(),
-				'multipart' => $data,
-				'verify' => false,
-				"headers" => [
-					"Authorization" => "Bearer " . getenv("scrappy.authKey")
-				]
+				'multipart'  => $data,
+				'verify'     => false,
+				'headers'    => [
+					'Authorization' => 'Bearer ' . getenv('scrappy.authKey'),
+				],
 			]);
 
-			if ($response->getStatusCode() === 200) {
+			if ($response->getStatusCode() === 200)
+			{
 				$content = $response->getBody();
 				$content = json_decode($content, true);
-				
-				if ($content['data'] !== 'false') {
-					$this->site = $content["data"];
+
+				if ($content['data'] !== 'false')
+				{
+					$this->site = $content['data'];
 				}
 			}
-		} catch (Exception $e) {
+		}
+		catch (Exception $e)
+		{
 			// echo $e->getMessage();
 
 			$this->site = '';
@@ -306,7 +335,8 @@ class Rate extends Entity
 	{
 		$agent = cache('user-agent');
 
-		if (!$agent) {
+		if (! $agent)
+		{
 			$agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36';
 
 			$agent = preg_replace('/headless/i', '', $agent);

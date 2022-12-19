@@ -94,7 +94,7 @@ class Crawl extends BaseCommand
 				{
 					$model->save($site);
 				}
-				catch (DataException $e)
+				catch (DataException | \ReflectionException $e)
 				{
 				}
 			}

@@ -28,7 +28,8 @@
 		"symfony/polyfill-php80": "*",
 		"symfony/polyfill-php81": "*",
 		"webonyx/graphql-php": "^14.11",
-		"voku/simple_html_dom": "^4.8"
+		"voku/simple_html_dom": "^4.8",
+		"ext-json": "*"
 	},
 	"require-dev": {
 		"codeigniter4/codeigniter4-standard": "^1.0",
