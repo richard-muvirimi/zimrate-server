@@ -13,8 +13,8 @@ use function \current as array_first;
 /**
  * Rate Entity
  *
- * @property int $enabled
- * @property int $status
+ * @property boolean $enabled
+ * @property boolean $status
  * @property int $id
  * @property false|string $site
  * @property int $last_checked
@@ -25,7 +25,7 @@ use function \current as array_first;
  * @property string $timezone
  * @property string $currency
  * @property string $url
- * @property int $javascript
+ * @property boolean $javascript
  * @author   Richard Muvirimi <rich4rdmuvirimi@gmail.com>
  * @since    1.0.0
  * @version  1.0.0
@@ -59,7 +59,7 @@ class Rate extends Entity
 		$throttler = Services::throttler();
 
 		//if enabled and half an hour has passed since last check
-		if ($this->enabled === 1 && ( $this->status !== 1 || $throttler->check($this->id, 1, MINUTE * 30)))
+		if ($this->enabled && ( $this->status !== true || $throttler->check($this->id, 1, MINUTE * 30)))
 		{
 			/**
 			 * Get site html file and scan for required fields
@@ -78,7 +78,7 @@ class Rate extends Entity
 			}
 			else
 			{
-				$this->status = 0;
+				$this->status = false;
 			}
 		}
 	}
