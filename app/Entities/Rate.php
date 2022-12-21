@@ -59,7 +59,7 @@ class Rate extends Entity
 		$throttler = Services::throttler();
 
 		//if enabled and half an hour has passed since last check
-		if ($this->enabled && ( $this->status !== true || $throttler->check($this->id, 1, MINUTE * 30)))
+		if ($this->enabled && ( $this->status !== true || $throttler->check($this->id, 1, HOUR)))
 		{
 			/**
 			 * Get site html file and scan for required fields

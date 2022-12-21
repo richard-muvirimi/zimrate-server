@@ -51,20 +51,15 @@ class Crawl implements FilterInterface
 	 */
 	public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
 	{
-		$throttler = Services::throttler();
+		$client = Services::curlrequest();
 
-		if ($throttler->check('crawl', 1, HOUR) !== false)
+		//trigger crawl
+		try
 		{
-			$client = Services::curlrequest();
-
-			//trigger crawl
-			try
-			{
-				$client->get(base_url('crawl'), ['timeout' => 1]);
-			}
-			catch (HTTPException $e)
-			{
-			}
+			$client->get(base_url('crawl'), ['timeout' => 1]);
+		}
+		catch (HTTPException $e)
+		{
 		}
 	}
 }
