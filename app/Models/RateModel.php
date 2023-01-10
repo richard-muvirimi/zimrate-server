@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Entities\Rate;
+use CodeIgniter\I18n\Time;
 use CodeIgniter\Model;
+use Exception;
 
 /**
  * Model for Rates
@@ -60,8 +62,9 @@ class RateModel extends Model
 	 * @param boolean $enabled  Enabled.
 	 *
 	 * @return  array
-	 * @version 1.0.0
+	 * @throws  Exception
 	 * @since   1.0.0
+	 * @version 1.0.0
 	 */
 	public function getByFilter(string $source, string $currency, int $date, string $prefer, bool $enabled = false): array
 	{
@@ -105,7 +108,7 @@ class RateModel extends Model
 
 		$this->orWhere([
 			'status'         => 0,
-			'last_updated >' => time() - WEEK,
+			'last_updated >' => Time::now()->subDays(7),
 		]);
 
 		$this->groupEnd();
@@ -157,8 +160,8 @@ class RateModel extends Model
 				$currency = $rate->currency;
 
 				$_rates[$currency]['rate'][]         = $rate->rate;
-				$_rates[$currency]['last_checked'][] = $rate->last_checked;
-				$_rates[$currency]['last_updated'][] = $rate->last_updated;
+				$_rates[$currency]['last_checked'][] = $rate->lastChecked;
+				$_rates[$currency]['last_updated'][] = $rate->lastUpdated;
 			}
 
 			$rates = [];
@@ -260,8 +263,9 @@ class RateModel extends Model
 	 * Get list of all available currencies
 	 *
 	 * @return  array
-	 * @version 1.0.0
+	 * @throws  Exception
 	 * @since   1.0.0
+	 * @version 1.0.0
 	 */
 	public function getCurrencies(): array
 	{
@@ -274,7 +278,7 @@ class RateModel extends Model
 
 		$this->orWhere([
 			'status'         => 0,
-			'last_updated >' => time() - WEEK,
+			'last_updated >' => Time::now()->subDays(7),
 		]);
 
 		$this->groupEnd();
@@ -286,8 +290,9 @@ class RateModel extends Model
 	 * Get list of all available currencies
 	 *
 	 * @return  array
-	 * @version 1.0.0
+	 * @throws  Exception
 	 * @since   1.0.0
+	 * @version 1.0.0
 	 */
 	public function getDisplayCurrencies(): array
 	{
@@ -303,7 +308,7 @@ class RateModel extends Model
 
 		$this->orWhere([
 			'status'         => 0,
-			'last_updated >' => time() - WEEK,
+			'last_updated >' => Time::now()->subDays(7),
 		]);
 
 		$this->groupEnd();

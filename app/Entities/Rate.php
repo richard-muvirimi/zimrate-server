@@ -4,10 +4,13 @@ namespace App\Entities;
 
 use App\Models\RateModel;
 use CodeIgniter\Entity\Entity;
+use CodeIgniter\I18n\Time;
 use Config\Services;
 use DateTime;
 use Exception;
-use voku\helper\HtmlDomParser;
+use NumberFormatter;
+use Symfony\Component\CssSelector\CssSelectorConverter;
+use Symfony\Component\DomCrawler\Crawler;
 use function \current as array_first;
 
 /**
@@ -17,11 +20,11 @@ use function \current as array_first;
  * @property boolean $status
  * @property int $id
  * @property false|string $site
- * @property int $last_checked
- * @property string $last_updated_selector
+ * @property Time $lastChecked
+ * @property string $lastUpdatedSelector
  * @property string $selector
  * @property float $rate
- * @property int $last_updated
+ * @property Time $lastUpdated
  * @property string $timezone
  * @property string $currency
  * @property string $url
@@ -36,23 +39,43 @@ class Rate extends Entity
 	/**
 	 * Property Casts
 	 *
-	 * @var array
+	 * @var string[]
 	 */
 	protected $casts = [
-		'rate'         => 'float',
-		'last_updated' => 'int',
-		'last_checked' => 'int',
-		'enabled'      => 'boolean',
-		'status'       => 'boolean',
-		'javascript'   => 'boolean',
+		'rate'       => 'float',
+		'enabled'    => 'boolean',
+		'status'     => 'boolean',
+		'javascript' => 'boolean',
+	];
+
+	/**
+	 * Property map
+	 *
+	 * @var string[]
+	 */
+	protected $datamap = [
+		'lastChecked'         => 'last_checked',
+		'lastUpdatedSelector' => 'last_updated_selector',
+		'lastUpdated'         => 'last_updated',
+	];
+
+	/**
+	 * Dates map
+	 *
+	 * @var string[]
+	 */
+	protected $dates = [
+		'last_checked',
+		'last_updated',
 	];
 
 	/**
 	 * Crawl given site for values
 	 *
 	 * @return  void
-	 * @version 1.0.0
+	 * @throws  Exception
 	 * @since   1.0.0
+	 * @version 1.0.0
 	 */
 	public function crawlSite(): void
 	{
@@ -74,7 +97,7 @@ class Rate extends Entity
 				$this->status = $this->parseHtml($this->site) === true ? 1 : 0;
 
 				//last checked
-				$this->last_checked = time();
+				$this->lastChecked = Time::now();
 			}
 			else
 			{
@@ -84,29 +107,75 @@ class Rate extends Entity
 	}
 
 	/**
-	 * Parse given html for required values
+	 * Check if a given text is an xpath
 	 *
-	 * @param string $html Site Html
+	 * @param string $selector Css Selector
 	 *
 	 * @return  boolean
 	 * @version 1.0.0
 	 * @since   1.0.0
 	 */
+	private function isXpath(string $selector): bool
+	{
+		switch ($selector){
+			case 'text':
+				// Select DOMText
+				$isXPath = true;
+				break;
+			case 'comment':
+				// Select DOMComment
+				$isXPath = true;
+				break;
+			default :
+				$isXPath = strpos($selector, '//') === 0;
+				break;
+		}
+
+		return $isXPath;
+	}
+
+	/**
+	 * Parse given html for required values
+	 *
+	 * @param string $html Site Html
+	 *
+	 * @return  boolean
+	 * @throws  Exception
+	 * @since   1.0.0
+	 * @version 1.0.0
+	 */
 	private function parseHtml(string $html): bool
 	{
 		//get html dom
-		$dom = HtmlDomParser::str_get_html($html);
+		$crawler = new Crawler($html);
+
+		$converter = new CssSelectorConverter();
+
+		$selector = $this->selector;
+		if (! $this->isXpath($selector))
+		{
+			$selector = $converter->toXPath($selector);
+		}
+
+		$locale = 'en_EN';
 
 		//rate
-		$rate = $this->cleanRate($dom->findOneOrFalse($this->selector));
+		$rate = $this->cleanRate($crawler->filterXPath($selector)->innerText(), $locale);
+
 		if ($rate)
 		{
 			$this->rate = $rate;
 
-			$date = $this->cleanDate($dom->findOneOrFalse($this->last_updated_selector)) ?: ($this->rate ? time() : 0);
+			$lastUpdatedSelector = $this->lastUpdatedSelector;
+			if (! $this->isXpath($lastUpdatedSelector))
+			{
+				$lastUpdatedSelector = $converter->toXPath($lastUpdatedSelector);
+			}
+
+			$date = $this->cleanDate($crawler->filterXPath($lastUpdatedSelector)->innerText()) ?: Time::now();
 
 			//date
-			$this->last_updated = $this->fixDateOffset($date);
+			$this->lastUpdated = $this->fixDateOffset($date);
 			return true;
 		}
 		else
@@ -118,29 +187,31 @@ class Rate extends Entity
 	/**
 	 * Fix date offset
 	 *
-	 * @param integer $date Date.
+	 * @param Time $date Date.
 	 *
-	 * @return  integer
-	 * @version 1.0.0
+	 * @return  Time
+	 * @throws  Exception
 	 * @since   1.0.0
+	 * @version 1.0.0
 	 */
-	private function fixDateOffset(int $date): int
+	private function fixDateOffset(Time $date): Time
 	{
-		$timezone = $this->timezone;
+		$timezone = timezone_open($this->timezone);
 
-		return $date - date_offset_get(date_create('now', timezone_open($timezone)));
+		return $date->setTimezone( $timezone);
 	}
 
 	/**
 	 * Convert number to an int
 	 *
-	 * @param string|HtmlDomParser $value Rate.
+	 * @param string $value  Rate.
+	 * @param string $locale Locale to parse number
 	 *
 	 * @return  float
 	 * @version 1.0.0
 	 * @since   1.0.0
 	 */
-	private function cleanRate($value): float
+	private function cleanRate(string $value, string $locale): float
 	{
 		$amount = $this->clean($value);
 
@@ -157,6 +228,9 @@ class Rate extends Entity
 
 			//join to allow removing non-numeric characters
 			$numbers = implode(' ', $numbered);
+
+			$fmt     = new NumberFormatter( $locale, NumberFormatter::DECIMAL );
+			$numbers = $fmt->parse($numbers);
 
 			//split by non-numeric
 			$figures = preg_split('/[^0-9,.]/', $numbers, -1, PREG_SPLIT_NO_EMPTY);
@@ -197,15 +271,16 @@ class Rate extends Entity
 	}
 
 	/**
-	 * Convert date to a unix time stamp
+	 * Parse a unix timestamp date
 	 *
-	 * @param string|HtmlDomParser $value Date.
+	 * @param string $value Date.
 	 *
-	 * @return  integer
-	 * @version 1.0.0
+	 * @return  Time
+	 * @throws  Exception
 	 * @since   1.0.0
+	 * @version 1.0.0
 	 */
-	private function cleanDate($value): int
+	private function cleanDate(string $value): Time
 	{
 		$rawDate = $this->clean($value);
 
@@ -243,25 +318,20 @@ class Rate extends Entity
 		/**
 		 * Return parsed date substituting with defaults on none existent parts
 		 */
-		return mktime($date['hour'] ?: 0, $date['minute'] ?: 0, $date['second'] ?: 0, $date['month'] ?: date('n'), $date['day'] ?: date('j'), $date['year'] ?: date('Y'));
+		return Time::create($date['year'] ?: date('Y'), $date['month'] ?: date('n'), $date['day'] ?: date('j'), $date['hour'] ?: 0, $date['minute'] ?: 0, $date['second'] ?: 0 );
 	}
 
 	/**
 	 * Remove all html and php tags from given string
 	 *
-	 * @param string|HtmlDomParser $value Value.
+	 * @param string $value Value.
 	 *
 	 * @return  string
 	 * @version 1.0.0
 	 * @since   1.0.0
 	 */
-	private function clean($value): string
+	private function clean(string $value): string
 	{
-		while (is_a($value, 'HtmlDomParser'))
-		{
-			$value = $value->innerhtml();
-		}
-
 		$value = utf8_decode($value);
 		$value = strip_tags($value);
 		$value = str_replace('&nbsp;', ' ', $value);
@@ -345,5 +415,32 @@ class Rate extends Entity
 		}
 
 		return $agent;
+	}
+
+	/**
+	 * Returns the raw values of the current attributes.
+	 *
+	 * @return  array
+	 * @throws  Exception
+	 * @version 1.0.0
+	 * @since   1.0.0
+	 */
+	public function jsonSerialize(): array
+	{
+		$return = [];
+
+		foreach ($this->attributes as $key => $value)
+		{
+			$value = $this->__get($key);
+
+			if (in_array($key, $this->dates, true))
+			{
+				$value = $value->getTimestamp();
+			}
+
+			$return[$key] = $value;
+		}
+
+		return $return;
 	}
 }

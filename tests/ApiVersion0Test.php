@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 
+use App\Entities\Rate;
 use App\Models\RateModel;
+use CodeIgniter\I18n\Time;
 use Config\Services;
 use PHPUnit\Framework\TestCase;
 use function current as array_first;
@@ -17,11 +19,12 @@ class ApiVersion0Test extends TestCase{
 	/**
 	 * Test no params of the api
 	 *
-	 * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
-	 * @since   1.0.0
+	 * @return  void
+	 * @throws  Exception
 	 * @version 1.0.0
 	 *
-	 * @return void
+	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @since  1.0.0
 	 */
 	public function testApi():void
 	{
@@ -41,7 +44,11 @@ class ApiVersion0Test extends TestCase{
 
 		$model = new RateModel();
 
-		$data  = json_encode($model->getByFilter('', '', 0, '', true));
+		$data = $model->getByFilter('', '', 0, '', true);
+
+		$data = json_encode(array_map(function (Rate $item) {
+			return $item->jsonSerialize();
+		}, $data));
 
 		$this->assertJsonStringEqualsJsonString($data, json_encode($response), 'The response from api version 0 does not match the expected response');
 	}
@@ -49,11 +56,12 @@ class ApiVersion0Test extends TestCase{
 	/**
 	 * Test the prefer of the api
 	 *
-	 * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
-	 * @since   1.0.0
+	 * @return  void
+	 * @throws  Exception
 	 * @version 1.0.0
 	 *
-	 * @return void
+	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @since  1.0.0
 	 */
 	public function testPrefer():void
 	{
@@ -74,7 +82,11 @@ class ApiVersion0Test extends TestCase{
 
 		$model = new RateModel();
 
-		$data  = json_encode($model->getByFilter('', '', 0, 'median', true));
+		$data = $model->getByFilter('', '', 0, 'median', true);
+
+		$data = json_encode(array_map(function (Rate $item) {
+			return $item->jsonSerialize();
+		}, $data));
 
 		$this->assertJsonStringEqualsJsonString($data, json_encode($response), 'The response from api version 0 does not match the expected response');
 	}
@@ -82,11 +94,12 @@ class ApiVersion0Test extends TestCase{
 	/**
 	 * Test the currency of the api
 	 *
-	 * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
-	 * @since   1.0.0
+	 * @return  void
+	 * @throws  Exception
 	 * @version 1.0.0
 	 *
-	 * @return void
+	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @since  1.0.0
 	 */
 	public function testCurrency():void
 	{
@@ -111,7 +124,11 @@ class ApiVersion0Test extends TestCase{
 
 		$this->assertIsArray($response, 'The response from api version 0 is not an array');
 
-		$data = json_encode($model->getByFilter('', $currencies[0]->currency, 0, '', true));
+		$data = $model->getByFilter('', array_first($currencies)->currency, 0, '', true);
+
+		$data = json_encode(array_map(function (Rate $item) {
+			return $item->jsonSerialize();
+		}, $data));
 
 		$this->assertJsonStringEqualsJsonString($data, json_encode($response), 'The response from api version 0 does not match the expected response');
 	}
@@ -119,22 +136,23 @@ class ApiVersion0Test extends TestCase{
 	/**
 	 * Test the date of the api
 	 *
-	 * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
-	 * @since   1.0.0
+	 * @return  void
+	 * @throws  Exception
 	 * @version 1.0.0
 	 *
-	 * @return void
+	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @since  1.0.0
 	 */
 	public function testDate():void
 	{
 		$client = Services::curlrequest();
 
-    $date = time() - DAY;
+		$date = Time::now()->subDays(1)->getTimestamp();
 
 		$response = $client->get($_SERVER['app.baseURL'] . 'api', [
 			'user_agent' => 'Zimrate/1.0',
 			'verify'     => false,
-			'query'      => compact("date"),
+			'query'      => compact('date'),
 		]);
 
 		$this->assertEquals (200, $response->getStatusCode(), 'The response code from api version 0 was not 200');
@@ -146,7 +164,11 @@ class ApiVersion0Test extends TestCase{
 
 		$model = new RateModel();
 
-		$data  = json_encode($model->getByFilter('', '', $date, '', true));
+		$data = $model->getByFilter('', '', $date, '', true);
+
+		$data = json_encode(array_map(function (Rate $item) {
+			return $item->jsonSerialize();
+		}, $data));
 
 		$this->assertJsonStringEqualsJsonString($data, json_encode($response), 'The response from api version 0 does not match the expected response');
 	}

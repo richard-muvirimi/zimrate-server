@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Entities\Rate;
 use App\Libraries\SearchType;
 use \App\Models\RateModel;
 use CodeIgniter\API\ResponseTrait;
@@ -97,7 +98,7 @@ class Api extends BaseController
 	{
 		if ($this->response->hasHeader('X-Callback'))
 		{
-			$this->response->setContentType('application/javascript;');
+			$this->response->setContentType('application/javascript');
 
 			return $this->respond($this->response->getHeaderLine('X-Callback') . '(' . json_encode($response) . ');');
 		}
@@ -108,8 +109,8 @@ class Api extends BaseController
 	/**
 	 * Resolve request using graphql
 	 *
-	 * @param string $query     Optional Query Data.
-	 * @param array  $variables Variables.
+	 * @param string     $query     Optional Query Data.
+	 * @param array|null $variables Variables.
 	 *
 	 * @return  array
 	 * @since   1.0.0
@@ -124,27 +125,27 @@ class Api extends BaseController
 			'fields' => [
 				'currency'     => [
 					'type'    => Type::string(),
-					'resolve' => fn($rate): string => $rate->currency ?? '',
+					'resolve' => fn(Rate $rate): string => $rate->currency ?? '',
 				],
 				'last_checked' => [
 					'type'    => Type::int(),
-					'resolve' => fn($rate): int => $rate->last_checked ?? 0,
+					'resolve' => fn(Rate $rate): int => $rate->lastChecked->getTimestamp(),
 				],
 				'last_updated' => [
 					'type'    => Type::int(),
-					'resolve' => fn($rate): int => $rate->last_updated ?? 0,
+					'resolve' => fn(Rate $rate): int => $rate->lastUpdated->getTimeStamp(),
 				],
 				'name'         => [
 					'type'    => Type::string(),
-					'resolve' => fn($rate): string => $rate->name ?? '',
+					'resolve' => fn(Rate $rate): string => $rate->name ?? '',
 				],
 				'rate'         => [
 					'type'    => Type::float(),
-					'resolve' => fn($rate): float => $rate->rate ?? 0,
+					'resolve' => fn(Rate $rate): float => $rate->rate ?? 0,
 				],
 				'url'          => [
 					'type'    => Type::string(),
-					'resolve' => fn($rate): string => $rate->url ?? '',
+					'resolve' => fn(Rate $rate): string => $rate->url ?? '',
 				],
 			],
 		]);

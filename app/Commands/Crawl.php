@@ -6,6 +6,7 @@ use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 use \App\Models\RateModel;
 use CodeIgniter\Database\Exceptions\DataException;
+use ReflectionException;
 
 /**
  * Crawl command class
@@ -80,7 +81,7 @@ class Crawl extends BaseCommand
 			$site = $sites[$i];
 
 			CLI::showProgress($i, $total - 1);
-			if (intval($site->enabled) === 1)
+			if ($site->enabled)
 			{
 				//set cache if same site
 				$site->site = $cache[$site->url] ?? '';
@@ -94,7 +95,7 @@ class Crawl extends BaseCommand
 				{
 					$model->save($site);
 				}
-				catch (DataException | \ReflectionException $e)
+				catch (DataException | ReflectionException $e)
 				{
 				}
 			}
