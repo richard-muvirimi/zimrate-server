@@ -348,7 +348,7 @@ class Api extends BaseController
 	{
 		$model = new RateModel();
 
-		$currency = strtoupper($this->request->getPostGet('currency'));
+		$currency = strtoupper($this->request->getPostGet('currency') ?: '');
 
 		$currencies = $model->getCurrencies();
 
@@ -384,7 +384,7 @@ class Api extends BaseController
 	{
 		$model = new RateModel();
 
-		$prefer = strtolower($this->request->getPostGet('prefer'));
+		$prefer = strtolower($this->request->getPostGet('prefer') ?: '');
 
 		//value to get
 		if (! in_array($prefer, $model->supportedPrefers()))

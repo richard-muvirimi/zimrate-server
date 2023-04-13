@@ -20,7 +20,19 @@ use Exception;
  */
 class RateModel extends Model
 {
-	protected $table         = 'zimrate';
+
+	/**
+	 * Table for the model
+	 *
+	 * @var string
+	 */
+	protected $table = 'zimrate';
+
+	/**
+	 * Fields that can be saved to database
+	 *
+	 * @var string[]
+	 */
 	protected $allowedFields = [
 		'status',
 		'enabled',
@@ -35,9 +47,27 @@ class RateModel extends Model
 		'last_updated',
 		'timezone',
 	];
-	protected $returnType    = 'App\Entities\Rate';
+
+	/**
+	 * Data return type
+	 *
+	 * @var string
+	 */
+	protected $returnType = 'App\Entities\Rate';
+
+	/**
+	 * Use timestamps for rows
+	 *
+	 * @var boolean
+	 */
 	protected $useTimestamps = false;
-	protected $dateFormat    = 'int';
+
+	/**
+	 * Database date format
+	 *
+	 * @var string
+	 */
+	protected $dateFormat = 'int';
 
 	/**
 	 * Get all records
@@ -226,7 +256,7 @@ class RateModel extends Model
 
 						foreach ($rate['rate'] as $_rate)
 						{
-							$occurs[strval($_rate)] = ($occurs[$_rate] ?? 0) + 1;
+							$occurs[strval($_rate)] = ($occurs[strval($_rate)] ?? 0) + 1;
 						}
 
 						$_rate = floatval(array_search(max($occurs), $occurs));
