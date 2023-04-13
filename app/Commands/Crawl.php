@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Crawl Command
+ */
+
 namespace App\Commands;
 
 use CodeIgniter\CLI\BaseCommand;
@@ -11,7 +15,7 @@ use ReflectionException;
 /**
  * Crawl command class
  *
- * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+ * @author  Richard Muvirimi <richard@tyganeutronics.com>
  * @since   1.0.0
  * @version 1.0.0
  */

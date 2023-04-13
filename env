@@ -55,7 +55,7 @@ app.google.analytics = 'UA-67829308-8'
 #--------------------------------------------------------------------
 
 email.from = 'crawler@zimrate.co.zw'
-email.to = 'rich4rdmuvirimi@gmail.com'
+email.to = 'richard@tyganeutronics.com'
 
 #--------------------------------------------------------------------
 # DATABASE

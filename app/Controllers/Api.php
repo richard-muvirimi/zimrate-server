@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Api Controller
+ */
+
 namespace App\Controllers;
 
 use App\Entities\Rate;
@@ -7,7 +11,7 @@ use App\Libraries\SearchType;
 use \App\Models\RateModel;
 use CodeIgniter\API\ResponseTrait;
 use CodeIgniter\HTTP\Exceptions\HTTPException;
-use CodeIgniter\HTTP\Response;
+use CodeIgniter\HTTP\ResponseInterface;
 use Config\Services;
 use Exception;
 use GraphQL\Type\Definition\ObjectType;
@@ -19,7 +23,7 @@ use GraphQL\Type\Schema;
 /**
  * Api Handling Class
  *
- * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+ * @author  Richard Muvirimi <richard@tyganeutronics.com>
  * @since   1.0.0
  * @version 1.0.0
  */
@@ -30,11 +34,12 @@ class Api extends BaseController
 	/**
 	 * Version 0 api endpoint
 	 *
-	 * @return  Response
-	 * @version 1.0.0
+	 * @return  ResponseInterface
+	 * @throws  Exception
 	 * @since   1.0.0
+	 * @version 1.0.0
 	 */
-	public function version0(): Response
+	public function version0(): ResponseInterface
 	{
 		return $this->response->setJSON($this->getData('api'));
 	}
@@ -42,11 +47,12 @@ class Api extends BaseController
 	/**
 	 * Version 1 api endpoint
 	 *
-	 * @return  Response
-	 * @version 1.0.0
+	 * @return  ResponseInterface
+	 * @throws  Exception
 	 * @since   1.0.0
+	 * @version 1.0.0
 	 */
-	public function version1(): Response
+	public function version1(): ResponseInterface
 	{
 		helper('array');
 
@@ -64,13 +70,14 @@ class Api extends BaseController
 	/**
 	 * Graphql version of the api
 	 *
-	 * @return  Response
-	 * @since   1.0.0
+	 * @return  ResponseInterface
+	 * @throws  Exception
 	 * @version 1.0.0
 	 *
-	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @author Richard Muvirimi <richard@tyganeutronics.com>
+	 * @since  1.0.0
 	 */
-	public function graphql(): Response
+	public function graphql(): ResponseInterface
 	{
 		$this->logVisit('api/graphql');
 
@@ -88,13 +95,13 @@ class Api extends BaseController
 	 *
 	 * @param array $response Response.
 	 *
-	 * @return  Response
+	 * @return  ResponseInterface
 	 * @since   1.0.0
 	 * @version 1.0.0
 	 *
-	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @author Richard Muvirimi <richard@tyganeutronics.com>
 	 */
-	private function prepareResponse(array $response): Response
+	private function prepareResponse(array $response): ResponseInterface
 	{
 		if ($this->response->hasHeader('X-Callback'))
 		{
@@ -113,10 +120,11 @@ class Api extends BaseController
 	 * @param array|null $variables Variables.
 	 *
 	 * @return  array
-	 * @since   1.0.0
+	 * @throws  Exception
 	 * @version 1.0.0
 	 *
-	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @author Richard Muvirimi <richard@tyganeutronics.com>
+	 * @since  1.0.0
 	 */
 	private function resolveData(string $query = '', array $variables = null): array
 	{
@@ -245,8 +253,9 @@ class Api extends BaseController
 	 * @param string $page Page name.
 	 *
 	 * @return  array
-	 * @version 1.0.0
+	 * @throws  Exception
 	 * @since   1.0.0
+	 * @version 1.0.0
 	 */
 	private function getData(string $page): array
 	{
@@ -341,8 +350,9 @@ class Api extends BaseController
 	 * Normalize currency
 	 *
 	 * @return  string
-	 * @version 1.0.0
+	 * @throws  Exception
 	 * @since   1.0.0
+	 * @version 1.0.0
 	 */
 	private function normalizeCurrency(): string
 	{

@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Search Type Graphql type
+ */
+
 namespace App\Libraries;
 
 use GraphQL\Error\Error;
@@ -10,9 +14,9 @@ use GraphQL\Type\Definition\ScalarType;
 use GraphQL\Utils\Utils;
 
 /**
- * Cusom search type for graphql
+ * Custom search type for graphql
  *
- * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+ * @author  Richard Muvirimi <richard@tyganeutronics.com>
  * @link    https://webonyx.github.io/graphql-php/type-definitions/scalars/
  * @version 1.0.0
  * ,@since   1.0.0
@@ -31,7 +35,7 @@ class SearchType extends ScalarType{
 	 * @throws  Error
 	 * @version 1.0.0
 	 *
-	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @author Richard Muvirimi <richard@tyganeutronics.com>
 	 * @since  1.0.0
 	 */
 	public function serialize($value): string
@@ -53,7 +57,7 @@ class SearchType extends ScalarType{
 	 * @throws  Error
 	 * @version 1.0.0
 	 *
-	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @author Richard Muvirimi <richard@tyganeutronics.com>
 	 * @since  1.0.0
 	 */
 	public function parseValue($value): string
@@ -76,7 +80,7 @@ class SearchType extends ScalarType{
 	 * @throws  Error
 	 * @version 1.0.0
 	 *
-	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @author Richard Muvirimi <richard@tyganeutronics.com>
 	 * @since  1.0.0
 	 */
 	public function parseLiteral(Node $valueNode, ?array $variables = null):string

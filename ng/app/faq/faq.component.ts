@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { AnimeService } from '../services/anime.service';
+import {environment} from "../../environments/environment";
 
 @Component({
 	selector: 'app-faq',
@@ -11,7 +12,7 @@ export class FaqComponent implements OnInit {
 	site$: string;
 
 	constructor(private animeService: AnimeService) {
-		this.site$ = "http://richard.co.zw";
+		this.site$ = environment.author.url;
 	}
 
 	ngOnInit(): void {

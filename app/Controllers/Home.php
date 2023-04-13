@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Home Controller
+ */
+
 namespace App\Controllers;
 
 use App\Entities\Rate;
@@ -9,7 +13,7 @@ use CodeIgniter\HTTP\IncomingRequest;
 /**
  * Front Page Controller
  *
- * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+ * @author  Richard Muvirimi <richard@tyganeutronics.com>
  * @since   1.0.0
  * @version 1.0.0
  */

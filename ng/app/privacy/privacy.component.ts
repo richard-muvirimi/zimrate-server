@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import * as base64 from 'base-64';
 import { AnimeService } from '../services/anime.service';
+import {environment} from "../../environments/environment";
 
 @Component({
 	selector: 'app-privacy',
@@ -9,12 +10,12 @@ import { AnimeService } from '../services/anime.service';
 })
 export class PrivacyComponent implements OnInit {
 
-	email: string;
-	title: string;
+	email$: string;
+	title$: string;
 
 	constructor(private animeService: AnimeService) {
-		this.email = base64.encode("rich4rdmuvirimi@gmail.com")
-		this.title = "ZimRate";
+		this.email$ = base64.encode(environment.author.email)
+		this.title$ = environment.appTitle;
 	}
 
 	ngOnInit(): void {

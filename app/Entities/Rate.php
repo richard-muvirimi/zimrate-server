@@ -29,7 +29,7 @@ use function \current as array_first;
  * @property string $currency
  * @property string $url
  * @property boolean $javascript
- * @author   Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+ * @author   Richard Muvirimi <richard@tyganeutronics.com>
  * @since    1.0.0
  * @version  1.0.0
  */

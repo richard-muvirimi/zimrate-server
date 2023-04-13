@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import {environment} from "../../environments/environment";
 
 @Component({
   selector: 'app-contact',
@@ -7,7 +8,11 @@ import { Component, OnInit } from '@angular/core';
 })
 export class ContactComponent implements OnInit {
 
-  constructor() { }
+	url$ : string;
+
+  constructor() {
+	  this.url$ = environment.author.url;
+  }
 
   ngOnInit(): void {
   }

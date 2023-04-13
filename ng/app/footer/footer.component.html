@@ -3,7 +3,8 @@
 		<div class="site-footer-inner">
 			<div class="brand footer-brand">
 				<a routerLink="./">
-					<img class="header-logo-image" src="app/Views/dist/assets/images/logo.svg" alt="Logo">
+					<img class="header-logo-image" ngSrc="app/Views/dist/assets/images/logo.svg" alt="Logo" height="32"
+						 width="28">
 				</a>
 			</div>
 			<ul class="footer-links list-reset">
@@ -11,7 +12,7 @@
 					<a routerLink="/privacy">Privacy Policy</a>
 				</li>
 				<li>
-					<a href="http://richard.co.zw">Contact</a>
+					<a href="{{url$}}">Contact</a>
 				</li>
 				<li>
 					<a href="./">About</a>
@@ -51,7 +52,7 @@
 				</li>
 				<li>
 
-					<a title="Email" href="#" [attr.data-email_b64]="email">
+					<a title="Email" href="#" [attr.data-email_b64]="email$">
 						<span class="screen-reader-text">
 							Google
 						</span>

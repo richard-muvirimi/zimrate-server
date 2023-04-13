@@ -3,10 +3,7 @@ import { uniqBy } from 'lodash';
 import { sprintf } from 'sprintf-js';
 import { AnimeService } from '../services/anime.service';
 import { RatesService } from '../services/rates.service';
-
-type Currency = {
-	currency: string
-}
+import {Currency} from "../../@types/app";
 
 @Component({
 	selector: 'app-developers',
@@ -34,7 +31,7 @@ export class DevelopersComponent implements OnInit {
 	}
 
 	ngOnInit(): void {
-		this.ratesService.getCurrencies().subscribe(data => {
+		this.ratesService.getCurrencies().subscribe((data : {rates : Currency[]}) => {
 			this.currencies$ = uniqBy(data["rates"].map((item: Currency) => item.currency), currency => currency).join(", ");
 		});
 
