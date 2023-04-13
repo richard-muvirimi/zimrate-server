@@ -66,7 +66,7 @@ jobs:
 
       - name: Commit
         run: |
-          git config --local user.email "rich4rdmuvirimi@gmail.com"
+          git config --local user.email "richard@tyganeutronics.com"
           git config --local user.name "Richard Muvirimi"
           git add -A
           git status | grep "nothing to commit" || git commit -m "Update dependencies" -a

@@ -1,7 +1,8 @@
-import { Injectable } from '@angular/core';
-import { request, gql } from 'graphql-request';
-import { from } from 'rxjs';
-import { HttpClient } from '@angular/common/http';
+import {Injectable} from '@angular/core';
+import {gql, request} from 'graphql-request';
+import {from, Observable} from 'rxjs';
+import {HttpClient} from '@angular/common/http';
+import {Currency} from "../../@types/app";
 
 @Injectable({
 	providedIn: 'root',
@@ -9,7 +10,7 @@ import { HttpClient } from '@angular/common/http';
 export class RatesService {
 	constructor(private http: HttpClient) { }
 
-	getRates() {
+	getRates() :Observable<Object> {
 
 		const query = gql`query {
 		   	min : rate (prefer : MIN) {
@@ -44,15 +45,13 @@ export class RatesService {
 			notice : info
 		}`;
 
-		const rates = from(request(
+		return from(request(
 			'api/graphql',
 			query
-		));
-
-		return rates;
+		)) as Observable<Object>;
 	}
 
-	getCurrencies() {
+	getCurrencies():Observable<{rates : Currency[]}> {
 
 		const query = gql`query {
 			rates : rate (cors : true, prefer : MIN) {
@@ -60,12 +59,10 @@ export class RatesService {
 			}
 		}`;
 
-		const currencies = from(request(
+		return from(request(
 			'api/graphql',
 			query
-		));
-
-		return currencies;
+		)) as Observable<{rates : Currency[]}>;
 	}
 
 	getCallBackExample() {

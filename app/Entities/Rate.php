@@ -29,7 +29,7 @@ use function \current as array_first;
  * @property string $currency
  * @property string $url
  * @property boolean $javascript
- * @author   Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+ * @author   Richard Muvirimi <richard@tyganeutronics.com>
  * @since    1.0.0
  * @version  1.0.0
  */
@@ -117,21 +117,10 @@ class Rate extends Entity
 	 */
 	private function isXpath(string $selector): bool
 	{
-		switch ($selector){
-			case 'text':
-				// Select DOMText
-				$isXPath = true;
-				break;
-			case 'comment':
-				// Select DOMComment
-				$isXPath = true;
-				break;
-			default :
-				$isXPath = strpos($selector, '//') === 0;
-				break;
-		}
-
-		return $isXPath;
+		return match ($selector) {
+			'text', 'comment' => true,
+			default => str_starts_with($selector, '//'),
+		};
 	}
 
 	/**
@@ -146,39 +135,47 @@ class Rate extends Entity
 	 */
 	private function parseHtml(string $html): bool
 	{
-		//get html dom
-		$crawler = new Crawler($html);
-
-		$converter = new CssSelectorConverter();
-
-		$selector = $this->selector;
-		if (! $this->isXpath($selector))
+		try
 		{
-			$selector = $converter->toXPath($selector);
-		}
+			//get html dom
+			$crawler = new Crawler();
+			$crawler->addHtmlContent($html);
 
-		$locale = 'en_EN';
+			$converter = new CssSelectorConverter();
 
-		//rate
-		$rate = $this->cleanRate($crawler->filterXPath($selector)->innerText(), $locale);
-
-		if ($rate)
-		{
-			$this->rate = $rate;
-
-			$lastUpdatedSelector = $this->lastUpdatedSelector;
-			if (! $this->isXpath($lastUpdatedSelector))
+			$selector = $this->selector;
+			if (! $this->isXpath($selector))
 			{
-				$lastUpdatedSelector = $converter->toXPath($lastUpdatedSelector);
+				$selector = $converter->toXPath($selector);
 			}
 
-			$date = $this->cleanDate($crawler->filterXPath($lastUpdatedSelector)->innerText()) ?: Time::now();
+			$locale = 'en_EN';
 
-			//date
-			$this->lastUpdated = $this->fixDateOffset($date);
-			return true;
+			//rate
+			$rate = $this->cleanRate($crawler->filterXPath($selector)->innerText(), $locale);
+
+			if ($rate)
+			{
+				$this->rate = $rate;
+
+				$lastUpdatedSelector = $this->lastUpdatedSelector;
+				if (! $this->isXpath($lastUpdatedSelector))
+				{
+					$lastUpdatedSelector = $converter->toXPath($lastUpdatedSelector);
+				}
+
+				$date = $this->cleanDate($crawler->filterXPath($lastUpdatedSelector)->innerText()) ?: Time::now();
+
+				//date
+				$this->lastUpdated = $this->fixDateOffset($date);
+				return true;
+			}
+			else
+			{
+				return false;
+			}
 		}
-		else
+		catch (Exception $e)
 		{
 			return false;
 		}

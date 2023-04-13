@@ -10,7 +10,7 @@ use function current as array_first;
 /**
  * Version 0 Api Test Class
  *
- * @author  Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+ * @author  Richard Muvirimi <richard@tyganeutronics.com>
  * @since   1.0.0
  * @version 1.0.0
  */
@@ -23,7 +23,7 @@ class ApiVersion0Test extends TestCase{
 	 * @throws  Exception
 	 * @version 1.0.0
 	 *
-	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @author Richard Muvirimi <richard@tyganeutronics.com>
 	 * @since  1.0.0
 	 */
 	public function testApi():void
@@ -60,7 +60,7 @@ class ApiVersion0Test extends TestCase{
 	 * @throws  Exception
 	 * @version 1.0.0
 	 *
-	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @author Richard Muvirimi <richard@tyganeutronics.com>
 	 * @since  1.0.0
 	 */
 	public function testPrefer():void
@@ -98,7 +98,7 @@ class ApiVersion0Test extends TestCase{
 	 * @throws  Exception
 	 * @version 1.0.0
 	 *
-	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @author Richard Muvirimi <richard@tyganeutronics.com>
 	 * @since  1.0.0
 	 */
 	public function testCurrency():void
@@ -140,7 +140,7 @@ class ApiVersion0Test extends TestCase{
 	 * @throws  Exception
 	 * @version 1.0.0
 	 *
-	 * @author Richard Muvirimi <rich4rdmuvirimi@gmail.com>
+	 * @author Richard Muvirimi <richard@tyganeutronics.com>
 	 * @since  1.0.0
 	 */
 	public function testDate():void

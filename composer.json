@@ -2,19 +2,19 @@
 	"name": "rich4rdmuvirmi/zimrate",
 	"type": "project",
 	"description": "Zimrate Server",
-	"homepage": "http://zimrate.tyganeutronics.com",
+	"homepage": "https://zimrate.tyganeutronics.com",
 	"license": "MIT",
 	"authors": [
 		{
 			"name": "Richard Muvirimi",
-			"email": "rich4rdmuvirmi@gmail.com",
+			"email": "richard@tyganeutronics.com",
 			"homepage": "https://richard.co.zw",
 			"role": "Developer"
 		}
 	],
 	"config": {
 		"platform": {
-			"php": "7.4"
+			"php": "8.1"
 		},
 		"allow-plugins": {
 			"dealerdirect/phpcodesniffer-composer-installer": true,
@@ -23,10 +23,9 @@
 		"process-timeout": 0
 	},
 	"require": {
-		"php": ">=7.4",
+		"php": ">=8.1",
 		"codeigniter4/framework": "^4.0",
-		"symfony/polyfill-php80": "*",
-		"symfony/polyfill-php81": "*",
+		"symfony/polyfill-php82": "*",
 		"webonyx/graphql-php": "^14.11",
 		"ext-json": "*",
 		"ext-intl": "*",
@@ -72,7 +71,7 @@
 		"test": "phpunit"
 	},
 	"support": {
-		"forum": "http://forum.codeigniter.com/",
+		"forum": "https://forum.codeigniter.com/",
 		"source": "https://github.com/codeigniter4/CodeIgniter4",
 		"slack": "https://codeigniterchat.slack.com"
 	},

@@ -16,6 +16,7 @@ import { HomeComponent } from './home/home.component';
 import { PrivacyComponent } from './privacy/privacy.component';
 import { FaqComponent } from './faq/faq.component';
 import { DevelopersComponent } from './developers/developers.component';
+import {NgOptimizedImage} from "@angular/common";
 
 @NgModule({
 	declarations: [
@@ -35,7 +36,8 @@ import { DevelopersComponent } from './developers/developers.component';
 	imports: [
 		BrowserModule,
 		AppRoutingModule,
-		HttpClientModule
+		HttpClientModule,
+		NgOptimizedImage
 	],
 	providers: [],
 	bootstrap: [
