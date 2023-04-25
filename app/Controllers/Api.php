@@ -59,8 +59,7 @@ class Api extends BaseController
 		$response['USD'] = $this->getData('api/v1');
 
 		$info = $this->request->getPostGet('info') ?: true;
-		if (filter_var($info, FILTER_VALIDATE_BOOL))
-		{
+		if (filter_var($info, FILTER_VALIDATE_BOOL)) {
 			$response['info'] = dot_array_search('data.info', $this->resolveData('{info : info }'));
 		}
 
@@ -81,8 +80,8 @@ class Api extends BaseController
 	{
 		$this->logVisit('api/graphql');
 
-		$input     = $this->request->getJSON(true);
-		$query     = $input['query'] ?? '{info : info}';
+		$input = $this->request->getJSON(true);
+		$query = $input['query'] ?? '{info : info}';
 		$variables = $input['variables'] ?? null;
 
 		$response = $this->resolveData($query, $variables);
@@ -103,8 +102,7 @@ class Api extends BaseController
 	 */
 	private function prepareResponse(array $response): ResponseInterface
 	{
-		if ($this->response->hasHeader('X-Callback'))
-		{
+		if ($this->response->hasHeader('X-Callback')) {
 			$this->response->setContentType('application/javascript');
 
 			return $this->respond($this->response->getHeaderLine('X-Callback') . '(' . json_encode($response) . ');');
@@ -116,7 +114,7 @@ class Api extends BaseController
 	/**
 	 * Resolve request using graphql
 	 *
-	 * @param string     $query     Optional Query Data.
+	 * @param string $query Optional Query Data.
 	 * @param array|null $variables Variables.
 	 *
 	 * @return  array
@@ -129,30 +127,30 @@ class Api extends BaseController
 	private function resolveData(string $query = '', array $variables = null): array
 	{
 		$rateType = new ObjectType([
-			'name'   => 'Rate',
+			'name' => 'Rate',
 			'fields' => [
-				'currency'     => [
-					'type'    => Type::string(),
+				'currency' => [
+					'type' => Type::string(),
 					'resolve' => fn(Rate $rate): string => $rate->currency ?? '',
 				],
 				'last_checked' => [
-					'type'    => Type::int(),
+					'type' => Type::int(),
 					'resolve' => fn(Rate $rate): int => $rate->lastChecked->getTimestamp(),
 				],
 				'last_updated' => [
-					'type'    => Type::int(),
+					'type' => Type::int(),
 					'resolve' => fn(Rate $rate): int => $rate->lastUpdated->getTimeStamp(),
 				],
-				'name'         => [
-					'type'    => Type::string(),
+				'name' => [
+					'type' => Type::string(),
 					'resolve' => fn(Rate $rate): string => $rate->name ?? '',
 				],
-				'rate'         => [
-					'type'    => Type::float(),
+				'rate' => [
+					'type' => Type::float(),
 					'resolve' => fn(Rate $rate): float => $rate->rate ?? 0,
 				],
-				'url'          => [
-					'type'    => Type::string(),
+				'url' => [
+					'type' => Type::string(),
 					'resolve' => fn(Rate $rate): string => $rate->url ?? '',
 				],
 			],
@@ -160,57 +158,55 @@ class Api extends BaseController
 
 		$model = new RateModel();
 
-		$currencies   = array_column($model->getDisplayCurrencies(), 'currency');
+		$currencies = array_column($model->getDisplayCurrencies(), 'currency');
 		$currencyType = new EnumType([
-			'name'   => 'Currency',
+			'name' => 'Currency',
 			'values' => array_combine(array_map('strtoupper', $currencies), array_map(fn($prefer): array => ['value' => $prefer], $currencies)),
 		]);
 
 		$aggregates = $model->supportedPrefers();
 		$preferType = new EnumType([
-			'name'   => 'Prefer',
+			'name' => 'Prefer',
 			'values' => array_combine(array_map('strtoupper', $aggregates), array_map(fn($prefer): array => ['value' => $prefer], $aggregates)),
 		]);
 
 		$queryType = new ObjectType([
-			'name'   => 'Query',
+			'name' => 'Query',
 			'fields' => [
 				'rate' => [
-					'type'    => Type::listOf(Type::nonNull($rateType)),
-					'args'    => [
-						'search'   => [
-							'type'         => new SearchType(),
+					'type' => Type::listOf(Type::nonNull($rateType)),
+					'args' => [
+						'search' => [
+							'type' => new SearchType(),
 							'defaultValue' => null,
 						],
-						'date'     => [
-							'type'         => Type::int(),
+						'date' => [
+							'type' => Type::int(),
 							'defaultValue' => 0,
 						],
 						'currency' => [
-							'type'         => $currencyType,
+							'type' => $currencyType,
 							'defaultValue' => null,
 						],
-						'prefer'   => [
-							'type'         => $preferType,
+						'prefer' => [
+							'type' => $preferType,
 							'defaultValue' => null,
 						],
 						'callback' => [
-							'type'         => Type::string(),
+							'type' => Type::string(),
 							'defaultValue' => '',
 						],
-						'cors'     => [
-							'type'         => Type::boolean(),
+						'cors' => [
+							'type' => Type::boolean(),
 							'defaultValue' => false,
 						],
 					],
 					'resolve' => function ($queryType, array $args) use ($model): array {
-						if ($args['cors'])
-						{
+						if ($args['cors']) {
 							$this->response->setHeader('Access-Control-Allow-Origin', '*');
 						}
 
-						if (! empty($args['callback']))
-						{
+						if (!empty($args['callback'])) {
 							$this->response->setHeader('X-CallBack', $args['callback']);
 						}
 
@@ -218,7 +214,7 @@ class Api extends BaseController
 					},
 				],
 				'info' => [
-					'type'    => Type::string(),
+					'type' => Type::string(),
 					'resolve' => fn(): string => view('notice.txt'),
 				],
 			],
@@ -228,13 +224,10 @@ class Api extends BaseController
 			'query' => $queryType,
 		]);
 
-		try
-		{
-			$result   = GraphQL::executeQuery($schema, $query, null, null, $variables);
+		try {
+			$result = GraphQL::executeQuery($schema, $query, null, null, $variables);
 			$response = $result->toArray();
-		}
-		catch (Exception $e)
-		{
+		} catch (Exception $e) {
 			$response = [
 				'errors' => [
 					[
@@ -264,11 +257,11 @@ class Api extends BaseController
 		$this->logVisit($page);
 
 		$params = array_filter([
-			'search'   => '"' . $this->normalizeName() . '"',
+			'search' => '"' . $this->normalizeName() . '"',
 			'currency' => $this->normalizeCurrency(),
-			'date'     => $this->normalizeDate(),
-			'prefer'   => $this->normalizePrefer(),
-			'cors'     => $this->request->getPostGet('cors'),
+			'date' => $this->normalizeDate(),
+			'prefer' => $this->normalizePrefer(),
+			'cors' => $this->request->getPostGet('cors'),
 			'callback' => '"' . $this->request->getPostGet('callback') . '"',
 		], function ($param): bool {
 			return $param && strlen(strip_quotes($param));
@@ -296,37 +289,33 @@ class Api extends BaseController
 	 */
 	private function logVisit(string $page): void
 	{
-		if (getenv('app.google.analytics'))
-		{
-			try
-			{
+		if (getenv('app.google.analytics')) {
+			try {
 				ob_start();
 
 				$client = Services::curlrequest();
 
 				$data = [
 					// Version.
-					'v'   => 1,
+					'v' => 1,
 					// Tracking ID / Property ID.
 					'tid' => getenv('app.google.analytics'),
 					// Document hostname.
-					'dh'  => base_url(),
+					'dh' => base_url(),
 					// Anonymous Client ID.
 					'cid' => $this->request->getIPAddress(),
 					// Hit Type.
-					't'   => 'pageview',
+					't' => 'pageview',
 					// Page.
-					'dp'  => $page,
+					'dp' => $page,
 				];
 
 				$client->post('https://www.google-analytics.com/collect', [
-					'user_agent'  => $this->request->getUserAgent()->getAgentString() ?: 'Zimrate/1.0',
+					'user_agent' => $this->request->getUserAgent()->getAgentString() ?: 'Zimrate/1.0',
 					'form_params' => $data,
-					'verify'      => false,
+					'verify' => false,
 				]);
-			}
-			catch (HTTPException $e)
-			{
+			} catch (HTTPException $e) {
 			} finally {
 				ob_clean();
 			}
@@ -375,8 +364,7 @@ class Api extends BaseController
 	private function normalizeDate(): int
 	{
 		$date = $this->request->getPostGet('date') ?: 0;
-		if ($date && ! is_numeric($date))
-		{
+		if ($date && !is_numeric($date)) {
 			$date = strtotime($date);
 		}
 
@@ -397,8 +385,7 @@ class Api extends BaseController
 		$prefer = strtolower($this->request->getPostGet('prefer') ?: '');
 
 		//value to get
-		if (! in_array($prefer, $model->supportedPrefers()))
-		{
+		if (!in_array($prefer, $model->supportedPrefers())) {
 			$prefer = '';
 		}
 

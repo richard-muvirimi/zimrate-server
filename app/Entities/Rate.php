@@ -11,7 +11,7 @@ use Exception;
 use NumberFormatter;
 use Symfony\Component\CssSelector\CssSelectorConverter;
 use Symfony\Component\DomCrawler\Crawler;
-use function \current as array_first;
+use function current as array_first;
 
 /**
  * Rate Entity
@@ -42,9 +42,9 @@ class Rate extends Entity
 	 * @var string[]
 	 */
 	protected $casts = [
-		'rate'       => 'float',
-		'enabled'    => 'boolean',
-		'status'     => 'boolean',
+		'rate' => 'float',
+		'enabled' => 'boolean',
+		'status' => 'boolean',
 		'javascript' => 'boolean',
 	];
 
@@ -54,9 +54,9 @@ class Rate extends Entity
 	 * @var string[]
 	 */
 	protected $datamap = [
-		'lastChecked'         => 'last_checked',
+		'lastChecked' => 'last_checked',
 		'lastUpdatedSelector' => 'last_updated_selector',
-		'lastUpdated'         => 'last_updated',
+		'lastUpdated' => 'last_updated',
 	];
 
 	/**
@@ -82,25 +82,20 @@ class Rate extends Entity
 		$throttler = Services::throttler();
 
 		//if enabled and half an hour has passed since last check
-		if ($this->enabled && ( $this->status !== true || $throttler->check($this->id, 1, HOUR)))
-		{
+		if ($this->enabled && ($this->status !== true || $throttler->check($this->id, 1, HOUR))) {
 			/**
 			 * Get site html file and scan for required fields
 			 */
-			if (! $this->site)
-			{
+			if (!$this->site) {
 				$this->getHtmlContent();
 			}
 
-			if ($this->site)
-			{
+			if ($this->site) {
 				$this->status = $this->parseHtml($this->site) === true ? 1 : 0;
 
 				//last checked
 				$this->lastChecked = Time::now();
-			}
-			else
-			{
+			} else {
 				$this->status = false;
 			}
 		}
@@ -135,8 +130,7 @@ class Rate extends Entity
 	 */
 	private function parseHtml(string $html): bool
 	{
-		try
-		{
+		try {
 			//get html dom
 			$crawler = new Crawler();
 			$crawler->addHtmlContent($html);
@@ -144,8 +138,7 @@ class Rate extends Entity
 			$converter = new CssSelectorConverter();
 
 			$selector = $this->selector;
-			if (! $this->isXpath($selector))
-			{
+			if (!$this->isXpath($selector)) {
 				$selector = $converter->toXPath($selector);
 			}
 
@@ -154,13 +147,11 @@ class Rate extends Entity
 			//rate
 			$rate = $this->cleanRate($crawler->filterXPath($selector)->innerText(), $locale);
 
-			if ($rate)
-			{
+			if ($rate) {
 				$this->rate = $rate;
 
 				$lastUpdatedSelector = $this->lastUpdatedSelector;
-				if (! $this->isXpath($lastUpdatedSelector))
-				{
+				if (!$this->isXpath($lastUpdatedSelector)) {
 					$lastUpdatedSelector = $converter->toXPath($lastUpdatedSelector);
 				}
 
@@ -169,14 +160,10 @@ class Rate extends Entity
 				//date
 				$this->lastUpdated = $this->fixDateOffset($date);
 				return true;
-			}
-			else
-			{
+			} else {
 				return false;
 			}
-		}
-		catch (Exception $e)
-		{
+		} catch (Exception $e) {
 			return false;
 		}
 	}
@@ -195,25 +182,25 @@ class Rate extends Entity
 	{
 		$timezone = timezone_open($this->timezone);
 
-		return $date->setTimezone( $timezone);
+		return $date->setTimezone($timezone);
 	}
 
 	/**
 	 * Convert number to an int
 	 *
-	 * @param string $value  Rate.
+	 * @param string $value Rate.
 	 * @param string $locale Locale to parse number
 	 *
 	 * @return  float
-	 * @version 1.0.0
+	 * @throws Exception
 	 * @since   1.0.0
+	 * @version 1.0.0
 	 */
 	private function cleanRate(string $value, string $locale): float
 	{
 		$amount = $this->clean($value);
 
-		if (! is_numeric($amount))
-		{
+		if (!is_numeric($amount)) {
 			$words = explode(' ', $amount);
 
 			//remove non-numeric words
@@ -226,7 +213,7 @@ class Rate extends Entity
 			//join to allow removing non-numeric characters
 			$numbers = implode(' ', $numbered);
 
-			$fmt     = new NumberFormatter( $locale, NumberFormatter::DECIMAL );
+			$fmt = new NumberFormatter($locale, NumberFormatter::DECIMAL);
 			$numbers = $fmt->parse($numbers);
 
 			//split by non-numeric
@@ -249,16 +236,13 @@ class Rate extends Entity
 		$max = array_column($model->getByFilter('', $this->currency, 0, 'MAX', true), 'rate');
 		$min = array_column($model->getByFilter('', $this->currency, 0, 'MIN', true), 'rate');
 
-		if ($min && $max)
-		{
+		if ($min && $max) {
 			$amount = floatval($amount);
 
-			if ($amount > (array_first($max) * 1.3) || $amount < (array_first($min) * 0.7))
-			{
+			if ($amount > (array_first($max) * 1.3) || $amount < (array_first($min) * 0.7)) {
 				$amount /= 100;
 
-				if ($amount > (array_first($max) * 1.3) || $amount < (array_first($min) * 0.7))
-				{
+				if ($amount > (array_first($max) * 1.3) || $amount < (array_first($min) * 0.7)) {
 					$amount = 0;
 				}
 			}
@@ -299,8 +283,7 @@ class Rate extends Entity
 		 * Method: will only leave text (months) in the form jan or january
 		 */
 		$months = [];
-		for ($i = 1; $i <= 12; $i++)
-		{
+		for ($i = 1; $i <= 12; $i++) {
 			$months[] = strtolower(DateTime::createFromFormat('n', $i)->format('M'));
 			$months[] = strtolower(DateTime::createFromFormat('n', $i)->format('F'));
 		}
@@ -315,7 +298,7 @@ class Rate extends Entity
 		/**
 		 * Return parsed date substituting with defaults on none existent parts
 		 */
-		return Time::create($date['year'] ?: date('Y'), $date['month'] ?: date('n'), $date['day'] ?: date('j'), $date['hour'] ?: 0, $date['minute'] ?: 0, $date['second'] ?: 0 );
+		return Time::create($date['year'] ?: date('Y'), $date['month'] ?: date('n'), $date['day'] ?: date('j'), $date['hour'] ?: 0, $date['minute'] ?: 0, $date['second'] ?: 0);
 	}
 
 	/**
@@ -337,7 +320,7 @@ class Rate extends Entity
 
 		// $value = strip_tags(trim(html_entity_decode($value), " \t\n\r\0\x0B\xC2\xA0"));
 
-		return implode(' ', array_map(function (string $word):string {
+		return implode(' ', array_map(function (string $word): string {
 			return trim($word, '-,');
 		}, explode(' ', $value)));
 	}
@@ -354,37 +337,32 @@ class Rate extends Entity
 		$client = Services::curlrequest();
 
 		$data = [
-			'url'        => $this->url,
-			'format'     => 'html',
-			'timeout'    => getenv('scrappy.timeout'),
+			'url' => $this->url,
+			'format' => 'html',
+			'timeout' => getenv('scrappy.timeout'),
 			'user_agent' => $this->getUserAgent(),
-			'css'        => 'body',
+			'css' => 'body',
 		];
 
-		try
-		{
+		try {
 			$response = $client->post(getenv('scrappy.server') . '/scrape', [
 				'user_agent' => $this->getUserAgent(),
-				'multipart'  => $data,
-				'verify'     => false,
-				'headers'    => [
+				'multipart' => $data,
+				'verify' => false,
+				'headers' => [
 					'Authorization' => 'Bearer ' . getenv('scrappy.authKey'),
 				],
 			]);
 
-			if ($response->getStatusCode() === 200)
-			{
+			if ($response->getStatusCode() === 200) {
 				$content = $response->getBody();
 				$content = json_decode($content, true);
 
-				if ($content['data'] !== 'false')
-				{
+				if ($content['data'] !== 'false') {
 					$this->site = $content['data'];
 				}
 			}
-		}
-		catch (Exception $e)
-		{
+		} catch (Exception $e) {
 			// echo $e->getMessage();
 
 			$this->site = '';
@@ -402,8 +380,7 @@ class Rate extends Entity
 	{
 		$agent = cache('user-agent');
 
-		if (! $agent)
-		{
+		if (!$agent) {
 			$agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36';
 
 			$agent = preg_replace('/headless/i', '', $agent);
@@ -426,12 +403,10 @@ class Rate extends Entity
 	{
 		$return = [];
 
-		foreach ($this->attributes as $key => $value)
-		{
+		foreach ($this->attributes as $key => $value) {
 			$value = $this->__get($key);
 
-			if (in_array($key, $this->dates, true))
-			{
+			if (in_array($key, $this->dates, true)) {
 				$value = $value->getTimestamp();
 			}
 
