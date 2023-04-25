@@ -14,7 +14,7 @@ class Panther extends Migration
 	 * @version 1.0.0
 	 * @return  void
 	 */
-	public function up()
+	public function up(): void
 	{
 		$fields = [
 			'javascript' => [
@@ -32,7 +32,7 @@ class Panther extends Migration
 	 * @version 1.0.0
 	 * @return  void
 	 */
-	public function down()
+	public function down(): void
 	{
 		$this->forge->dropColumn('zimrate', 'javascript');
 	}
