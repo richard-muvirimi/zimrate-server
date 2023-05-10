@@ -13,19 +13,18 @@ use function command as execute;
  */
 class Crawl extends BaseController
 {
+    /**
+     * Initiate site crawling to get rates
+     *
+     * @since   1.0.0
+     * @version 1.0.0
+     * @return  void
+     */
+    public function index(): void
+    {
+        set_time_limit(0);
+        ignore_user_abort(true);
 
-	/**
-	 * Initiate site crawling to get rates
-	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
-	 * @return  void
-	 */
-	public function index():void
-	{
-		set_time_limit(0);
-		ignore_user_abort(true);
-
-		execute('crawl');
-	}
+        execute('crawl');
+    }
 }

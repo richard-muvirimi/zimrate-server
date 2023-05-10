@@ -182,3 +182,4 @@ ng/assets/js/scrollreveal.min.js
 ng/assets/js/safe-email.min.js
 
 *.lock
+.php-cs-fixer.cache

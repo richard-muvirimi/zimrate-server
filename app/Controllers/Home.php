@@ -19,56 +19,52 @@ use CodeIgniter\HTTP\IncomingRequest;
  */
 class Home extends BaseController
 {
+    use ResponseTrait;
 
-	use ResponseTrait;
+    /**
+     * Home page endpoint
+     *
+     * @since   1.0.0
+     * @version 1.0.0
+     * @return  string
+     */
+    public function index(): string
+    {
+        return view('dist/index');
+    }
 
-	/**
-	 * Home page endpoint
-	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
-	 * @return  string
-	 */
-	public function index():string
-	{
-		return view('dist/index');
-	}
+    /**
+     * Page testing endpoint
+     *
+     * @since   1.0.0
+     * @version 1.0.0
+     * @return  string
+     */
+    public function tester(): string
+    {
+        /**
+         * Incoming Request.
+         *
+         * @var IncomingRequest $request
+         */
+        $request = $this->request;
 
-	/**
-	 * Page testing endpoint
-	 *
-	 * @since   1.0.0
-	 * @version 1.0.0
-	 * @return  string
-	 */
-	public function tester():string
-	{
-		/**
-		 * Incoming Request.
-		 *
-		 * @var IncomingRequest $request
-		 */
-		$request = $this->request;
+        $site          = new Rate();
+        $site->url     = $request->getPostGet('site');
+        $site->enabled = true;
 
-		$site          = new Rate();
-		$site->url     = $request->getPostGet('site');
-		$site->enabled = true;
+        //also prevents mail
+        $site->status     = false;
+        $site->site       = false;
+        $site->javascript = true;
+        $site->selector   = $request->getPostGet('css') ?? '*';
 
-		 //also prevents mail
-		$site->status     = false;
-		$site->site       = false;
-		$site->javascript = true;
-		$site->selector   = $request->getPostGet('css') ?? '*';
+        $site->getHtmlContent();
 
-		$site->getHtmlContent();
-
-		if (empty($site->site))
-		{
-			return 'Failed to scan site';
-		}
-		else
-		{
-			return $site->site;
-		}
-	}
+        if (empty($site->site)) {
+            return 'Failed to scan site';
+        } else {
+            return $site->site;
+        }
+    }
 }
