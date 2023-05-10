@@ -8,11 +8,9 @@ namespace App\Controllers;
 
 use App\Entities\Rate;
 use App\Libraries\SearchType;
-use \App\Models\RateModel;
+use App\Models\RateModel;
 use CodeIgniter\API\ResponseTrait;
-use CodeIgniter\HTTP\Exceptions\HTTPException;
 use CodeIgniter\HTTP\ResponseInterface;
-use Config\Services;
 use Exception;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
@@ -29,366 +27,339 @@ use GraphQL\Type\Schema;
  */
 class Api extends BaseController
 {
-	use ResponseTrait;
+    use ResponseTrait;
 
-	/**
-	 * Version 0 api endpoint
-	 *
-	 * @return  ResponseInterface
-	 * @throws  Exception
-	 * @since   1.0.0
-	 * @version 1.0.0
-	 */
-	public function version0(): ResponseInterface
-	{
-		return $this->response->setJSON($this->getData('api'));
-	}
+    /**
+     * Version 0 api endpoint
+     *
+     * @return  ResponseInterface
+     * @throws  Exception
+     * @since   1.0.0
+     * @version 1.0.0
+     */
+    public function version0(): ResponseInterface
+    {
+        return $this->response->setJSON($this->getData('api'));
+    }
 
-	/**
-	 * Version 1 api endpoint
-	 *
-	 * @return  ResponseInterface
-	 * @throws  Exception
-	 * @since   1.0.0
-	 * @version 1.0.0
-	 */
-	public function version1(): ResponseInterface
-	{
-		helper('array');
+    /**
+     * Version 1 api endpoint
+     *
+     * @return  ResponseInterface
+     * @throws  Exception
+     * @since   1.0.0
+     * @version 1.0.0
+     */
+    public function version1(): ResponseInterface
+    {
+        helper('array');
 
-		$response['USD'] = $this->getData('api/v1');
+        $response['USD'] = $this->getData('api/v1');
 
-		$info = $this->request->getPostGet('info') ?: true;
-		if (filter_var($info, FILTER_VALIDATE_BOOL)) {
-			$response['info'] = dot_array_search('data.info', $this->resolveData('{info : info }'));
-		}
+        $info = $this->request->getPostGet('info') ?: true;
+        if (filter_var($info, FILTER_VALIDATE_BOOL)) {
+            $response['info'] = dot_array_search('data.info', $this->resolveData('{info : info }'));
+        }
 
-		return $this->prepareResponse($response);
-	}
+        return $this->prepareResponse($response);
+    }
 
-	/**
-	 * Graphql version of the api
-	 *
-	 * @return  ResponseInterface
-	 * @throws  Exception
-	 * @version 1.0.0
-	 *
-	 * @author Richard Muvirimi <richard@tyganeutronics.com>
-	 * @since  1.0.0
-	 */
-	public function graphql(): ResponseInterface
-	{
-		$this->logVisit('api/graphql');
+    /**
+     * Graphql version of the api
+     *
+     * @return  ResponseInterface
+     * @throws  Exception
+     * @version 1.0.0
+     *
+     * @author Richard Muvirimi <richard@tyganeutronics.com>
+     * @since  1.0.0
+     */
+    public function graphql(): ResponseInterface
+    {
+        helper(['logger']);
 
-		$input = $this->request->getJSON(true);
-		$query = $input['query'] ?? '{info : info}';
-		$variables = $input['variables'] ?? null;
+        log_activity('"api_request"');
 
-		$response = $this->resolveData($query, $variables);
+        $input     = $this->request->getJSON(true);
+        $query     = $input['query'] ?? '{info : info}';
+        $variables = $input['variables'] ?? null;
 
-		return $this->prepareResponse($response);
-	}
+        $response = $this->resolveData($query, $variables);
 
-	/**
-	 * Prepare response
-	 *
-	 * @param array $response Response.
-	 *
-	 * @return  ResponseInterface
-	 * @since   1.0.0
-	 * @version 1.0.0
-	 *
-	 * @author Richard Muvirimi <richard@tyganeutronics.com>
-	 */
-	private function prepareResponse(array $response): ResponseInterface
-	{
-		if ($this->response->hasHeader('X-Callback')) {
-			$this->response->setContentType('application/javascript');
+        return $this->prepareResponse($response);
+    }
 
-			return $this->respond($this->response->getHeaderLine('X-Callback') . '(' . json_encode($response) . ');');
-		}
+    /**
+     * Prepare response
+     *
+     * @param array $response Response.
+     *
+     * @return  ResponseInterface
+     * @since   1.0.0
+     * @version 1.0.0
+     *
+     * @author Richard Muvirimi <richard@tyganeutronics.com>
+     */
+    private function prepareResponse(array $response): ResponseInterface
+    {
+        if ($this->response->hasHeader('X-Callback')) {
+            $this->response->setContentType('application/javascript');
 
-		return $this->response->setJSON($response);
-	}
+            return $this->respond($this->response->getHeaderLine('X-Callback') . '(' . json_encode($response) . ');');
+        }
 
-	/**
-	 * Resolve request using graphql
-	 *
-	 * @param string $query Optional Query Data.
-	 * @param array|null $variables Variables.
-	 *
-	 * @return  array
-	 * @throws  Exception
-	 * @version 1.0.0
-	 *
-	 * @author Richard Muvirimi <richard@tyganeutronics.com>
-	 * @since  1.0.0
-	 */
-	private function resolveData(string $query = '', array $variables = null): array
-	{
-		$rateType = new ObjectType([
-			'name' => 'Rate',
-			'fields' => [
-				'currency' => [
-					'type' => Type::string(),
-					'resolve' => fn(Rate $rate): string => $rate->currency ?? '',
-				],
-				'last_checked' => [
-					'type' => Type::int(),
-					'resolve' => fn(Rate $rate): int => $rate->lastChecked->getTimestamp(),
-				],
-				'last_updated' => [
-					'type' => Type::int(),
-					'resolve' => fn(Rate $rate): int => $rate->lastUpdated->getTimeStamp(),
-				],
-				'name' => [
-					'type' => Type::string(),
-					'resolve' => fn(Rate $rate): string => $rate->name ?? '',
-				],
-				'rate' => [
-					'type' => Type::float(),
-					'resolve' => fn(Rate $rate): float => $rate->rate ?? 0,
-				],
-				'url' => [
-					'type' => Type::string(),
-					'resolve' => fn(Rate $rate): string => $rate->url ?? '',
-				],
-			],
-		]);
+        return $this->response->setJSON($response);
+    }
 
-		$model = new RateModel();
+    /**
+     * Resolve request using graphql
+     *
+     * @param string     $query     Optional Query Data.
+     * @param array|null $variables Variables.
+     *
+     * @return  array
+     * @throws  Exception
+     * @version 1.0.0
+     *
+     * @author Richard Muvirimi <richard@tyganeutronics.com>
+     * @since  1.0.0
+     */
+    private function resolveData(string $query = '', array $variables = null): array
+    {
+        $rateType = new ObjectType([
+            'name'   => 'Rate',
+            'fields' => [
+                'currency'     => [
+                    'type'    => Type::string(),
+                    'resolve' => fn (Rate $rate): string => $rate->currency ?? '',
+                ],
+                'last_checked' => [
+                    'type'    => Type::int(),
+                    'resolve' => fn (Rate $rate): int => $rate->lastChecked->getTimestamp(),
+                ],
+                'last_updated' => [
+                    'type'    => Type::int(),
+                    'resolve' => fn (Rate $rate): int => $rate->lastUpdated->getTimeStamp(),
+                ],
+                'name'         => [
+                    'type'    => Type::string(),
+                    'resolve' => fn (Rate $rate): string => $rate->name ?? '',
+                ],
+                'rate'         => [
+                    'type'    => Type::float(),
+                    'resolve' => fn (Rate $rate): float => $rate->rate ?? 0,
+                ],
+                'url'          => [
+                    'type'    => Type::string(),
+                    'resolve' => fn (Rate $rate): string => $rate->url ?? '',
+                ],
+            ],
+        ]);
 
-		$currencies = array_column($model->getDisplayCurrencies(), 'currency');
-		$currencyType = new EnumType([
-			'name' => 'Currency',
-			'values' => array_combine(array_map('strtoupper', $currencies), array_map(fn($prefer): array => ['value' => $prefer], $currencies)),
-		]);
+        $model = new RateModel();
 
-		$aggregates = $model->supportedPrefers();
-		$preferType = new EnumType([
-			'name' => 'Prefer',
-			'values' => array_combine(array_map('strtoupper', $aggregates), array_map(fn($prefer): array => ['value' => $prefer], $aggregates)),
-		]);
+        $currencies   = array_column($model->getDisplayCurrencies(), 'currency');
+        $currencyType = new EnumType([
+            'name'   => 'Currency',
+            'values' => array_combine(array_map('strtoupper', $currencies), array_map(
+                function ($prefer): array {
+                    return ['value' => $prefer];
+                },
+                $currencies
+            )),
+        ]);
 
-		$queryType = new ObjectType([
-			'name' => 'Query',
-			'fields' => [
-				'rate' => [
-					'type' => Type::listOf(Type::nonNull($rateType)),
-					'args' => [
-						'search' => [
-							'type' => new SearchType(),
-							'defaultValue' => null,
-						],
-						'date' => [
-							'type' => Type::int(),
-							'defaultValue' => 0,
-						],
-						'currency' => [
-							'type' => $currencyType,
-							'defaultValue' => null,
-						],
-						'prefer' => [
-							'type' => $preferType,
-							'defaultValue' => null,
-						],
-						'callback' => [
-							'type' => Type::string(),
-							'defaultValue' => '',
-						],
-						'cors' => [
-							'type' => Type::boolean(),
-							'defaultValue' => false,
-						],
-					],
-					'resolve' => function ($queryType, array $args) use ($model): array {
-						if ($args['cors']) {
-							$this->response->setHeader('Access-Control-Allow-Origin', '*');
-						}
+        $aggregates = $model->supportedPrefers();
+        $preferType = new EnumType([
+            'name'   => 'Prefer',
+            'values' => array_combine(array_map('strtoupper', $aggregates), array_map(function ($prefer): array {
+                return ['value' => $prefer];
+            }, $aggregates)),
+        ]);
 
-						if (!empty($args['callback'])) {
-							$this->response->setHeader('X-CallBack', $args['callback']);
-						}
+        $queryType = new ObjectType([
+            'name'   => 'Query',
+            'fields' => [
+                'rate' => [
+                    'type'    => Type::listOf(Type::nonNull($rateType)),
+                    'args'    => [
+                        'search'   => [
+                            'type'         => new SearchType(),
+                            'defaultValue' => null,
+                        ],
+                        'date'     => [
+                            'type'         => Type::int(),
+                            'defaultValue' => 0,
+                        ],
+                        'currency' => [
+                            'type'         => $currencyType,
+                            'defaultValue' => null,
+                        ],
+                        'prefer'   => [
+                            'type'         => $preferType,
+                            'defaultValue' => null,
+                        ],
+                        'callback' => [
+                            'type'         => Type::string(),
+                            'defaultValue' => '',
+                        ],
+                        'cors'     => [
+                            'type'         => Type::boolean(),
+                            'defaultValue' => false,
+                        ],
+                    ],
+                    'resolve' => function ($queryType, array $args) use ($model): array {
+                        if ($args['cors']) {
+                            $this->response->setHeader('Access-Control-Allow-Origin', '*');
+                        }
 
-						return $model->getByFilter($args['search'] ?? '', $args['currency'] ?? '', $args['date'], $args['prefer'] ?? '', true);
-					},
-				],
-				'info' => [
-					'type' => Type::string(),
-					'resolve' => fn(): string => view('notice.txt'),
-				],
-			],
-		]);
+                        if (! empty($args['callback'])) {
+                            $this->response->setHeader('X-CallBack', $args['callback']);
+                        }
 
-		$schema = new Schema([
-			'query' => $queryType,
-		]);
+                        ["search" => $search, "currency" => $currency, "date" => $date, "prefer" => $prefer] = $args;
 
-		try {
-			$result = GraphQL::executeQuery($schema, $query, null, null, $variables);
-			$response = $result->toArray();
-		} catch (Exception $e) {
-			$response = [
-				'errors' => [
-					[
-						'message' => $e->getMessage(),
-					],
-				],
-			];
-		}
+                        return $model->getByFilter($search ?? '', $currency ?? '', $date, $prefer ?? '', true);
+                    },
+                ],
+                'info' => [
+                    'type'    => Type::string(),
+                    'resolve' => fn (): string => view('notice.txt'),
+                ],
+            ],
+        ]);
 
-		return $response;
-	}
+        $schema = new Schema([
+            'query' => $queryType,
+        ]);
 
-	/**
-	 * Retrieve data from the data base
-	 *
-	 * @param string $page Page name.
-	 *
-	 * @return  array
-	 * @throws  Exception
-	 * @since   1.0.0
-	 * @version 1.0.0
-	 */
-	private function getData(string $page): array
-	{
-		helper(['array', 'text']);
+        try {
+            $result   = GraphQL::executeQuery($schema, $query, null, null, $variables);
+            $response = $result->toArray();
+        } catch (Exception $e) {
+            $response = [
+                'errors' => [
+                    [
+                        'message' => $e->getMessage(),
+                    ],
+                ],
+            ];
+        }
 
-		$this->logVisit($page);
+        return $response;
+    }
 
-		$params = array_filter([
-			'search' => '"' . $this->normalizeName() . '"',
-			'currency' => $this->normalizeCurrency(),
-			'date' => $this->normalizeDate(),
-			'prefer' => $this->normalizePrefer(),
-			'cors' => $this->request->getPostGet('cors'),
-			'callback' => '"' . $this->request->getPostGet('callback') . '"',
-		], function ($param): bool {
-			return $param && strlen(strip_quotes($param));
-		});
+    /**
+     * Retrieve data from the data base
+     *
+     * @param string $page Page name.
+     *
+     * @return  array
+     * @throws  Exception
+     * @since   1.0.0
+     * @version 1.0.0
+     */
+    private function getData(string $page): array
+    {
+        helper(['array', 'text', 'logger']);
 
-		$params = array_map(function ($value, $key) {
-			return $key . ' : ' . $value;
-		}, $params, array_keys($params));
+        log_activity('api_request');
 
-		$params = empty($params) ? '' : ' (' . implode(', ', $params) . ')';
+        $params = array_filter([
+            'search'   => '"' . $this->normalizeName() . '"',
+            'currency' => $this->normalizeCurrency(),
+            'date'     => $this->normalizeDate(),
+            'prefer'   => $this->normalizePrefer(),
+            'cors'     => $this->request->getPostGet('cors'),
+            'callback' => '"' . $this->request->getPostGet('callback') . '"',
+        ], function ($param): bool {
+            return $param && strlen(strip_quotes($param));
+        });
 
-		$query = '{ query : rate' . $params . ' { currency last_checked last_updated name rate url }}';
+        $params = array_map(function ($value, $key) {
+            return $key . ' : ' . $value;
+        }, $params, array_keys($params));
 
-		return array_map('array_filter', dot_array_search('data.query', $this->resolveData($query)) ?? []);
-	}
+        $params = empty($params) ? '' : ' (' . implode(', ', $params) . ')';
 
-	/**
-	 * Log visit to google analytics
-	 *
-	 * @param string $page Page name.
-	 *
-	 * @return  void
-	 * @version 1.0.0
-	 * @since   1.0.0
-	 */
-	private function logVisit(string $page): void
-	{
-		if (getenv('app.google.analytics')) {
-			try {
-				ob_start();
+        $query = '{ query : rate' . $params . ' { currency last_checked last_updated name rate url }}';
 
-				$client = Services::curlrequest();
+        return array_map('array_filter', dot_array_search('data.query', $this->resolveData($query)) ?? []);
+    }
 
-				$data = [
-					// Version.
-					'v' => 1,
-					// Tracking ID / Property ID.
-					'tid' => getenv('app.google.analytics'),
-					// Document hostname.
-					'dh' => base_url(),
-					// Anonymous Client ID.
-					'cid' => $this->request->getIPAddress(),
-					// Hit Type.
-					't' => 'pageview',
-					// Page.
-					'dp' => $page,
-				];
+    /**
+     * Normalize search term
+     *
+     * @return  string
+     * @version 1.0.0
+     * @since   1.0.0
+     */
+    private function normalizeName(): string
+    {
+        $filter = [
+            $this->request->getPostGet('search'),
+            $this->request->getPostGet('source'),
+            $this->request->getPostGet('name')
+        ];
 
-				$client->post('https://www.google-analytics.com/collect', [
-					'user_agent' => $this->request->getUserAgent()->getAgentString() ?: 'Zimrate/1.0',
-					'form_params' => $data,
-					'verify' => false,
-				]);
-			} catch (HTTPException $e) {
-			} finally {
-				ob_clean();
-			}
-		}
-	}
+        //search for rate
+        return array_filter($filter) ?: "";
+    }
 
-	/**
-	 * Normalize search term
-	 *
-	 * @return  string
-	 * @version 1.0.0
-	 * @since   1.0.0
-	 */
-	private function normalizeName(): string
-	{
-		//search for rate
-		return $this->request->getPostGet('search') ?: $this->request->getPostGet('source') ?: $this->request->getPostGet('name') ?: '';
-	}
+    /**
+     * Normalize currency
+     *
+     * @return  string
+     * @throws  Exception
+     * @since   1.0.0
+     * @version 1.0.0
+     */
+    private function normalizeCurrency(): string
+    {
+        $model = new RateModel();
 
-	/**
-	 * Normalize currency
-	 *
-	 * @return  string
-	 * @throws  Exception
-	 * @since   1.0.0
-	 * @version 1.0.0
-	 */
-	private function normalizeCurrency(): string
-	{
-		$model = new RateModel();
+        $currency = strtoupper($this->request->getPostGet('currency') ?: '');
 
-		$currency = strtoupper($this->request->getPostGet('currency') ?: '');
+        $currencies = $model->getCurrencies();
 
-		$currencies = $model->getCurrencies();
+        return in_array($currency, array_column($currencies, 'currency')) ? $currency : '';
+    }
 
-		return in_array($currency, array_column($currencies, 'currency')) ? $currency : '';
-	}
+    /**
+     * Normalize given date
+     *
+     * @return  integer
+     * @version 1.0.0
+     * @since   1.0.0
+     */
+    private function normalizeDate(): int
+    {
+        $date = $this->request->getPostGet('date') ?: 0;
+        if ($date && ! is_numeric($date)) {
+            $date = strtotime($date);
+        }
 
-	/**
-	 * Normalize given date
-	 *
-	 * @return  integer
-	 * @version 1.0.0
-	 * @since   1.0.0
-	 */
-	private function normalizeDate(): int
-	{
-		$date = $this->request->getPostGet('date') ?: 0;
-		if ($date && !is_numeric($date)) {
-			$date = strtotime($date);
-		}
+        return $date;
+    }
 
-		return $date;
-	}
+    /**
+     * Normalize preferred return value
+     *
+     * @return  string
+     * @version 1.0.0
+     * @since   1.0.0
+     */
+    private function normalizePrefer(): string
+    {
+        $model = new RateModel();
 
-	/**
-	 * Normalize preferred return value
-	 *
-	 * @return  string
-	 * @version 1.0.0
-	 * @since   1.0.0
-	 */
-	private function normalizePrefer(): string
-	{
-		$model = new RateModel();
+        $prefer = strtolower($this->request->getPostGet('prefer') ?: '');
 
-		$prefer = strtolower($this->request->getPostGet('prefer') ?: '');
+        //value to get
+        if (! in_array($prefer, $model->supportedPrefers())) {
+            $prefer = '';
+        }
 
-		//value to get
-		if (!in_array($prefer, $model->supportedPrefers())) {
-			$prefer = '';
-		}
-
-		return strtoupper($prefer);
-	}
+        return strtoupper($prefer);
+    }
 }

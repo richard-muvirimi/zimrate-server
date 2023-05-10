@@ -9,7 +9,9 @@ import { install } from 'ga-gtag';
 export class AppComponent {
 
 	constructor() {
-		install('UA-67829308-8');
+		const measurementId = document.querySelector("meta[name='gtag-id']")!.getAttribute('content');
+
+		install(measurementId);
 	}
 
 }

@@ -12,6 +12,8 @@
 		<meta property="og:image"
 			content="<?php echo base_url('app/Views/dist/assets/images/zimrate_screenshot.png'); ?>">
 		<meta property="og:url" content="<?php echo base_url(); ?>">
+		
+		<meta name="gtag-id" content="<?php echo getenv('GOOGLE_MEASUREMENT_ID'); ?>">
 
 		<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,600" rel="stylesheet">
 
