@@ -42,9 +42,9 @@ class Rate extends Entity
      * @var string[]
      */
     protected $casts = [
-        'rate'       => 'float',
-        'enabled'    => 'boolean',
-        'status'     => 'boolean',
+        'rate' => 'float',
+        'enabled' => 'boolean',
+        'status' => 'boolean',
         'javascript' => 'boolean',
     ];
 
@@ -54,9 +54,9 @@ class Rate extends Entity
      * @var string[]
      */
     protected $datamap = [
-        'lastChecked'         => 'last_checked',
+        'lastChecked' => 'last_checked',
         'lastUpdatedSelector' => 'last_updated_selector',
-        'lastUpdated'         => 'last_updated',
+        'lastUpdated' => 'last_updated',
     ];
 
     /**
@@ -86,12 +86,12 @@ class Rate extends Entity
             /**
              * Get site html file and scan for required fields
              */
-            if (! $this->site) {
+            if (!$this->site) {
                 $this->getHtmlContent();
             }
 
             if ($this->site) {
-                $this->status = $this->parseHtml($this->site) === true ? 1 : 0;
+                $this->status = $this->parseHtml($this->site) === true;
 
                 //last checked
                 $this->lastChecked = Time::now();
@@ -138,7 +138,7 @@ class Rate extends Entity
             $converter = new CssSelectorConverter();
 
             $selector = $this->selector;
-            if (! $this->isXpath($selector)) {
+            if (!$this->isXpath($selector)) {
                 $selector = $converter->toXPath($selector);
             }
 
@@ -151,7 +151,7 @@ class Rate extends Entity
                 $this->rate = $rate;
 
                 $lastUpdatedSelector = $this->lastUpdatedSelector;
-                if (! $this->isXpath($lastUpdatedSelector)) {
+                if (!$this->isXpath($lastUpdatedSelector)) {
                     $lastUpdatedSelector = $converter->toXPath($lastUpdatedSelector);
                 }
 
@@ -188,7 +188,7 @@ class Rate extends Entity
     /**
      * Convert number to an int
      *
-     * @param string $value  Rate.
+     * @param string $value Rate.
      * @param string $locale Locale to parse number
      *
      * @return  float
@@ -200,7 +200,7 @@ class Rate extends Entity
     {
         $amount = $this->clean($value);
 
-        if (! is_numeric($amount)) {
+        if (!is_numeric($amount)) {
             $words = explode(' ', $amount);
 
             //remove non-numeric words
@@ -213,7 +213,7 @@ class Rate extends Entity
             //join to allow removing non-numeric characters
             $numbers = implode(' ', $numbered);
 
-            $fmt     = new NumberFormatter($locale, NumberFormatter::DECIMAL);
+            $fmt = new NumberFormatter($locale, NumberFormatter::DECIMAL);
             $numbers = $fmt->parse($numbers);
 
             //split by non-numeric
@@ -300,7 +300,7 @@ class Rate extends Entity
         /**
          * Return parsed date substituting with defaults on none existent parts
          */
-		// phpcs:ignore Generic.Files.LineLength.TooLong
+        // phpcs:ignore Generic.Files.LineLength.TooLong
         return Time::create($date['year'] ?: date('Y'), $date['month'] ?: date('n'), $date['day'] ?: date('j'), $date['hour'] ?: 0, $date['minute'] ?: 0, $date['second'] ?: 0);
     }
 
@@ -340,19 +340,19 @@ class Rate extends Entity
         $client = Services::curlrequest();
 
         $data = [
-            'url'        => $this->url,
-            'format'     => 'html',
-            'timeout'    => getenv('scrappy.timeout'),
+            'url' => $this->url,
+            'format' => 'html',
+            'timeout' => getenv('scrappy.timeout'),
             'user_agent' => $this->getUserAgent(),
-            'css'        => 'body',
+            'css' => 'body',
         ];
 
         try {
             $response = $client->post(getenv('scrappy.server') . '/scrape', [
                 'user_agent' => $this->getUserAgent(),
-                'multipart'  => $data,
-                'verify'     => false,
-                'headers'    => [
+                'multipart' => $data,
+                'verify' => false,
+                'headers' => [
                     'Authorization' => 'Bearer ' . getenv('scrappy.authKey'),
                 ],
             ]);
@@ -383,7 +383,7 @@ class Rate extends Entity
     {
         $agent = cache('user-agent');
 
-        if (! $agent) {
+        if (!$agent) {
             $agent = getenv("USER_AGENT");
 
             $agent = preg_replace('/headless/i', '', $agent);
