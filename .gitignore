@@ -183,3 +183,4 @@ ng/assets/js/safe-email.min.js
 
 *.lock
 .php-cs-fixer.cache
+package-lock.json
