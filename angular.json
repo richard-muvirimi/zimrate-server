@@ -18,6 +18,7 @@
 					"builder": "@angular-devkit/build-angular:browser",
 					"options": {
 						"outputPath": "app/Views/dist",
+						"deployUrl" : "app/Views/dist",
 						"index": "ng/index.php",
 						"main": "ng/main.ts",
 						"polyfills": "ng/polyfills.ts",
