@@ -3,7 +3,7 @@ name: Update Dependencies
 on:
   # On push or after every 7 days
   push:
-    branches: [master]
+    branches: [ master ]
   schedule:
     - cron: "0 0 1/7 * *"
 
@@ -55,14 +55,8 @@ jobs:
         continue-on-error: true
         run: npm list
 
-      - name: Install Yarn Dependencies
-        run: yarn
-
-      - name: Composer Setup
-        run: composer update --no-dev
-
-      - name: Build Angular
-        run: yarn build
+      - name: Composer Install Upto Date Packages
+        run: composer install --no-dev --no-interaction --no-progress --optimize-autoloader --prefer-dist
 
       - name: Commit
         run: |
@@ -70,6 +64,7 @@ jobs:
           git config --local user.name "Richard Muvirimi"
           git add -A
           git status | grep "nothing to commit" || git commit -m "Update dependencies" -a
+          git pull --rebase
 
       - name: Push changes
         uses: ad-m/github-push-action@v0.6.0
@@ -78,7 +73,7 @@ jobs:
           branch: master
 
       - name: Prepare Deploy
-        run: rsync -rvzt --include 'vendor' --include 'app/Views/dist' --exclude-from=.gitignore --exclude '.git' --exclude '.github' --exclude 'ng' ./ ./distribution/
+        run: rsync -rvzt --include 'vendor' --include 'public_html/build' --exclude-from=.gitignore --exclude '.git' --exclude '.github' --exclude 'resources/js/' ./ ./distribution/
 
       - name: Deploy
         uses: SamKirkland/FTP-Deploy-Action@4.3.2

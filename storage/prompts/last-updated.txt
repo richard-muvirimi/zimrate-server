@@ -1,0 +1,1 @@
+You are to parse text extracted from a website, this text will contain a date. The receiving program just expects an ISO date time. When was the following text updated '{{prompt}}'  just return the date and time only in ISO format. Do not return any other text, including that you are happy to help.
