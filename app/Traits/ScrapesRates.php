@@ -6,7 +6,6 @@ use App\Models\Rate;
 use DateTime;
 use Exception;
 use GuzzleHttp\Client;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -192,16 +191,16 @@ trait ScrapesRates
          * if value is not within a 30 percentile range then it is invalid
          * Handles cases where it may be in cents
          */
-        $max = Rate::query()->where('rate_currency', $this->currency)->enabled()->updated()->max('rate');
-        $min = Rate::query()->where('rate_currency', $this->currency)->enabled()->updated()->min('rate');
+        $max = Rate::query()->where('rate_currency', $this->rate_currency)->enabled()->updated()->max('rate');
+        $min = Rate::query()->where('rate_currency', $this->rate_currency)->enabled()->updated()->min('rate');
 
         if ($min && $max) {
             $amount = floatval($amount);
 
-            if ($amount > (Arr::first($max) * 1.3) || $amount < (Arr::first($min) * 0.7)) {
+            if ($amount > ($max * 1.3) || $amount < ($min * 0.7)) {
                 $amount /= 100;
 
-                if ($amount > (Arr::first($max) * 1.3) || $amount < (Arr::first($min) * 0.7)) {
+                if ($amount > ($max * 1.3) || $amount < ($min * 0.7)) {
                     $amount = 0;
                 }
             }
