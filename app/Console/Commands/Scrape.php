@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Rate;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class Scrape extends Command
@@ -26,7 +27,7 @@ class Scrape extends Command
      */
     public function handle(): void
     {
-        $rates = Rate::query()->enabled()->get();
+        $rates = Rate::query()->enabled()->whereDate("updated_at", "<", Carbon::now()->subMinutes(30))->get();
 
         $this->withProgressBar($rates, function (Rate $rate) {
             $rate->scrape();
