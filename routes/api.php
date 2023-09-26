@@ -21,4 +21,3 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::match(['get', 'post'], '/', [RatesController::class, 'version0']);
 Route::match(['get', 'post'], '/v1', [RatesController::class, 'version1']);
-Route::match(['get', 'post'], '/replicate', [RatesController::class, 'replicate']);

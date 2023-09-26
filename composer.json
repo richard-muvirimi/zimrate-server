@@ -74,7 +74,7 @@
             "vendor/bin/pint ."
         ],
         "crawl": "@php spark crawl",
-        "test": "phpunit",
+        "test": "php artisan test",
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
@@ -94,7 +94,7 @@
             "dont-discover": []
         },
         "composer-asset-compiler": {
-            "dependencies": "update",
+            "dependencies": "install",
             "script": "build",
             "auto-run": "true",
             "wipe-node-modules": "false"

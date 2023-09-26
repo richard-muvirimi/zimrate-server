@@ -1,76 +1,78 @@
 import {Injectable} from '@angular/core';
-import {gql, request} from 'graphql-request';
-import {from, Observable} from 'rxjs';
+import {gql, TypedDocumentNode} from "apollo-angular";
+import {Observable} from 'rxjs';
 import {HttpClient} from '@angular/common/http';
 import {Currency} from "../../@types/app";
+import {GraphQlService} from "./graph-ql.service";
 
 @Injectable({
     providedIn: 'root',
 })
 export class RatesService {
-    constructor(private http: HttpClient) {
+    constructor(
+        private http: HttpClient,
+        private graphqlService: GraphQlService,
+    ) {
     }
 
-    getRates(): Observable<Object> {
+    async getRates(): Promise<Object> {
 
-        const query = gql`query {
-            min : rate (prefer : MIN) {
-                rate
-                currency
+        const query: TypedDocumentNode = gql`
+            query {
+                min : rate (prefer : MIN) {
+                    rate
+                    currency
+                }
+                max : rate (prefer : MAX) {
+                    rate
+                    currency
+                }
+                mean : rate (prefer : MEAN) {
+                    rate
+                    currency
+                }
+                median : rate (prefer : MEDIAN) {
+                    rate
+                    currency
+                }
+                random : rate (prefer : RANDOM) {
+                    rate
+                    currency
+                }
+                mode : rate (prefer : MODE) {
+                    rate
+                    currency
+                }
+                rates : rate (cors : true) {
+                    last_checked
+                    currency
+                    url
+                }
+                notice : info
             }
-            max : rate (prefer : MAX) {
-                rate
-                currency
-            }
-            mean : rate (prefer : MEAN) {
-                rate
-                currency
-            }
-            median : rate (prefer : MEDIAN) {
-                rate
-                currency
-            }
-            random : rate (prefer : RANDOM) {
-                rate
-                currency
-            }
-            mode : rate (prefer : MODE) {
-                rate
-                currency
-            }
-            rates : rate (cors : true) {
-                last_checked
-                currency
-                url
-            }
-            notice : info
-        }`;
+        `;
 
-        return from(request(
-            'api/graphql',
-            query
-        )) as Observable<Object>;
+        return this.graphqlService.query(query);
     }
 
-    getCurrencies(): Observable<{ rates: Currency[] }> {
+    async getCurrencies(): Promise<{ rates: Currency[] }> {
 
-        const query = gql`query {
-            rates : rate (cors : true, prefer : MIN) {
-                currency
+        const query: TypedDocumentNode = gql`
+            query {
+                rates : rate (cors : true, prefer : MIN) {
+                    currency
+                }
             }
-        }`;
+        `;
 
-        return from(request(
-            'api/graphql',
-            query
-        )) as Observable<{ rates: Currency[] }>;
+        return this.graphqlService.query<{ rates: Currency[] }>(query);
     }
 
-    getCallBackExample() {
+    getCallBackExample(): Observable<string> {
         return this.http.get("build/assets/misc/example.js", {responseType: 'text'});
     }
 
-    getGraphqlExample() {
+    getGraphqlExample(): Observable<string> {
         return this.http.get("build/assets/misc/example.graphql", {responseType: 'text'});
     }
 }

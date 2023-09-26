@@ -1,20 +1,22 @@
-import { Component, OnInit } from '@angular/core';
+import {Component, OnInit} from '@angular/core';
 import {environment} from "../../environments/environment";
 
 @Component({
-  selector: 'app-contact',
-  templateUrl: './contact.component.html',
-  styleUrls: ['./contact.component.scss']
+    selector: 'app-contact',
+    templateUrl: './contact.component.html',
+    styleUrls: ['./contact.component.scss']
 })
 export class ContactComponent implements OnInit {
 
-	url$ : string;
+    url$: string;
 
-  constructor() {
-	  this.url$ = environment.author.url;
-  }
+    constructor() {
+        this.ngOnInit = this.ngOnInit.bind(this);
 
-  ngOnInit(): void {
-  }
+        this.url$ = environment.author.url;
+    }
+
+    ngOnInit(): void {
+    }
 
 }

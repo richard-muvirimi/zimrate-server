@@ -11,9 +11,7 @@
         "start": "ng serve",
         "build": "ng build --configuration production",
         "dev": "ng build --configuration development",
-        "watch": "ng build --watch --configuration development",
-        "postbuild": "php artisan app:viewify",
-        "postdev": "php artisan app:viewify"
+        "watch": "ng build --watch --configuration development"
     },
     "private": true,
     "dependencies": {
@@ -29,10 +27,10 @@
         "base-64": "^1.0.0",
         "ga-gtag": "^1.1.1",
         "github-fork-ribbon-css": "^0.2.3",
-        "graphql": "^16.6.0",
-        "graphql-request": "^5.0.0",
+        "apollo-angular": "^5.0.1",
+        "graphql": "^16",
         "lodash": "^4.17.21",
-        "luxon": "^3.0.3",
+        "luxon": "^3.3.0",
         "rxjs": "~7.5.0",
         "safe-email": "^1.1.1",
         "scrollreveal": "4.0.0",

@@ -10,13 +10,11 @@
 
     <link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,600" rel="stylesheet">
 
-    <base href="{{ url('') }}/">
+    <base href="{{ url('/') }}/">
 
     <link rel="icon" type="image/x-icon" href="{{ url('build/assets/images/logo.svg') }}"/>
 
     <meta name="gtag-id" content="{{ env('MEASUREMENT_ID') }}"/>
-
-    <link rel="manifest" href="{{ url('build/manifest.webmanifest') }}"/>
 
     <title>{{ $data['title'] }}</title>
     <meta name="author" content="{{ $data['author']  }}"/>
