@@ -3,8 +3,6 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -44,46 +42,4 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
-
-    /**
-     * Relationship with Content.
-     *
-     * @since 1.0.0
-     *
-     * @version 1.0.0
-     *
-     * @author Richard Muvirimi <richard@tyganeutronics.com>
-     */
-    public function contents(): HasMany
-    {
-        return $this->hasMany(Content::class);
-    }
-
-    /**
-     * Relationship with UserMeta.
-     *
-     * @since 1.0.0
-     *
-     * @version 1.0.0
-     *
-     * @author Richard Muvirimi <richard@tyganeutronics.com>
-     */
-    public function userMetas(): HasMany
-    {
-        return $this->hasMany(UserMeta::class);
-    }
-
-    /**
-     * Relationship with ContentMeta.
-     *
-     * @since 1.0.0
-     *
-     * @version 1.0.0
-     *
-     * @author Richard Muvirimi <richard@tyganeutronics.com>
-     */
-    public function contentMetas(): HasManyThrough
-    {
-        return $this->hasManyThrough(ContentMeta::class, Content::class);
-    }
 }

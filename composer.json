@@ -39,7 +39,8 @@
         "laravel/tinker": "^2.8",
         "nuwave/lighthouse": "^6.18",
         "symfony/css-selector": "^6.3",
-        "symfony/dom-crawler": "^6.3"
+        "symfony/dom-crawler": "^6.3",
+        "wapmorgan/time-parser": "^2.0"
     },
     "require-dev": {
         "doctrine/dbal": "^3.6",

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "87ee8e71abf25f9909d91ef875eb588f",
+    "content-hash": "6a0b66e42cfd706b17fc195ca8f0b0ff",
     "packages": [
         {
             "name": "benbjurstrom/replicate-php",
@@ -6375,6 +6375,50 @@
                 }
             ],
             "time": "2022-03-08T17:03:00+00:00"
+        },
+        {
+            "name": "wapmorgan/time-parser",
+            "version": "2.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/wapmorgan/TimeParser.git",
+                "reference": "16afaaf038872b5ad332cd5229d72f2bcc973b35"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/wapmorgan/TimeParser/zipball/16afaaf038872b5ad332cd5229d72f2bcc973b35",
+                "reference": "16afaaf038872b5ad332cd5229d72f2bcc973b35",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.6.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "~4.8"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "wapmorgan\\TimeParser\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "A parser for date & time written in natural language",
+            "keywords": [
+                "date",
+                "human-written",
+                "humanized",
+                "parser",
+                "time"
+            ],
+            "support": {
+                "issues": "https://github.com/wapmorgan/TimeParser/issues",
+                "source": "https://github.com/wapmorgan/TimeParser/tree/master"
+            },
+            "time": "2017-04-27T16:14:22+00:00"
         },
         {
             "name": "webmozart/assert",

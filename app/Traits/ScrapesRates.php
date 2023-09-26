@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Models\Rate;
+use Carbon\CarbonInterval;
 use DateTime;
 use Exception;
 use GuzzleHttp\Client;
@@ -12,6 +13,7 @@ use Illuminate\Support\Str;
 use NumberFormatter;
 use Symfony\Component\CssSelector\CssSelectorConverter;
 use Symfony\Component\DomCrawler\Crawler;
+use wapmorgan\TimeParser\TimeParser;
 
 trait ScrapesRates
 {
@@ -27,7 +29,7 @@ trait ScrapesRates
         if (empty($site)) {
             $site = $this->getHtmlContent($this);
 
-            Cache::set($this->source_url, $site, 60 * 60);
+            Cache::set($this->source_url, $site, CarbonInterval::minutes(30));
         }
 
         if (Str::of($site)->isNotEmpty()) {
@@ -89,7 +91,7 @@ trait ScrapesRates
 
             $agent = preg_replace('/headless/i', '', $agent);
 
-            Cache::set('user-agent', $agent);
+            Cache::set('user-agent', $agent, CarbonInterval::day());
         }
 
         return $agent;
@@ -115,7 +117,7 @@ trait ScrapesRates
             $locale = 'en_EN';
 
             //rate
-            $rate = $this->cleanRate($crawler->filterXPath($selector)->innerText(), $locale);
+            $rate = $this->cleanRate($crawler->filterXPath($selector)->text(), $locale);
 
             if ($rate) {
                 $theRate->rate = $rate;
@@ -126,7 +128,7 @@ trait ScrapesRates
                 }
 
                 //date
-                $theRate->rate_updated_at = $this->cleanDate($crawler->filterXPath($selector)->innerText(), $theRate->source_timezone);
+                $theRate->rate_updated_at = $this->cleanDate($crawler->filterXPath($selector)->text(), $theRate->source_timezone);
                 $theRate->status = true;
 
             } else {
@@ -159,6 +161,9 @@ trait ScrapesRates
     {
         $amount = $this->clean($value);
 
+        /**
+         * Remove spaces between numbers
+         */
         $amount = preg_replace('/(\d)\s+(\d)/', '$1$2', $amount);
 
         if (!is_numeric($amount)) {
@@ -222,19 +227,35 @@ trait ScrapesRates
 
         // $value = strip_tags(trim(html_entity_decode($value), " \t\n\r\0\x0B\xC2\xA0"));
 
-        return implode(' ', array_map(function (string $word): string {
-            return trim($word, '-,');
+        /**
+         * Remove all non-alphanumeric characters except spaces
+         */
+        $value = implode(' ', array_map(function (string $word): string {
+            return trim($word, '-,:;\'"()[]{}<>!?*');
         }, explode(' ', $value)));
+
+        return Str::squish($value);
     }
 
     /**
-     * Parse a unix timestamp date
+     * Parse a date from raw text
      *
      * @throws  Exception
      */
     private function cleanDate(string $value, string $timezone): Carbon
     {
         $rawDate = $this->clean($value);
+
+        /**
+         * Try to natural parse the date
+         */
+        $parser = new TimeParser("english");
+
+        $parsed = $parser->parse($rawDate, true);
+
+        if ($parsed !== false) {
+            return Carbon::parse($parsed)->shiftTimezone($timezone);
+        }
 
         /**
          * Bug: php_parse fails when there is no year but time right after month e.g => "19 January 11:22"
@@ -264,14 +285,13 @@ trait ScrapesRates
         $rawDate = preg_replace($regex, '', $rawDate);
 
         /**
-         * Parse the date
+         * Remove extra spaces
          */
-        $date = date_parse($rawDate);
+        $rawDate = Str::squish($rawDate);
 
         /**
-         * Return parsed date substituting with defaults on none existent parts
+         * Parse the date
          */
-        // phpcs:ignore Generic.Files.LineLength.TooLong
-        return Carbon::create($date['year'] ?: date('Y'), $date['month'] ?: date('n'), $date['day'] ?: date('j'), $date['hour'] ?: 0, $date['minute'] ?: 0, $date['second'] ?: 0, $timezone);
+        return Carbon::parse($rawDate)->shiftTimezone($timezone);
     }
 }
