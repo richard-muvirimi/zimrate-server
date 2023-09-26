@@ -40,7 +40,7 @@ export class DevelopersComponent implements OnInit {
         }, 0);
 
         this.ratesService.getCallBackExample().subscribe((data: string): void => {
-            this.exampleCallback$ = sprintf(data, this.baseUrl$ + '/api/graphql')
+            this.exampleCallback$ = sprintf(data, this.baseUrl$ + '/api/v1')
         });
 
         this.ratesService.getGraphqlExample().subscribe((data: string): void => {
