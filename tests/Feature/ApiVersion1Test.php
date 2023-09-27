@@ -24,18 +24,18 @@ class ApiVersion1Test extends TestCase
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'USD' => [
-                "*" => [
+                '*' => [
                     'currency',
                     'last_checked',
                     'last_updated',
                     'name',
                     'rate',
-                    'url'
-                ]
-            ]
+                    'url',
+                ],
+            ],
         ]);
 
-        Rate::query()->enabled()->updated()->get(["rate_currency", "updated_at", "rate_updated_at", "rate_name", "rate", "source_url"])->each(function (Rate $rate) use ($response) {
+        Rate::query()->enabled()->updated()->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate_name', 'rate', 'source_url'])->each(function (Rate $rate) use ($response) {
             $response->assertJsonFragment([
                 'currency' => $rate->currency,
                 'last_checked' => $rate->last_checked,
@@ -55,15 +55,15 @@ class ApiVersion1Test extends TestCase
     {
 
         $query = [
-            'prefer' => "MEDIAN",
+            'prefer' => 'MEDIAN',
         ];
 
-        $response = $this->getJson('api/v1?' . Arr::query($query));
+        $response = $this->getJson('api/v1?'.Arr::query($query));
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'USD' => [
-                "*" => [
+                '*' => [
                     'currency',
                     'last_checked',
                     'last_updated',
@@ -72,7 +72,7 @@ class ApiVersion1Test extends TestCase
             ],
         ]);
 
-        Rate::query()->enabled()->updated()->preferred($query["prefer"])->get(["rate_currency", "updated_at", "rate_updated_at", "rate"])->each(function (Rate $rate) use ($response) {
+        Rate::query()->enabled()->updated()->preferred($query['prefer'])->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate'])->each(function (Rate $rate) use ($response) {
             $response->assertJsonFragment([
                 'currency' => $rate->currency,
                 'last_checked' => $rate->last_checked,
@@ -92,23 +92,23 @@ class ApiVersion1Test extends TestCase
             'currency' => Rate::query()->enabled()->updated()->first(['rate_currency'])->currency,
         ];
 
-        $response = $this->getJson('api/v1?' . Arr::query($query));
+        $response = $this->getJson('api/v1?'.Arr::query($query));
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'USD' => [
-                "*" => [
+                '*' => [
                     'currency',
                     'last_checked',
                     'last_updated',
                     'name',
                     'rate',
-                    'url'
+                    'url',
                 ],
             ],
         ]);
 
-        Rate::query()->enabled()->updated()->currency($query["currency"])->get(["rate_currency", "updated_at", "rate_updated_at", "rate_name", "rate", "source_url"])->each(function (Rate $rate) use ($response) {
+        Rate::query()->enabled()->updated()->currency($query['currency'])->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate_name', 'rate', 'source_url'])->each(function (Rate $rate) use ($response) {
             $response->assertJsonFragment([
                 'currency' => $rate->currency,
                 'last_checked' => $rate->last_checked,
@@ -130,23 +130,23 @@ class ApiVersion1Test extends TestCase
             'date' => Carbon::now()->subDay()->getTimestamp(),
         ];
 
-        $response = $this->getJson('api/v1?' . Arr::query($query));
+        $response = $this->getJson('api/v1?'.Arr::query($query));
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'USD' => [
-                "*" => [
+                '*' => [
                     'currency',
                     'last_checked',
                     'last_updated',
                     'name',
                     'rate',
-                    'url'
+                    'url',
                 ],
             ],
         ]);
 
-        Rate::query()->enabled()->updated()->date($query["date"])->get(["rate_currency", "updated_at", "rate_updated_at", "rate_name", "rate", "source_url"])->each(function (Rate $rate) use ($response) {
+        Rate::query()->enabled()->updated()->date($query['date'])->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate_name', 'rate', 'source_url'])->each(function (Rate $rate) use ($response) {
             $response->assertJsonFragment([
                 'currency' => $rate->currency,
                 'last_checked' => $rate->last_checked,
@@ -167,23 +167,23 @@ class ApiVersion1Test extends TestCase
             'info' => false,
         ];
 
-        $response = $this->getJson('api/v1?' . Arr::query($query));
+        $response = $this->getJson('api/v1?'.Arr::query($query));
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'USD' => [
-                "*" => [
+                '*' => [
                     'currency',
                     'last_checked',
                     'last_updated',
                     'name',
                     'rate',
-                    'url'
+                    'url',
                 ],
             ],
         ]);
 
-        Rate::query()->enabled()->updated()->get(["rate_currency", "updated_at", "rate_updated_at", "rate_name", "rate", "source_url"])->each(function (Rate $rate) use ($response) {
+        Rate::query()->enabled()->updated()->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate_name', 'rate', 'source_url'])->each(function (Rate $rate) use ($response) {
             $response->assertJsonFragment([
                 'currency' => $rate->currency,
                 'last_checked' => $rate->last_checked,
@@ -204,7 +204,7 @@ class ApiVersion1Test extends TestCase
             'callback' => 'test',
         ];
 
-        $response = $this->getJson('api/v1?' . Arr::query($query));
+        $response = $this->getJson('api/v1?'.Arr::query($query));
 
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'text/javascript; charset=UTF-8');
@@ -221,7 +221,7 @@ class ApiVersion1Test extends TestCase
             'cors' => true,
         ];
 
-        $response = $this->getJson('api/v1?' . Arr::query($query));
+        $response = $this->getJson('api/v1?'.Arr::query($query));
 
         $response->assertStatus(200);
         $response->assertHeader('Access-Control-Allow-Origin', '*');

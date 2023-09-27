@@ -14,7 +14,6 @@ use Tests\TestCase;
  */
 class ApiVersion0Test extends TestCase
 {
-
     /**
      * Test no params of the api
      */
@@ -24,17 +23,17 @@ class ApiVersion0Test extends TestCase
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
-            "*" => [
+            '*' => [
                 'currency',
                 'last_checked',
                 'last_updated',
                 'name',
                 'rate',
-                'url'
+                'url',
             ],
         ]);
 
-        Rate::query()->enabled()->updated()->get(["rate_currency", "updated_at", "rate_updated_at", "rate_name", "rate", "source_url"])->each(function (Rate $rate) use ($response) {
+        Rate::query()->enabled()->updated()->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate_name', 'rate', 'source_url'])->each(function (Rate $rate) use ($response) {
             $response->assertJsonFragment([
                 'currency' => $rate->rate_currency,
                 'last_checked' => $rate->last_checked,
@@ -53,14 +52,14 @@ class ApiVersion0Test extends TestCase
     public function test_filter_prefer_aggregate_works(): void
     {
         $query = [
-            'prefer' => "MEDIAN",
+            'prefer' => 'MEDIAN',
         ];
 
-        $response = $this->getJson('api?' . Arr::query($query));
+        $response = $this->getJson('api?'.Arr::query($query));
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
-            "*" => [
+            '*' => [
                 'currency',
                 'last_checked',
                 'last_updated',
@@ -68,7 +67,7 @@ class ApiVersion0Test extends TestCase
             ],
         ]);
 
-        Rate::query()->enabled()->updated()->preferred($query["prefer"])->get(["rate_currency", "updated_at", "rate_updated_at", "rate"])->each(function (Rate $rate) use ($response) {
+        Rate::query()->enabled()->updated()->preferred($query['prefer'])->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate'])->each(function (Rate $rate) use ($response) {
             $response->assertJsonFragment([
                 'currency' => $rate->rate_currency,
                 'last_checked' => $rate->last_checked,
@@ -87,21 +86,21 @@ class ApiVersion0Test extends TestCase
             'currency' => Rate::query()->enabled()->updated()->first(['rate_currency'])->currency,
         ];
 
-        $response = $this->getJson('api?' . Arr::query($query));
+        $response = $this->getJson('api?'.Arr::query($query));
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
-            "*" => [
+            '*' => [
                 'currency',
                 'last_checked',
                 'last_updated',
                 'name',
                 'rate',
-                'url'
-            ]
+                'url',
+            ],
         ]);
 
-        Rate::query()->enabled()->updated()->currency($query["currency"])->get(["rate_currency", "updated_at", "rate_updated_at", "rate_name", "rate", "source_url"])->each(function (Rate $rate) use ($response) {
+        Rate::query()->enabled()->updated()->currency($query['currency'])->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate_name', 'rate', 'source_url'])->each(function (Rate $rate) use ($response) {
             $response->assertJsonFragment([
                 'currency' => $rate->rate_currency,
                 'last_checked' => $rate->last_checked,
@@ -124,22 +123,22 @@ class ApiVersion0Test extends TestCase
             'date' => Carbon::now()->subDay()->getTimestamp(),
         ];
 
-        $response = $this->getJson('api?' . Arr::query($query));
+        $response = $this->getJson('api?'.Arr::query($query));
 
         $response->assertStatus(200);
 
         $response->assertJsonStructure([
-            "*" => [
+            '*' => [
                 'currency',
                 'last_checked',
                 'last_updated',
                 'name',
                 'rate',
-                'url'
-            ]
+                'url',
+            ],
         ]);
 
-        Rate::query()->enabled()->updated()->date($query["date"])->get(["rate_currency", "updated_at", "rate_updated_at", "rate_name", "rate", "source_url"])->each(function (Rate $rate) use ($response) {
+        Rate::query()->enabled()->updated()->date($query['date'])->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate_name', 'rate', 'source_url'])->each(function (Rate $rate) use ($response) {
             $response->assertJsonFragment([
                 'currency' => $rate->rate_currency,
                 'last_checked' => $rate->last_checked,
