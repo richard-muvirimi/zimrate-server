@@ -44,7 +44,7 @@ trait ScrapesRates
     {
 
         $headers = [
-            'Authorization' => 'Bearer '.env('SCRAPPY_TOKEN'),
+            'Authorization' => 'Bearer ' . env('SCRAPPY_TOKEN'),
         ];
 
         $body = [
@@ -53,7 +53,7 @@ trait ScrapesRates
             'timeout' => env('SCRAPPY_TIMEOUT'),
             'user_agent' => $this->getUserAgent(),
             'css' => 'body',
-            'javascript' => strval($theRate->javascript),
+            'javascript' => var_export($theRate->javascript, true),
         ];
 
         $options = [
@@ -62,7 +62,7 @@ trait ScrapesRates
 
         $client = new Client($options);
 
-        $response = $client->post(env('SCRAPPY_SERVER').'/scrape', [
+        $response = $client->post(env('SCRAPPY_SERVER') . '/scrape', [
             'headers' => $headers,
             'form_params' => $body,
         ]);
@@ -72,7 +72,7 @@ trait ScrapesRates
             $content = json_decode($response->getBody(), true);
 
             if ($content['data'] !== 'false') {
-                return '<html lang="en-US"><body>'.$content['data'].'</body></html>';
+                return '<html lang="en-US"><body>' . $content['data'] . '</body></html>';
             }
         }
 
@@ -86,7 +86,7 @@ trait ScrapesRates
     {
         $agent = Cache::get('user-agent');
 
-        if (! $agent) {
+        if (!$agent) {
             $agent = env('USER_AGENT');
 
             $agent = preg_replace('/headless/i', '', $agent);
@@ -110,7 +110,7 @@ trait ScrapesRates
             $converter = new CssSelectorConverter();
 
             $selector = $theRate->rate_selector;
-            if (! $this->isXpath($selector)) {
+            if (!$this->isXpath($selector)) {
                 $selector = $converter->toXPath($selector);
             }
 
@@ -123,7 +123,7 @@ trait ScrapesRates
                 $theRate->rate = $rate;
 
                 $selector = $this->rate_updated_at_selector;
-                if (! $this->isXpath($selector)) {
+                if (!$this->isXpath($selector)) {
                     $selector = $converter->toXPath($selector);
                 }
 
@@ -166,7 +166,7 @@ trait ScrapesRates
          */
         $amount = preg_replace('/(\d)\s+(\d)/', '$1$2', $amount);
 
-        if (! is_numeric($amount)) {
+        if (!is_numeric($amount)) {
             $words = explode(' ', $amount);
 
             //remove non-numeric words
@@ -280,7 +280,7 @@ trait ScrapesRates
             $months[] = strtolower(DateTime::createFromFormat('n', $i)->format('F'));
         }
 
-        $regex = "/\b(?!(".implode('|', $months).'|(\w[0-9][a-z])))(\w*[a-z]+[^\s]*|(\w[^\D\d\w]))/i';
+        $regex = "/\b(?!(" . implode('|', $months) . '|(\w[0-9][a-z])))(\w*[a-z]+[^\s]*|(\w[^\D\d\w]))/i';
 
         $rawDate = preg_replace($regex, '', $rawDate);
 
