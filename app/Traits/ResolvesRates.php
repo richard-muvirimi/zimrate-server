@@ -5,7 +5,9 @@ namespace App\Traits;
 use App\Models\Rate;
 use App\Rules\IsBoolean;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 trait ResolvesRates
 {
@@ -14,13 +16,14 @@ trait ResolvesRates
      */
     public function getRates(Request $request): array
     {
+
         $request->validate([
             'search' => 'string|prohibits:source,name',
             'source' => 'string|prohibits:search,name',
             'name' => 'string|prohibits:search,source',
             'date' => 'numeric|date_format:U|before:now',
             'currency' => 'string|exists:rates,rate_currency',
-            'prefer' => 'string|in:MIN,min,MAX,max,MEAN,mean,MEDIAN,median,RANDOM,random,MODE,mode',
+            'prefer' => ['string', Rule::in([...Rate::AGGREGATES, ...Arr::map(Rate::AGGREGATES, "strtoupper")])],
             'callback' => 'string',
             'cors' => [new IsBoolean()],
         ]);
@@ -55,7 +58,7 @@ trait ResolvesRates
         return $query->get()->map(function ($rate) use ($request) {
             $fields = collect(['currency', 'last_checked', 'last_updated', 'rate']);
 
-            if (! $request->has('prefer')) {
+            if (!$request->has('prefer')) {
                 $fields->push('name', 'url');
             }
 

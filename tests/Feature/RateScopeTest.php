@@ -84,29 +84,27 @@ class RateScopeTest extends TestCase
     public function test_scope_preferred(): void
     {
 
-        $prefer = ['MIN', 'MAX', 'MEAN', 'MODE', 'MEDIAN', 'RANDOM'];
-
-        foreach ($prefer as $aggregate) {
+        foreach (Rate::AGGREGATES as $aggregate) {
             $rates = Rate::query()->preferred($aggregate)->get(['rate', 'rate_currency']);
 
             $rates->each(function (Rate $rate) use ($aggregate) {
-                switch ($aggregate) {
-                    case 'MIN':
+                switch (strtolower($aggregate)) {
+                    case 'min':
                         $this->assertEquals($rate->rate, Rate::query()->currency($rate->rate_currency)->min('rate'));
                         break;
-                    case 'MAX':
+                    case 'max':
                         $this->assertEquals($rate->rate, Rate::query()->currency($rate->rate_currency)->max('rate'));
                         break;
-                    case 'MEAN':
+                    case 'mean':
                         $this->assertEquals($rate->rate, Rate::query()->currency($rate->rate_currency)->avg('rate'));
                         break;
-                    case 'MODE':
+                    case 'mode':
                         $this->assertContains(intval($rate->rate), Rate::query()->preferred($aggregate)->currency($rate->rate_currency)->get(['rate'])->mode('rate'));
                         break;
-                    case 'MEDIAN':
+                    case 'median':
                         $this->assertEquals(floor($rate->rate), floor(Rate::query()->preferred($aggregate)->currency($rate->rate_currency)->get(['rate'])->median('rate')));
                         break;
-                    case 'RANDOM':
+                    case 'random':
                         $this->assertContains($rate->rate, Rate::query()->currency($rate->rate_currency)->get(['rate'])->pluck('rate'));
                         break;
                 }

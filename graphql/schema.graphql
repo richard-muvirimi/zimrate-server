@@ -9,7 +9,7 @@ type Query  {
         date: Int @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "date") @rules(apply: ["numeric", "date_format:U", "before:now"])
         currency: Currency @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "currency") @rules(apply : ["string", "exists:rates,rate_currency"])
         cors: Boolean @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "cors") @rules(apply: ["boolean"])
-        prefer: Prefer @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "preferred") @rules(apply: ["string", "in:MIN,min,MAX,max,MEAN,mean,MEDIAN,median,RANDOM,random,MODE,mode"])
+        prefer: Prefer @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "preferred") @rules(apply: ["string"])
     ): [Rate!]! @all
 
     info : String! @field(resolver: "App\\GraphQL\\Queries\\InfoQuery")
@@ -99,28 +99,9 @@ type Option{
 
 type Rate {
     currency : String @rename(attribute : "rate_currency")
-    #    last_checked : Int! @rename(attribute : "updated_at")
     last_checked : Int!
     last_updated: Int!
-    #    last_updated: Int! @rename(attribute : "rate_updated_at")
     name : String @rename(attribute : "rate_name")
     rate : Float!
     url : String @rename(attribute : "source_url")
-}
-
-enum Prefer {
-    MIN
-    MAX
-    MEAN
-    MEDIAN
-    RANDOM
-    MODE
-}
-
-enum Currency {
-    BOND
-    RTGS
-    RBZ
-    ZAR
-    OMIR
 }
