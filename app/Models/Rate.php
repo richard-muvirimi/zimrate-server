@@ -16,6 +16,20 @@ class Rate extends Model
     use ScrapesRates;
 
     /**
+     * Aggregates.
+     *
+     * @var array|string[] $AGGREGATES
+     */
+    public const AGGREGATES = [
+        'min',
+        'max',
+        'mean',
+        'median',
+        'random',
+        'mode',
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
@@ -34,7 +48,6 @@ class Rate extends Model
         'created_at',
         'source_timezone',
     ];
-
     /**
      * The attributes that should be cast.
      *
@@ -55,7 +68,7 @@ class Rate extends Model
      */
     public function scopeSearch(Builder $query, string $search): Builder
     {
-        return $query->where('rate_name', 'like', '%'.$search.'%');
+        return $query->where('rate_name', 'like', '%' . $search . '%');
     }
 
     /**
@@ -116,7 +129,7 @@ class Rate extends Model
      */
     public function scopeCors(Builder $query, bool $enable = true): Builder
     {
-        if ($enable && ! headers_sent()) {
+        if ($enable && !headers_sent()) {
             header('Access-Control-Allow-Origin', '*');
         }
 

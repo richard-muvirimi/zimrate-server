@@ -1,5 +1,6 @@
 <?php
 
+use App\Providers\GraphQLServiceProvider;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\ServiceProvider;
 
@@ -42,7 +43,7 @@ return [
     |
     */
 
-    'debug' => (bool) env('APP_DEBUG', false),
+    'debug' => (bool)env('APP_DEBUG', false),
 
     /*
     |--------------------------------------------------------------------------
@@ -159,7 +160,7 @@ return [
         /*
          * Package Service Providers...
          */
-
+        GraphQLServiceProvider::class,
         /*
          * Application Service Providers...
          */
