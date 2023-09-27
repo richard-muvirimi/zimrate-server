@@ -64,6 +64,11 @@ current days rate.
 
 5. Visit `your-site/api` or `your-site/api/v1` for the api
 
+### Tests
+
+1. Make sure the server is running `php artisan serve`
+2. Run `php artisan test`
+
 ### Contributions and Issues
 
 Contributions are more than welcome, as well as issues
