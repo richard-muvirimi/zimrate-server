@@ -12,9 +12,9 @@ trait CreatesApplication
      */
     public function createApplication(): Application
     {
-        $app = require __DIR__ . '/../bootstrap/app.php';
+        $app = require __DIR__.'/../bootstrap/app.php';
 
-        $app->usePublicPath(dirname(__DIR__) . '/public_html');
+        $app->usePublicPath(dirname(__DIR__).'/public_html');
 
         $app->make(Kernel::class)->bootstrap();
 

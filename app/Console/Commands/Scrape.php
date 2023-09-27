@@ -28,7 +28,7 @@ class Scrape extends Command
      */
     public function handle(): void
     {
-        $rates = Rate::query()->enabled()->whereDate("updated_at", "<", Carbon::now("UTC")->subMinutes(30)->format(CarbonInterface::DEFAULT_TO_STRING_FORMAT))->get();
+        $rates = Rate::query()->enabled()->whereDate('updated_at', '<', Carbon::now('UTC')->subMinutes(30)->format(CarbonInterface::DEFAULT_TO_STRING_FORMAT))->get();
 
         $this->withProgressBar($rates, function (Rate $rate) {
             $rate->scrape();

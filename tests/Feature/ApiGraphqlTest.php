@@ -32,19 +32,19 @@ class ApiGraphqlTest extends TestCase
         $response->assertJsonStructure([
             'data' => [
                 'USD' => [
-                    "*" => [
+                    '*' => [
                         'currency',
                         'last_checked',
                         'last_updated',
                         'name',
                         'rate',
-                        'url'
+                        'url',
                     ],
                 ],
             ],
         ]);
 
-        Rate::query()->enabled()->updated()->get(["rate_currency", "updated_at", "rate_updated_at", "rate_name", "rate", "source_url"])->each(function (Rate $rate) use ($response) {
+        Rate::query()->enabled()->updated()->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate_name', 'rate', 'source_url'])->each(function (Rate $rate) use ($response) {
             $response->assertJsonFragment([
                 'currency' => $rate->rate_currency,
                 'last_checked' => $rate->last_checked,
@@ -61,15 +61,15 @@ class ApiGraphqlTest extends TestCase
      */
     public function test_filter_prefer_aggregate_works(): void
     {
-        $aggregate = "MEDIAN";
+        $aggregate = 'MEDIAN';
 
-        $response = $this->graphQl(/** @lang GraphQL */ 'query($prefer : Prefer!) {USD : rate(prefer : $prefer) { currency last_checked last_updated rate }}', ["prefer" => $aggregate]);
+        $response = $this->graphQl(/** @lang GraphQL */ 'query($prefer : Prefer!) {USD : rate(prefer : $prefer) { currency last_checked last_updated rate }}', ['prefer' => $aggregate]);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'data' => [
                 'USD' => [
-                    "*" => [
+                    '*' => [
                         'currency',
                         'last_checked',
                         'last_updated',
@@ -79,7 +79,7 @@ class ApiGraphqlTest extends TestCase
             ],
         ]);
 
-        Rate::query()->enabled()->updated()->preferred($aggregate)->get(["rate_currency", "updated_at", "rate_updated_at", "rate"])->each(function (Rate $rate) use ($response) {
+        Rate::query()->enabled()->updated()->preferred($aggregate)->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate'])->each(function (Rate $rate) use ($response) {
             $response->assertJsonFragment([
                 'currency' => $rate->rate_currency,
                 'last_checked' => $rate->last_checked,
@@ -97,25 +97,25 @@ class ApiGraphqlTest extends TestCase
 
         $currency = Rate::query()->enabled()->updated()->first(['rate_currency'])->currency;
 
-        $response = $this->graphQl(/** @lang GraphQL */ 'query ($currency: Currency!) { USD: rate(currency : $currency) { currency last_checked last_updated name rate url }}', ["currency" => $currency]);
+        $response = $this->graphQl(/** @lang GraphQL */ 'query ($currency: Currency!) { USD: rate(currency : $currency) { currency last_checked last_updated name rate url }}', ['currency' => $currency]);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'data' => [
                 'USD' => [
-                    "*" => [
+                    '*' => [
                         'currency',
                         'last_checked',
                         'last_updated',
                         'name',
                         'rate',
-                        'url'
+                        'url',
                     ],
                 ],
             ],
         ]);
 
-        Rate::query()->enabled()->updated()->currency($currency)->get(["rate_currency", "updated_at", "rate_updated_at", "rate_name", "rate", "source_url"])->each(function (Rate $rate) use ($response) {
+        Rate::query()->enabled()->updated()->currency($currency)->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate_name', 'rate', 'source_url'])->each(function (Rate $rate) use ($response) {
             $response->assertJsonFragment([
                 'currency' => $rate->rate_currency,
                 'last_checked' => $rate->last_checked,
@@ -135,25 +135,25 @@ class ApiGraphqlTest extends TestCase
 
         $date = Carbon::now()->subDay()->getTimestamp();
 
-        $response = $this->graphQl(/** @lang GraphQL */ 'query ($date : Int!) { USD : rate(date:  $date) { currency last_checked last_updated name rate url }}', ["date" => $date]);
+        $response = $this->graphQl(/** @lang GraphQL */ 'query ($date : Int!) { USD : rate(date:  $date) { currency last_checked last_updated name rate url }}', ['date' => $date]);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'data' => [
                 'USD' => [
-                    "*" => [
+                    '*' => [
                         'currency',
                         'last_checked',
                         'last_updated',
                         'name',
                         'rate',
-                        'url'
+                        'url',
                     ],
                 ],
             ],
         ]);
 
-        Rate::query()->enabled()->updated()->date($date)->get(["rate_currency", "updated_at", "rate_updated_at", "rate_name", "rate", "source_url"])->each(function (Rate $rate) use ($response) {
+        Rate::query()->enabled()->updated()->date($date)->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate_name', 'rate', 'source_url'])->each(function (Rate $rate) use ($response) {
             $response->assertJsonFragment([
                 'currency' => $rate->rate_currency,
                 'last_checked' => $rate->last_checked,
@@ -177,16 +177,16 @@ class ApiGraphqlTest extends TestCase
         $response->assertJsonStructure([
             'data' => [
                 'USD' => [
-                    "*" => [
+                    '*' => [
                         'currency',
                         'last_checked',
                         'last_updated',
                         'name',
                         'rate',
-                        'url'
+                        'url',
                     ],
                 ],
-                'info'
+                'info',
             ],
         ]);
 
@@ -200,7 +200,7 @@ class ApiGraphqlTest extends TestCase
      */
     public function test_cors_headers_are_set(): void
     {
-        $response = $this->graphQl(/** @lang GraphQL */ 'query($cors : Boolean!) {USD : rate(cors : $cors) { currency last_checked last_updated name rate url }}', ["cors" => true]);
+        $response = $this->graphQl(/** @lang GraphQL */ 'query($cors : Boolean!) {USD : rate(cors : $cors) { currency last_checked last_updated name rate url }}', ['cors' => true]);
 
         $response->assertStatus(200);
         $response->assertHeader('Access-Control-Allow-Origin', '*');
