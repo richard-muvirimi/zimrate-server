@@ -29,7 +29,7 @@ class GraphQLServiceProvider extends ServiceProvider
             ])
         );
 
-        $currencies = Rate::query()->distinct()->enabled()->updated()->get(["rate_currency"])->pluck("rate_currency")->toArray();
+        $currencies = Rate::query()->distinct()->enabled()->updated()->get(['rate_currency'])->pluck('rate_currency')->toArray();
 
         $typeRegistry->register(
             new EnumType([
