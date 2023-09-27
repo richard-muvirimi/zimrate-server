@@ -23,7 +23,7 @@ trait ResolvesRates
             'name' => 'string|prohibits:search,source',
             'date' => 'numeric|date_format:U|before:now',
             'currency' => 'string|exists:rates,rate_currency',
-            'prefer' => ['string', Rule::in([...Rate::AGGREGATES, ...Arr::map(Rate::AGGREGATES, "strtoupper")])],
+            'prefer' => ['string', Rule::in([...Rate::AGGREGATES, ...Arr::map(Rate::AGGREGATES, 'strtoupper')])],
             'callback' => 'string',
             'cors' => [new IsBoolean()],
         ]);
@@ -58,7 +58,7 @@ trait ResolvesRates
         return $query->get()->map(function ($rate) use ($request) {
             $fields = collect(['currency', 'last_checked', 'last_updated', 'rate']);
 
-            if (!$request->has('prefer')) {
+            if (! $request->has('prefer')) {
                 $fields->push('name', 'url');
             }
 
