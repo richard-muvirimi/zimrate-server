@@ -43,6 +43,7 @@ class Rate extends Model
     protected $casts = [
         'status' => 'boolean',
         'enabled' => 'boolean',
+        'javascript' => 'boolean',
         'rate' => 'float',
         'rate_updated_at' => 'datetime',
         'updated_at' => 'datetime',
