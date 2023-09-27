@@ -1,14 +1,12 @@
 "A datetime string with format `Y-m-d H:i:s`, e.g. `2018-05-23 13:43:32`."
 scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
 
-scalar UnixTimeStamp @scalar(class: "UnixTimeStamp")
-
 "Indicates what fields are available at the top level of a query operation."
 type Query  {
 
     rate(
         search: String @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "search") @rules(apply: ["string"])
-        date: UnixTimeStamp @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "date") @rules(apply: ["numeric", "date_format:U", "before:now"])
+        date: Int @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "date") @rules(apply: ["numeric", "date_format:U", "before:now"])
         currency: Currency @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "currency") @rules(apply : ["string", "exists:rates,rate_currency"])
         cors: Boolean @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "cors") @rules(apply: ["boolean"])
         prefer: Prefer @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "preferred") @rules(apply: ["string", "in:MIN,min,MAX,max,MEAN,mean,MEDIAN,median,RANDOM,random,MODE,mode"])

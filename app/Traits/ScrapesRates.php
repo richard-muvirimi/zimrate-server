@@ -53,7 +53,7 @@ trait ScrapesRates
             'timeout' => env('SCRAPPY_TIMEOUT'),
             'user_agent' => $this->getUserAgent(),
             'css' => 'body',
-            'javascript' => $theRate->javascript ? 'true' : 'false',
+            'javascript' => strval($theRate->javascript),
         ];
 
         $options = [

@@ -75,7 +75,7 @@
             "vendor/bin/pint ."
         ],
         "crawl": "@php spark crawl",
-        "test": "php artisan test",
+        "test": "php artisan test --stop-on-failure",
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
