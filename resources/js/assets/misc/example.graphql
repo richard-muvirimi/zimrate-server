@@ -1,4 +1,4 @@
-{
+query {
     USD : rate ( prefer : RANDOM, cors: true ) {
         currency
         last_checked
