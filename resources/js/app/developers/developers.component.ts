@@ -1,5 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {uniqBy} from 'lodash';
+import {trimEnd, uniqBy} from 'lodash';
 import {sprintf} from 'sprintf-js';
 import {AnimeService} from '../services/anime.service';
 import {RatesService} from '../services/rates.service';
@@ -29,7 +29,7 @@ export class DevelopersComponent implements OnInit {
         this.exampleCallback$ = "";
         this.exampleGraphql$ = "";
 
-        this.baseUrl$ = window.location.href.replace("/developers", "");
+        this.baseUrl$ = trimEnd(document.querySelector<HTMLBaseElement>("base[href]")!!.href, "/");
     }
 
     ngOnInit(): void {
@@ -40,7 +40,7 @@ export class DevelopersComponent implements OnInit {
         }, 0);
 
         this.ratesService.getCallBackExample().subscribe((data: string): void => {
-            this.exampleCallback$ = sprintf(data, this.baseUrl$ + '/api/v1')
+            this.exampleCallback$ = sprintf(data, this.baseUrl$)
         });
 
         this.ratesService.getGraphqlExample().subscribe((data: string): void => {
