@@ -1,7 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {RatesService} from '../services/rates.service';
 import {DateTime} from "luxon";
-import {Dictionary, groupBy, map, mapValues, maxBy, uniqBy} from "lodash";
+import {Dictionary, groupBy, mapValues, maxBy, uniqBy} from "lodash";
 import {AnimeService} from '../services/anime.service';
 
 
@@ -46,10 +46,6 @@ export class RatesComponent implements OnInit {
 
             const {max, min, mean, median, random, mode} = data;
             this.data$ = mapValues({max, min, mean, median, random, mode}, items => {
-                items = map(items, item => {
-                    item.rate = item.rate.toFixed(2);
-                    return item;
-                });
                 return groupBy(items, item => item.currency);
             });
 
