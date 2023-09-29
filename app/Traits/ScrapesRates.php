@@ -167,6 +167,9 @@ trait ScrapesRates
         $amount = preg_replace('/(\d)\s+(\d)/', '$1$2', $amount);
 
         if (!is_numeric($amount)) {
+            // separate alpha characters from numeric
+            $amount = preg_replace('/([^0-9,.]*)([0-9,.]+)([^0-9,.]*)/i', '$1 $2 $3', $amount);
+
             $words = explode(' ', $amount);
 
             //remove non-numeric words
