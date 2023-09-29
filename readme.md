@@ -38,6 +38,8 @@ current days rate.
             - the site will discard all non-numeric values and take the highest numeric value
 
         - `rate` The rate from site, (initially set to 1)
+        - `transform` The formula to apply on the rate to get the correct rate relative to 1 USD (initially set
+          to `1 * x`)
         - `rate_updated_at` The timestamp when scan was last performed (initially set to 0)
         - `rate_updated_at_selector` The css selector of the date field
 

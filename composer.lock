@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6a0b66e42cfd706b17fc195ca8f0b0ff",
+    "content-hash": "77ca53a90a992dd5f27739b26fd1e37f",
     "packages": [
         {
             "name": "benbjurstrom/replicate-php",
@@ -2085,6 +2085,58 @@
                 }
             ],
             "time": "2023-08-05T12:09:49+00:00"
+        },
+        {
+            "name": "madorin/matex",
+            "version": "v1.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/madorin/matex.git",
+                "reference": "2927e17d91bd294b18655e0d42c3a0c9e783a25f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/madorin/matex/zipball/2927e17d91bd294b18655e0d42c3a0c9e783a25f",
+                "reference": "2927e17d91bd294b18655e0d42c3a0c9e783a25f",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.3"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Matex\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Dorin Marcoci",
+                    "email": "dorin.marcoci@gmail.com",
+                    "homepage": "https://www.marcodor.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "PHP Mathematical expression parser and evaluator",
+            "homepage": "https://github.com/madorin/matex",
+            "keywords": [
+                "calculator",
+                "eval",
+                "evaluator",
+                "expression",
+                "formula",
+                "math",
+                "parser"
+            ],
+            "support": {
+                "issues": "https://github.com/madorin/matex/issues",
+                "source": "https://github.com/madorin/matex"
+            },
+            "time": "2021-01-07T18:46:41+00:00"
         },
         {
             "name": "masterminds/html5",

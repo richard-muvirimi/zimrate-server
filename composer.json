@@ -37,6 +37,7 @@
         "laravel/framework": "^10.22",
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
+        "madorin/matex": "^1.0",
         "nuwave/lighthouse": "^6.18",
         "symfony/css-selector": "^6.3",
         "symfony/dom-crawler": "^6.3",
