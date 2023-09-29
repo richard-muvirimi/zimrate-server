@@ -47,6 +47,7 @@ class Rate extends Model
         'updated_at',
         'created_at',
         'source_timezone',
+        'transform',
     ];
 
     /**
@@ -69,7 +70,7 @@ class Rate extends Model
      */
     public function scopeSearch(Builder $query, string $search): Builder
     {
-        return $query->where('rate_name', 'like', '%'.$search.'%');
+        return $query->where('rate_name', 'like', '%' . $search . '%');
     }
 
     /**
@@ -130,7 +131,7 @@ class Rate extends Model
      */
     public function scopeCors(Builder $query, bool $enable = true): Builder
     {
-        if ($enable && ! headers_sent()) {
+        if ($enable && !headers_sent()) {
             header('Access-Control-Allow-Origin', '*');
         }
 

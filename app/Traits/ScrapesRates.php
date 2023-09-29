@@ -10,6 +10,7 @@ use GuzzleHttp\Client;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Matex\Evaluator;
 use NumberFormatter;
 use Symfony\Component\CssSelector\CssSelectorConverter;
 use Symfony\Component\DomCrawler\Crawler;
@@ -27,20 +28,26 @@ trait ScrapesRates
         $site = Cache::get($this->source_url, '');
 
         if (empty($site)) {
-            $site = $this->getHtmlContent($this);
+            $site = $this->getHtmlContent();
+
+            if ($site === '') {
+                return;
+            }
+
+            $site = '<html lang="en-US"><body>' . $site . '</body></html>';
 
             Cache::set($this->source_url, $site, CarbonInterval::minutes(30));
         }
 
         if (Str::of($site)->isNotEmpty()) {
-            $this->parseHtml($site, $this);
+            $this->parseHtml($site);
         }
     }
 
     /**
      * Get content of given url
      */
-    private function getHtmlContent(Rate $theRate): string
+    private function getHtmlContent(): string
     {
 
         $headers = [
@@ -48,12 +55,12 @@ trait ScrapesRates
         ];
 
         $body = [
-            'url' => $theRate->source_url,
+            'url' => $this->source_url,
             'format' => 'html',
             'timeout' => env('SCRAPPY_TIMEOUT'),
             'user_agent' => $this->getUserAgent(),
             'css' => 'body',
-            'javascript' => var_export($theRate->javascript, true),
+            'javascript' => var_export($this->javascript, true),
         ];
 
         $options = [
@@ -72,7 +79,7 @@ trait ScrapesRates
             $content = json_decode($response->getBody(), true);
 
             if ($content['data'] !== 'false') {
-                return '<html lang="en-US"><body>' . $content['data'] . '</body></html>';
+                return $content['data'];
             }
         }
 
@@ -100,8 +107,9 @@ trait ScrapesRates
     /**
      * Parse given html for required values
      */
-    private function parseHtml(string $html, Rate $theRate): void
+    private function parseHtml(string $html): void
     {
+
         try {
             //get html dom
             $crawler = new Crawler();
@@ -109,18 +117,19 @@ trait ScrapesRates
 
             $converter = new CssSelectorConverter();
 
-            $selector = $theRate->rate_selector;
+            $selector = $this->rate_selector;
             if (!$this->isXpath($selector)) {
                 $selector = $converter->toXPath($selector);
             }
 
-            $locale = 'en_EN';
+            //locale
+            $locale = $crawler->getNode(0)->getAttribute('lang');
 
             //rate
             $rate = $this->cleanRate($crawler->filterXPath($selector)->text(), $locale);
 
             if ($rate) {
-                $theRate->rate = $rate;
+                $this->rate = $rate;
 
                 $selector = $this->rate_updated_at_selector;
                 if (!$this->isXpath($selector)) {
@@ -128,16 +137,17 @@ trait ScrapesRates
                 }
 
                 //date
-                $theRate->rate_updated_at = $this->cleanDate($crawler->filterXPath($selector)->text(), $theRate->source_timezone);
-                $theRate->status = true;
+                $this->rate_updated_at = $this->cleanDate($crawler->filterXPath($selector)->text(), $this->source_timezone);
+                $this->status = true;
 
             } else {
-                $theRate->status = false;
+                $this->status = false;
             }
-        } catch (Exception) {
-            $theRate->status = false;
+        } catch (Exception $e) {
+            dd($e->getMessage());
+            $this->status = false;
         } finally {
-            $theRate->save();
+            $this->save();
         }
     }
 
@@ -192,6 +202,16 @@ trait ScrapesRates
         }
 
         /**
+         * Apply transformation to rate
+         */
+        $evaluator = new Evaluator();
+        $evaluator->variables = [
+            'x' => floatval($amount),
+        ];
+
+        $amount = $evaluator->execute($this->transform);
+
+        /**
          * Normalize the value
          *
          * There could be better ways but the premise here is
@@ -203,8 +223,6 @@ trait ScrapesRates
         $min = Rate::query()->where('rate_currency', $this->rate_currency)->enabled()->updated()->min('rate');
 
         if ($min && $max) {
-            $amount = floatval($amount);
-
             if ($amount > ($max * 1.3) || $amount < ($min * 0.7)) {
                 $amount /= 100;
 
@@ -252,12 +270,16 @@ trait ScrapesRates
         /**
          * Try to natural parse the date
          */
-        $parser = new TimeParser('english');
+        try {
+            $parser = new TimeParser('english');
 
-        $parsed = $parser->parse($rawDate, true);
+            $parsed = $parser->parse($rawDate, true);
 
-        if ($parsed !== false) {
-            return Carbon::parse($parsed)->shiftTimezone($timezone);
+            if ($parsed !== false) {
+                return Carbon::parse($parsed)->shiftTimezone($timezone);
+            }
+        } catch (Exception) {
+            //do nothing
         }
 
         /**
