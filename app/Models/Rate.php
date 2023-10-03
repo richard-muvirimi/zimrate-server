@@ -166,9 +166,9 @@ class Rate extends Model
             case 'median':
                 $rates = $query->clone()->get(['id', 'rate_currency', 'rate'])->groupBy('rate_currency')->map(function (Collection $rates) {
                     if ($rates->count() % 2 === 0) {
-                        return $rates->sort()->slice(floor($rates->count() / 2) - 1, 2);
+                        return $rates->sortBy("rate", SORT_NUMERIC)->slice(floor($rates->count() / 2) - 1, 2);
                     } else {
-                        return $rates->sort()->slice(floor($rates->count() / 2), 1);
+                        return $rates->sortBy("rate", SORT_NUMERIC)->slice(floor($rates->count() / 2), 1);
                     }
                 });
 
@@ -178,15 +178,15 @@ class Rate extends Model
             case 'mode':
                 $rates = $query->clone()->get(['id', 'rate_currency', 'rate'])->groupBy('rate_currency')->map(function (Collection $rates) {
 
-                    $rates = $rates->groupBy('rate')->sortByDesc(function (Collection $rates) {
+                    $rates = $rates->groupBy('rate')->sortBy(function (Collection $rates) {
                         return $rates->count();
                     }, SORT_NUMERIC);
 
-                    return $rates->flatten(1)->first();
-
+                    return $rates;
                 });
 
-                $query->whereIn('id', $rates->pluck('id'));
+                $query->whereIn('id', $rates->flatten(2)->pluck('id'));
+                $query->preferred('MAX');
                 break;
             default:
                 break;

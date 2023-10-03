@@ -51,30 +51,38 @@ class ApiVersion0Test extends TestCase
      */
     public function test_filter_prefer_aggregate_works(): void
     {
-        $query = [
-            'prefer' => 'MEDIAN',
-        ];
 
-        $response = $this->getJson('api?'.Arr::query($query));
+        $aggregates = ['MAX', 'MEAN', 'MIN', 'MEDIAN', 'MODE', 'RANDOM'];
 
-        $response->assertStatus(200);
-        $response->assertJsonStructure([
-            '*' => [
-                'currency',
-                'last_checked',
-                'last_updated',
-                'rate',
-            ],
-        ]);
+        foreach ($aggregates as $aggregate) {
 
-        Rate::query()->enabled()->updated()->preferred($query['prefer'])->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate'])->each(function (Rate $rate) use ($response) {
-            $response->assertJsonFragment([
-                'currency' => $rate->rate_currency,
-                'last_checked' => $rate->last_checked,
-                'last_updated' => $rate->last_updated,
-                'rate' => $rate->rate,
+            $query = [
+                'prefer' => $aggregate,
+            ];
+
+            $response = $this->getJson('api?'.Arr::query($query));
+
+            $response->assertStatus(200);
+            $response->assertJsonStructure([
+                '*' => [
+                    'currency',
+                    'last_checked',
+                    'last_updated',
+                    'rate',
+                ],
             ]);
-        });
+
+            if ($aggregate !== 'RANDOM') {
+                Rate::query()->enabled()->updated()->preferred($query['prefer'])->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate'])->each(function (Rate $rate) use ($response) {
+                    $response->assertJsonFragment([
+                        'currency' => $rate->rate_currency,
+                        'last_checked' => $rate->last_checked,
+                        'last_updated' => $rate->last_updated,
+                        'rate' => $rate->rate,
+                    ]);
+                });
+            }
+        }
     }
 
     /**

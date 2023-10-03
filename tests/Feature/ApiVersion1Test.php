@@ -54,32 +54,39 @@ class ApiVersion1Test extends TestCase
     public function test_filter_prefer_aggregate_works(): void
     {
 
-        $query = [
-            'prefer' => 'MEDIAN',
-        ];
+        $aggregates = ['MAX', 'MEAN', 'MIN', 'MEDIAN', 'MODE', 'RANDOM'];
 
-        $response = $this->getJson('api/v1?'.Arr::query($query));
+        foreach ($aggregates as $aggregate) {
 
-        $response->assertStatus(200);
-        $response->assertJsonStructure([
-            'USD' => [
-                '*' => [
-                    'currency',
-                    'last_checked',
-                    'last_updated',
-                    'rate',
+            $query = [
+                'prefer' => $aggregate,
+            ];
+
+            $response = $this->getJson('api/v1?'.Arr::query($query));
+
+            $response->assertStatus(200);
+            $response->assertJsonStructure([
+                'USD' => [
+                    '*' => [
+                        'currency',
+                        'last_checked',
+                        'last_updated',
+                        'rate',
+                    ],
                 ],
-            ],
-        ]);
-
-        Rate::query()->enabled()->updated()->preferred($query['prefer'])->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate'])->each(function (Rate $rate) use ($response) {
-            $response->assertJsonFragment([
-                'currency' => $rate->currency,
-                'last_checked' => $rate->last_checked,
-                'last_updated' => $rate->last_updated,
-                'rate' => $rate->rate,
             ]);
-        });
+
+            if ($aggregate !== 'RANDOM') {
+                Rate::query()->enabled()->updated()->preferred($query['prefer'])->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate'])->each(function (Rate $rate) use ($response) {
+                    $response->assertJsonFragment([
+                        'currency' => $rate->currency,
+                        'last_checked' => $rate->last_checked,
+                        'last_updated' => $rate->last_updated,
+                        'rate' => $rate->rate,
+                    ]);
+                });
+            }
+        }
     }
 
     /**

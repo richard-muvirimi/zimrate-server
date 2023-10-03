@@ -61,32 +61,36 @@ class ApiGraphqlTest extends TestCase
      */
     public function test_filter_prefer_aggregate_works(): void
     {
-        $aggregate = 'MEDIAN';
+        $aggregates = ['MAX', 'MEAN', 'MIN', 'MEDIAN', 'MODE', 'RANDOM'];
 
-        $response = $this->graphQl(/** @lang GraphQL */ 'query($prefer : Prefer!) {USD : rate(prefer : $prefer) { currency last_checked last_updated rate }}', ['prefer' => $aggregate]);
+        foreach ($aggregates as $aggregate) {
+            $response = $this->graphQl(/** @lang GraphQL */ 'query($prefer : Prefer!) {USD : rate(prefer : $prefer) { currency last_checked last_updated rate }}', ['prefer' => $aggregate]);
 
-        $response->assertStatus(200);
-        $response->assertJsonStructure([
-            'data' => [
-                'USD' => [
-                    '*' => [
-                        'currency',
-                        'last_checked',
-                        'last_updated',
-                        'rate',
+            $response->assertStatus(200);
+            $response->assertJsonStructure([
+                'data' => [
+                    'USD' => [
+                        '*' => [
+                            'currency',
+                            'last_checked',
+                            'last_updated',
+                            'rate',
+                        ],
                     ],
                 ],
-            ],
-        ]);
-
-        Rate::query()->enabled()->updated()->preferred($aggregate)->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate'])->each(function (Rate $rate) use ($response) {
-            $response->assertJsonFragment([
-                'currency' => $rate->rate_currency,
-                'last_checked' => $rate->last_checked,
-                'last_updated' => $rate->last_updated,
-                'rate' => $rate->rate,
             ]);
-        });
+
+            if ($aggregate !== 'RANDOM') {
+                Rate::query()->enabled()->updated()->preferred($aggregate)->get(['rate_currency', 'updated_at', 'rate_updated_at', 'rate'])->each(function (Rate $rate) use ($response) {
+                    $response->assertJsonFragment([
+                        'currency' => $rate->rate_currency,
+                        'last_checked' => $rate->last_checked,
+                        'last_updated' => $rate->last_updated,
+                        'rate' => $rate->rate,
+                    ]);
+                });
+            }
+        }
     }
 
     /**
