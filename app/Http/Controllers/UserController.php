@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Option;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -12,14 +13,6 @@ use Illuminate\Support\Facades\Hash;
 class UserController extends BaseController
 {
     /**
-     * Create the controller instance.
-     */
-    public function __construct()
-    {
-        $this->authorizeResource(User::class, 'user');
-    }
-
-    /**
      * Display a listing of the resource.
      */
     public function index(Request $request): JsonResponse
@@ -27,12 +20,28 @@ class UserController extends BaseController
         try {
             $request->validate([
                 'limit' => 'numeric',
-                'offset' => 'numeric',
+                'page' => 'numeric',
             ]);
+
+            $limit = Option::query()->firstOrCreate(['key' => 'paginator-limit'], ['value' => '20']);
+
+            $request->mergeIfMissing([
+                'limit' => $limit->value('value'),
+                'page' => 1,
+            ]);
+
+            $paginator = User::query()->paginate(perPage: intval($request->get('limit')), page: intval($request->get('page')));
 
             return response()->json([
                 'status' => true,
-                'data' => User::all(),
+                'data' => [
+                    'items' => $paginator->items(),
+                    'paginator' => [
+                        'total' => $paginator->total(),
+                        'page' => $paginator->currentPage(),
+                        'limit' => $paginator->perPage(),
+                    ],
+                ],
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -48,23 +57,19 @@ class UserController extends BaseController
     public function store(Request $request): JsonResponse
     {
         try {
-            $request->validate([
-                'name' => 'required',
+            $rules = [
+                'name' => 'required|string',
                 'email' => 'required|email',
-                'password' => 'required',
-            ]);
+                'password' => 'required|string',
+            ];
 
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => $request->password,
-                'role' => 'user',
-            ]);
+            $request->validate($rules);
+
+            User::query()->create($request->only(array_keys($rules)));
 
             return response()->json([
                 'status' => true,
                 'message' => 'User Created Successfully',
-                'data' => $user->createToken(config('app.key'))->plainTextToken,
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -79,10 +84,9 @@ class UserController extends BaseController
      */
     public function show(User $user): JsonResponse
     {
-
         return response()->json([
             'status' => true,
-            'data' => $user,
+            'data' => $user->toArray(),
         ]);
     }
 
@@ -93,24 +97,16 @@ class UserController extends BaseController
     {
         try {
             $request->validate([
-                'name' => 'required',
+                'name' => 'required|string',
                 'email' => 'required|email',
                 'password' => '',
-                'role' => '',
             ]);
 
-            $user->name = $request->name;
-            $user->email = $request->email;
+            $user->update($request->only(['name', 'email']));
 
-            if ($request->user()->tokenCan('update:others:account')) {
-                $user->role = $request->role;
+            if ($request->has('password')) {
+                $user->update(['password' => Hash::make($request->get('password'))]);
             }
-
-            if ($request->password) {
-                $user->password = Hash::make($request->password);
-            }
-
-            $user->save();
 
             return response()->json([
                 'status' => true,

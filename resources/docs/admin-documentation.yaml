@@ -1,0 +1,964 @@
+openapi: 3.0.0
+info:
+  title: ZimRate Admin Api Documentation.
+  description: Documentation for the ZimRate Admin Dashboard.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/public_html/api/admin
+    description: Development Server.
+  - url: https://zimrate.tyganeutronics.com/api/admin
+    description: Production Server.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Rate:
+      description: The Rate Model.
+      properties:
+        id:
+          type: number
+          description: The ID of the rate.
+        status:
+          type: boolean
+          required: true
+          description: The status of the rate, indicates scan status.
+        enabled:
+          type: boolean
+          required: true
+          description: Whether the rate is enabled and should be included in rate query results.
+        javascript:
+          type: boolean
+          required: true
+          description: Whether the scrapper should load the site with javascript support.
+        rate_name:
+          type: string
+          required: true
+          description: The name of the rate provider.
+        rate_currency:
+          type: string
+          required: true
+          description: The currency of the rate.
+        rate_currency_base:
+          type: string
+          required: true
+          description: The base currency of the rate.
+        source_url:
+          type: string
+          required: true
+          description: The source url to obtain the rate.
+        rate_selector:
+          type: string
+          required: true
+          description: The selector to use to extract the rate from the scraped site.
+        rate:
+          type: number
+          required: true
+          description: The actual rate.
+        last_rate:
+          type: number
+          description: The previously scanned rate.
+        transformer:
+          type: string
+          required: true
+          description: The transformer to use to transform the rate.
+        rate_updated_at_selector:
+          type: string
+          required: true
+          description: The selector to use to extract the rate updated at date from the scraped site.
+        source_timezone:
+          type: string
+          required: true
+          description: The timezone of the source.
+        rate_updated_at:
+          type: string
+          required: true
+          description: The date the rate was last updated on site.
+        created_at:
+          type: string
+          description: The date the rate was created.
+        updated_at:
+          type: string
+          description: The date the rate was last updated.
+    Option:
+      description: The Option Model.
+      properties:
+        id:
+          type: number
+          description: The ID of the option.
+        key:
+          type: string
+          required: true
+          description: The key of the option.
+        value:
+          type: string
+          required: true
+          description: The value of the option.
+        created_at:
+          type: string
+          description: The date the option was created.
+        updated_at:
+          type: string
+          description: The date the option was last updated.
+    User:
+      description: The User Model.
+      properties:
+        id:
+          type: number
+          description: The ID of the user.
+        name:
+          type: string
+          required: true
+          description: The name of the user.
+        email:
+          type: string
+          required: true
+          description: The email of the user.
+        password:
+          type: string
+          required: true
+          description: The password of the user.
+        email_verified_at:
+          type: string
+          description: The date the user's email was verified.
+        created_at:
+          type: string
+          description: The date the user was created.
+        updated_at:
+          type: string
+          description: The date the user was last updated.
+    ApiResponse:
+      description: The Api response.
+      properties:
+        status:
+          $ref: "#/components/schemas/ApiResponseStatus"
+        message:
+          type: string
+          description: Message describing the status of the request.
+    ApiResponseStatus:
+      description: The response status.
+      type: boolean
+      example: false
+
+paths:
+  /login:
+    post:
+      tags:
+        - Authentication
+      summary: Generates authentication token.
+      description: Allows one to generate an authentication token that can be used on subsequent requests.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email:
+                  description: The email of the user trying to login.
+                  type: string
+                password:
+                  description: The password of the user trying to login.
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        "200":
+          description: An object with the request status and the generated token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    $ref: "#/components/schemas/ApiResponseStatus"
+                  data:
+                    type: string
+                    description: The authentication token.
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+  /account:
+    get:
+      tags:
+        - Authentication
+      summary: Get Account Details.
+      description: Get currently logged in account details.
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          description: An object with the request status and the user object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    $ref: "#/components/schemas/ApiResponseStatus"
+                  data:
+                    $ref: "#/components/schemas/User"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+  /logout:
+    get:
+      tags:
+        - Authentication
+      summary: Revokes authentication tokens.
+      description: Revokes all authentication tokens associated with the login account.
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          description: An object with the request status
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+
+  /rate:
+    get:
+      tags:
+        - Rate
+      summary: Get Paginated Rates.
+      description: Get a paginated list of rates in the system.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: query
+          name: limit
+          example: 20
+          description: The number of rates to return.
+          schema:
+            type: number
+        - in: query
+          name: page
+          description: The page to start returning rates.
+          schema:
+            type: number
+      responses:
+        "200":
+          description: An object with the request status and the list of rates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    $ref: "#/components/schemas/ApiResponseStatus"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Rate"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+    post:
+      tags:
+        - Rate
+      summary: Create a new rate.
+      description: Create a new rate item.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              allOf:
+                - $ref: "#/components/schemas/Rate"
+              required:
+                - status
+                - enabled
+                - javascript
+                - rate_name
+                - rate_currency
+                - rate_currency_base
+                - source_url
+                - rate_selector
+                - rate
+                - last_rate
+                - transformer
+                - rate_updated_at_selector
+                - source_timezone
+                - rate_updated_at
+      responses:
+        "200":
+          description: An object with the request status
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+  /rate/{rate}:
+    get:
+      tags:
+        - Rate
+      summary: Get a single rate.
+      description: Get a single rate with matching id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: rate
+          description: The Rate ID of the rate to get.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: An object with the request status and the rate item
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    $ref: "#/components/schemas/ApiResponseStatus"
+                  data:
+                    $ref: "#/components/schemas/Rate"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+    put:
+      tags:
+        - Rate
+      summary: Update a Rate Item.
+      description: Update an existing rate item.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: rate
+          description: The Rate ID of the Rate to update.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              allOf:
+                - $ref: "#/components/schemas/Rate"
+              required:
+                - status
+                - enabled
+                - javascript
+                - rate_name
+                - rate_currency
+                - rate_currency_base
+                - source_url
+                - rate_selector
+                - rate
+                - last_rate
+                - transformer
+                - rate_updated_at_selector
+                - source_timezone
+                - rate_updated_at
+      responses:
+        "200":
+          description: An object with the request status
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+    patch:
+      tags:
+        - Rate
+      summary: Update a Rate Item.
+      description: Update an existing rate item.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: rate
+          description: The Rate ID of the Rate to update.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              allOf:
+                - $ref: "#/components/schemas/Rate"
+              required:
+                - status
+                - enabled
+                - javascript
+                - rate_name
+                - rate_currency
+                - rate_currency_base
+                - source_url
+                - rate_selected
+                - rate
+                - last_rate
+                - transform
+                - rate_updated_at_selector
+                - source_timezone
+                - rate_updated_at
+      responses:
+        "200":
+          description: An object with the request status
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+    delete:
+      tags:
+        - Rate
+      summary: Deletes Rate Item.
+      description: Deletes a single Rate Item.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: rate
+          description: The Rate ID of the Rate to delete.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: An object with the request status
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+
+  /user:
+    get:
+      tags:
+        - User
+      summary: Get Paginated Users.
+      description: Get paginated users in the system.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: query
+          name: limit
+          example: 20
+          description: The number of users to return, defaults to 20.
+          schema:
+            type: number
+        - in: query
+          name: page
+          description: The page to start returning users.
+          schema:
+            type: number
+      responses:
+        "200":
+          description: An object with the request status and the list of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    $ref: "#/components/schemas/ApiResponseStatus"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+    post:
+      tags:
+        - User
+      summary: Create a new user.
+      description: Create a new user for the logged in user.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              allOf:
+                - $ref: "#/components/schemas/User"
+              required:
+                - name
+                - email
+                - password
+      responses:
+        "200":
+          description: An object with the request status and the status message
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+  /user/{user}:
+    get:
+      tags:
+        - User
+      summary: Get a single user.
+      description: Get a single user with matching id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: user
+          description: The User ID of the user to get.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: An object with the request status and the user item
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    $ref: "#/components/schemas/ApiResponseStatus"
+                  data:
+                    $ref: "#/components/schemas/User"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+    put:
+      tags:
+        - User
+      summary: Update a User Item.
+      description: Update an existing user item.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: user
+          description: The User ID of the user to update.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              allOf:
+                - $ref: "#/components/schemas/User"
+              required:
+                - name
+                - email
+      responses:
+        "200":
+          description: An object with the request status
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+    patch:
+      tags:
+        - User
+      summary: Update a User Item.
+      description: Update an existing user item.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: user
+          description: The User ID od the user to update.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              allOf:
+                - $ref: "#/components/schemas/User"
+              required:
+                - name
+                - email
+      responses:
+        "200":
+          description: An object with the request status
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+    delete:
+      tags:
+        - User
+      summary: Deletes User Item.
+      description: Deletes a single User Item.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: user
+          description: The User ID of the User to delete.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: An object with the request status
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+
+  /option:
+    get:
+      tags:
+        - Option
+      summary: Get Paginated Options.
+      description: Get paginated options in the system.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: query
+          name: limit
+          example: 20
+          description: The number of options to return, defaults to 20.
+          schema:
+            type: number
+        - in: query
+          name: page
+          description: The page to start returning options.
+          schema:
+            type: number
+      responses:
+        "200":
+          description: An object with the request status and the list of options
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    $ref: "#/components/schemas/ApiResponseStatus"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Option"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+    post:
+      tags:
+        - Option
+      summary: Create a new option.
+      description: Create a new option for the logged in option.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              allOf:
+                - $ref: "#/components/schemas/Option"
+              required:
+                - name
+                - email
+                - password
+      responses:
+        "200":
+          description: An object with the request status and the status message
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+
+  /option/{option}:
+    get:
+      tags:
+        - Option
+      summary: Get a single option.
+      description: Get a single option with matching id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: option
+          description: The Option ID of the option to get.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: An object with the request status and the option item
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    $ref: "#/components/schemas/ApiResponseStatus"
+                  data:
+                    $ref: "#/components/schemas/Option"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+    put:
+      tags:
+        - Option
+      summary: Update a Option Item.
+      description: Update an existing option item.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: option
+          description: The Option ID of the option to update.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              allOf:
+                - $ref: "#/components/schemas/Option"
+              required:
+                - key
+                - value
+      responses:
+        "200":
+          description: An object with the request status
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+    patch:
+      tags:
+        - Option
+      summary: Update a Option Item.
+      description: Update an existing option item.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: option
+          description: The Option ID od the option to update.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              allOf:
+                - $ref: "#/components/schemas/Option"
+              required:
+                - key
+                - value
+      responses:
+        "200":
+          description: An object with the request status
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+    delete:
+      tags:
+        - Option
+      summary: Deletes Option Item.
+      description: Deletes a single Option Item.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: option
+          description: The Option ID of the Option to delete.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: An object with the request status
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+        default:
+          description: An object with error status.
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"

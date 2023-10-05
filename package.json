@@ -11,7 +11,9 @@
         "start": "ng serve",
         "build": "ng build --configuration production",
         "dev": "ng build --configuration development",
-        "watch": "ng build --watch --configuration development"
+        "watch": "ng build --watch --configuration development",
+        "postbuild": "php artisan app:redocly",
+        "postdev": "npm run postbuild"
     },
     "private": true,
     "dependencies": {
@@ -24,10 +26,10 @@
         "@angular/platform-browser-dynamic": "^15.2.0",
         "@angular/router": "^15.2.0",
         "animejs": "3.0.1",
+        "apollo-angular": "^5.0.1",
         "base-64": "^1.0.0",
         "ga-gtag": "^1.1.1",
         "github-fork-ribbon-css": "^0.2.3",
-        "apollo-angular": "^5.0.1",
         "graphql": "^16",
         "lodash": "^4.17.21",
         "luxon": "^3.3.0",
@@ -42,7 +44,7 @@
         "@angular-devkit/build-angular": "^15.2.6",
         "@angular/cli": "~15.2.6",
         "@angular/compiler-cli": "^15.2.0",
-        "@redocly/cli": "^1.0.0",
+        "@redocly/cli": "^1.2.0",
         "@types/animejs": "^3.1.6",
         "@types/base-64": "^1.0.0",
         "@types/jasmine": "~4.0.0",

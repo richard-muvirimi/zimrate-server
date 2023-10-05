@@ -3,8 +3,6 @@
 namespace App\Models;
 
 use App\Traits\ScrapesRates;
-use Exception;
-use Freshbitsweb\LaravelGoogleAnalytics4MeasurementProtocol\Facades\GA4;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
@@ -42,6 +40,7 @@ class Rate extends Model
         'source_url',
         'rate_selector',
         'rate',
+        'last_rate',
         'rate_updated_at',
         'rate_updated_at_selector',
         'updated_at',
@@ -60,6 +59,7 @@ class Rate extends Model
         'enabled' => 'boolean',
         'javascript' => 'boolean',
         'rate' => 'float',
+        'last_rate' => 'float',
         'rate_updated_at' => 'datetime',
         'updated_at' => 'datetime',
         'created_at' => 'datetime',
@@ -70,7 +70,7 @@ class Rate extends Model
      */
     public function scopeSearch(Builder $query, string $search): Builder
     {
-        return $query->where('rate_name', 'like', '%' . $search . '%');
+        return $query->where('rate_name', 'like', '%'.$search.'%');
     }
 
     /**
@@ -98,23 +98,6 @@ class Rate extends Model
     }
 
     /**
-     * Log query request.
-     */
-    public function scopeLogAnalyticsEvent(Builder $query): Builder
-    {
-        try {
-            GA4::setClientId(request()->ip())
-                ->postEvent([
-                    'name' => 'api_request',
-                ]);
-        } catch (Exception) {
-            // Do nothing
-        }
-
-        return $query;
-    }
-
-    /**
      * Scope a query to only include successful results.
      */
     public function scopeUpdated(Builder $query): Builder
@@ -131,10 +114,6 @@ class Rate extends Model
      */
     public function scopeCors(Builder $query, bool $enable = true): Builder
     {
-        if ($enable && !headers_sent()) {
-            header('Access-Control-Allow-Origin', '*');
-        }
-
         return $query;
     }
 
@@ -166,9 +145,9 @@ class Rate extends Model
             case 'median':
                 $rates = $query->clone()->get(['id', 'rate_currency', 'rate'])->groupBy('rate_currency')->map(function (Collection $rates) {
                     if ($rates->count() % 2 === 0) {
-                        return $rates->sortBy("rate", SORT_NUMERIC)->slice(floor($rates->count() / 2) - 1, 2);
+                        return $rates->sortBy('rate', SORT_NUMERIC)->slice(floor($rates->count() / 2) - 1, 2);
                     } else {
-                        return $rates->sortBy("rate", SORT_NUMERIC)->slice(floor($rates->count() / 2), 1);
+                        return $rates->sortBy('rate', SORT_NUMERIC)->slice(floor($rates->count() / 2), 1);
                     }
                 });
 
@@ -220,6 +199,20 @@ class Rate extends Model
             },
             set: function (mixed $value, array $attributes) {
                 $this->attributes['rate_currency'] = $value;
+            });
+    }
+
+    /**
+     * Get currency attribute.
+     */
+    protected function currencyBase(): Attribute
+    {
+        return Attribute::make(
+            get: function (mixed $value, array $attributes) {
+                return $attributes['rate_currency_base'];
+            },
+            set: function (mixed $value, array $attributes) {
+                $this->attributes['rate_currency_base'] = $value;
             });
     }
 

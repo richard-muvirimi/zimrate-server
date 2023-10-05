@@ -20,7 +20,10 @@ export class DevelopersComponent implements OnInit {
 
     baseUrl$: string;
 
-    constructor(private ratesService: RatesService, private animeService: AnimeService) {
+    constructor(
+        private ratesService: RatesService,
+        private animeService: AnimeService,
+    ) {
         this.ngOnInit = this.ngOnInit.bind(this);
 
         this.currencies$ = "";
@@ -36,7 +39,7 @@ export class DevelopersComponent implements OnInit {
         setTimeout(async (): Promise<void> => {
             const data: { rates: Currency[] } = await this.ratesService.getCurrencies();
 
-            this.currencies$ = uniqBy(data["rates"].map((item: Currency) => item.currency), (currency: string) => currency).join(", ");
+            this.currencies$ = uniqBy<string>(data["rates"].map((item: Currency): string => item.currency), (currency: string) => currency).join(", ");
         }, 0);
 
         this.ratesService.getCallBackExample().subscribe((data: string): void => {

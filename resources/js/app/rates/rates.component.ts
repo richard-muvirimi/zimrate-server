@@ -1,16 +1,11 @@
 import {Component, OnInit} from '@angular/core';
 import {RatesService} from '../services/rates.service';
 import {DateTime} from "luxon";
-import {Dictionary, groupBy, mapValues, maxBy, uniqBy} from "lodash";
+import {Dictionary, groupBy, map, mapValues, maxBy, pick, uniqBy} from "lodash";
 import {AnimeService} from '../services/anime.service';
-
-
-type Rate = {
-    domain: string,
-    currency: string,
-    last_checked: number,
-    url: string
-}
+import RateAggregate from "../@types/rate-aggregate";
+import Rate from "../@types/rate";
+import {environment} from "../../environments/environment";
 
 @Component({
     selector: 'app-rates',
@@ -19,20 +14,22 @@ type Rate = {
 })
 export class RatesComponent implements OnInit {
 
-    lastChecked$: String;
-    urls$: Dictionary<any>;
-    currencies$: string[];
-    data$: Dictionary<any>;
+    lastChecked$: number | undefined;
+    currencies$: RateAggregate[];
     notice$: String;
+
+    ratesDisplay: string = "";
+
+    protected readonly DateTime = DateTime;
 
     constructor(private rateService: RatesService, private animeService: AnimeService) {
         this.ngOnInit = this.ngOnInit.bind(this);
 
         this.currencies$ = [];
-        this.urls$ = {};
-        this.data$ = {};
-        this.lastChecked$ = "...";
+        this.lastChecked$ = undefined;
         this.notice$ = "";
+
+        this.ratesDisplay = environment.ratesDisplay;
     }
 
     ngOnInit(): void {
@@ -45,23 +42,42 @@ export class RatesComponent implements OnInit {
             this.notice$ = data["notice"];
 
             const {max, min, mean, median, random, mode} = data;
-            this.data$ = mapValues({max, min, mean, median, random, mode}, items => {
+            const aggregated: Dictionary<any> = mapValues({max, min, mean, median, random, mode}, items => {
                 return groupBy(items, item => item.currency);
             });
 
             // Rates
-            this.currencies$ = uniqBy(data["rates"].map((item: Rate) => item.currency), (currency: string) => currency);
+            this.currencies$ = uniqBy<Rate>(data["rates"], "currency")
+                .map((rate: Rate): RateAggregate => {
+                    const rates = data["rates"]
+                        .filter((item: Rate): boolean => rate.currency === item.currency)
+                        .sort((rate1: Rate, rate2: Rate) => {
+                            return rate1.rate - rate2.rate;
+                        });
 
-            // Urls
-            this.urls$ = mapValues(groupBy(data["rates"], (rate: Rate) => rate.currency), (items: Rate[]) => uniqBy(items.map((item: Rate): Rate => {
-                item.domain = (new URL(item.url)).hostname;
-                return item;
-            }), (item: Rate) => item.url));
+                    return {
+                        currency: rate.currency,
+                        currency_base: rate.currency_base,
+                        last_checked: maxBy<Rate>(rates, "last_checked")!!.last_checked,
+                        last_updated: maxBy<Rate>(rates, "last_updated")!!.last_updated,
+                        rates: uniqBy<Rate>(rates, (item: Rate) => {
+                            return JSON.stringify(pick(item, ["rate", "last_rate"]));
+                        }),
+                        urls: map(uniqBy<Rate>(rates, "url"), (item: Rate): URL => new URL(item.url)),
+                        aggregated: {
+                            max: aggregated['max'][rate.currency][0].rate,
+                            mean: aggregated['mean'][rate.currency][0].rate,
+                            min: aggregated['min'][rate.currency][0].rate,
+                            mode: aggregated['mode'][rate.currency][0].rate,
+                            median: aggregated['median'][rate.currency][0].rate,
+                            random: aggregated['random'][rate.currency][0].rate,
+                        },
+                        expanded: false,
+                    }
+                });
 
             // Last Checked
-            const date: number = maxBy(data["rates"], (rate: Rate) => rate.last_checked)?.last_checked || DateTime.now().toSeconds();
-
-            this.lastChecked$ = DateTime.fromSeconds(date).toLocaleString(DateTime.DATETIME_MED);
+            this.lastChecked$ = maxBy<Rate>(data["rates"], "last_checked")?.last_checked || DateTime.now().toSeconds();
 
             setTimeout((): void => {
                 this.animeService.reviewComponents();
@@ -69,5 +85,4 @@ export class RatesComponent implements OnInit {
 
         }, 0);
     }
-
 }

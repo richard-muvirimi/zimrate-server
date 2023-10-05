@@ -1,0 +1,36 @@
+.bg-card {
+    border-radius: 8px;
+    background: #2C3039;
+
+    table {
+        table-layout: fixed;
+
+        tr {
+            & {
+                border-bottom-color: #8A94A7;
+            }
+        }
+    }
+}
+
+.text-white {
+    color: white;
+}
+
+.font-bold {
+    font-weight: bold;
+}
+
+.font-xxx-large {
+    font-size: xxx-large;
+}
+
+.font-size-small {
+    font-size: small;
+}
+
+td, th {
+    small {
+        text-transform: uppercase;
+    }
+}

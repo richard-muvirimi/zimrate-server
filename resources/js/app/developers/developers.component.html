@@ -1,144 +1,200 @@
 <section class="hero">
-	<div class="container">
-		<div class="hero-inner">
-			<div class="hero-copy">
-				<h1 class="hero-title mt-0">
-					For Software Developers
-				</h1>
-			</div>
+    <div class="container">
+        <div class="hero-inner">
+            <div class="hero-copy">
+                <h1 class="hero-title mt-0">
+                    For Software Developers
+                </h1>
+            </div>
 
-			<app-hero></app-hero>
+            <app-hero></app-hero>
 
-		</div>
-	</div>
+        </div>
+    </div>
 </section>
 
 <section class="features section">
-	<div class="container">
-		<div class="features-inner has-bottom-divider">
+    <div class="container">
+        <div class="features-inner has-bottom-divider">
 
-			<p class="text-sm mb-0">
-				The api can be accessed through
-			</p>
-			<ul>
-				<li>
-					REST:&nbsp;<a href="./api/v1">{{ baseUrl$ }}/api/v1</a>
-				</li>
-				<li>
-					Graphql:&nbsp;<a href="./api/graphql">{{ baseUrl$ }}/api/graphql</a>
-				</li>
-			</ul>
+            <h3>
+                Retrieving Rates
+            </h3>
+            <p class="text-sm mb-0">
+                The api can be accessed through
+            </p>
+            <ul>
+                <li>
+                    <dl>
+                        <dt>
+                            Rest Api
+                        </dt>
+                        <dd>
+                            <a fragment="rest" routerLink=".">Documentation</a>
+                        </dd>
+                    </dl>
+                </li>
+                <li>
+                    <dl>
+                        <dt>
+                            JsonP Api
+                        </dt>
+                        <dd>
+                            <a fragment="jsonp" routerLink=".">Documentation</a>
+                        </dd>
+                    </dl>
+                </li>
+                <li>
+                    <dl>
+                        <dt>
+                            GraphQl Api
+                        </dt>
+                        <dd>
+                            <a fragment="graphql" routerLink=".">Documentation</a>
+                        </dd>
+                    </dl>
+                </li>
+            </ul>
 
-			<h4>
-				Accessing Rates
-			</h4>
-			<p class="text-sm mb-0">
-				There are a total of four possible query parameter combinations (GET | POST) that can be passed to get
-				data from both the RESTful and Graphql Api namely:
-			</p>
+            <h3 class="mt-64">
+                Filtering Rates
+            </h3>
+            <p class="text-sm mb-0">
+                There are a total of four possible query parameter combinations that can be passed to get
+                data from both the RESTful and Graphql Api namely:
+            </p>
 
-			<dl>
-				<dt>
-					<code>search</code>
-				</dt>
-				<dd>-
-					Allows you to get currency rates using only part of a name of said currency
-				</dd>
+            <dl>
+                <dt>
+                    <code>search</code>
+                </dt>
+                <dd>-
+                    Allows you to get currency rates using only part of a name of said currency
+                </dd>
 
-				<dt>
-					<code>currency</code>
-				</dt>
-				<dd>-
-					Can only be either of <code>{{ currencies$ }}</code>, this is only for when you require a specific
-					currency.
-				</dd>
+                <dt>
+                    <code>currency</code>
+                </dt>
+                <dd>-
+                    Can only be either one of <code>{{ currencies$ }}</code>, this is only for when you require a
+                    specific
+                    currency.
+                </dd>
 
-				<dt>
-					<code>date</code>
-				</dt>
-				<dd>-
-					When provided only matching rate after this date will be returned. Accepts common date formats,
-					though a unix time stamp is preferred.
-				</dd>
+                <dt>
+                    <code>date</code>
+                </dt>
+                <dd>-
+                    When provided only matching rate after this date will be returned. Accepts common date formats,
+                    though a unix time stamp is preferred.
+                </dd>
 
-				<dt>
-					<code>prefer</code>
-				</dt>
-				<dd>-
-					Can only be either of <code>{{prefer$}}</code> or empty to return the whole list.
-				</dd>
-			</dl>
+                <dt>
+                    <code>prefer</code>
+                </dt>
+                <dd>-
+                    Can only be either of <code>{{prefer$}}</code> or empty to return the whole list.
+                </dd>
+            </dl>
 
-			<p class="text-sm mb-0">
-				All these parameters are optional and are there only as a convenience to get the specific data that you
-				need.
-			</p>
+            <p class="text-sm mb-0">
+                All these parameters are optional and are there only as a convenience to get the specific data that you
+                need.
+            </p>
 
-			<h4>
-				Javascript CORS (Cross Origin Resource Sharing)
-			</h4>
-			<p class="text-sm mb-0">
-				By default the api does not allow CORS but in cases where you require it there are two options:
-			</p>
+            <h3 class="mt-64" id="rest">
+                Rest Api Specification
+            </h3>
+            <h6>Link</h6>
+            <p>
+                <a href="api/v1">{{ baseUrl$ }}/api/v1</a>
+            </p>
+            <p class="text-sm mb-0">
+                Rates can be retrieved through the rest api using either (GET | POST).
+            </p>
+            <div class="mt-16" style="height: 90vh">
+                <iframe height="100%" loading="lazy" src="documentation/public" style="background: white"
+                        width="100%"></iframe>
+            </div>
 
-			<ul>
-				<li>
-					Adding <code>cors=true</code> to your request
-				</li>
-				<li>
-					<p class="text-sm mb-0">
-						Or using the <code>script</code> tag with the url having the parameter <code>callback</code>
-						where the value will be the name of the function you want called after the tag is loaded. For
-						example <code>callback=myFunction</code> will return wrapped in a function call as
-						<code>myFunction({{'{'}}...{{'}'}});</code>
-					</p>
+            <h3 class="mt-64" id="jsonp">
+                JSONP Callbacks
+            </h3>
+            <p class="text-sm mb-0">
+                You can also use JSONP callbacks by using the <code>script</code> tag with the url having the parameter
+                <code>callback</code>
+                where the value will be the name of the function you want called after the tag is loaded. For
+                example <code>callback=myFunction</code> will return wrapped in a function call as
+                <code>myFunction({{'{'}}...{{'}'}});</code>
+            </p>
 
-					<pre><code>{{ exampleCallback$ }}</code></pre>
+            <h6>Code Sample</h6>
+            <code>
+                <pre data-lang="js">{{ exampleCallback$ }}</pre>
+            </code>
 
-				</li>
-			</ul>
+            <h6>Live Editor</h6>
+            <p class="text-sm mb-0">
+                Feel free to interact with the above example in the CodePen below.
+            </p>
+            <div class="mt-16">
+                <iframe allowfullscreen="true" allowtransparency="true" frameborder="no" height="300"
+                        loading="lazy" scrolling="no"
+                        src="https://codepen.io/tygalive/embed/ZEVWOqm?default-tab=js%2Cresult&editable=true"
+                        style="width: 100%;" title="Zimrate JSONP">
+                    See the Pen <a href="https://codepen.io/tygalive/pen/ZEVWOqm">
+                    Zimrate JSONP</a> by Richard Muvirimi (<a href="https://codepen.io/tygalive">@tygalive</a>)
+                    on <a href="https://codepen.io">CodePen</a>.
+                </iframe>
+            </div>
 
-			<p class="text-sm mb-0">
-				Both achieve the same result with the later being applicable whilst the document is still loading.
-			</p>
+            <h3 class="mt-64" id="graphql">
+                Graphql
+            </h3>
+            <h6>Link</h6>
+            <p>
+                <a href="api/graphql">{{ baseUrl$ }}/api/graphql</a>
+            </p>
+            <p class="text-sm mb-0">
+                Unlike REST, graphql allows you to structure the responses however you like, even reducing the number of
+                requests made to the server in one go.
+            </p>
 
-			<h4>
-				Graphql
-			</h4>
-			<p class="text-sm mb-0">
-				Unlike REST, graphql allows you to structure the responses however you like, even reducing the number of
-				requests made to the server in one go.
-			</p>
+            <h6>Code Sample</h6>
+            <pre><code>{{ exampleGraphql$ }}</code></pre>
 
-			<pre><code>{{ exampleGraphql$ }}</code></pre>
-			<p class="text-sm mb-0">
-				Using a Graphql schema browser is highly recommended to fully explore the api. You may use the example
-				as a starting point as the possibilities of graphql are beyond the scope of this documentation.
-			</p>
+            <h6>Live Editor</h6>
+            <p class="text-sm mb-0">
+                You may use the above example in the GraghQl DevTools provided below as a starting point as the
+                possibilities of graphql are beyond the scope of this documentation.
+            </p>
+            <div class="mt-16" style="height: 90vh">
+                <iframe height="100%" loading="lazy" src="graphiql" style="background: white" width="100%"></iframe>
+            </div>
 
-			<h4>...</h4>
+            <h3 class="mt-64">
+                Disclaimer:
+            </h3>
+            <p class="text-sm mb-0">
+                As a developer, I guess your are familiar with how we (as software developers) hate to write
+                documentation for software. After all we are not bloggers. But I have tried to be as extensive as
+                possible, please contact me if all this does not make sense after reading through a few times.
+            </p>
 
-			<ul>
-				<li>
-					Avoid accessing returned values based on their position as if a site goes down or is removed that
-					site's rates may not be included thus distorting their position. A request with the prefer parameter
-					is much more reliable as it includes values from all available sites and not a specific one.
-				</li>
-				<li>
-					You can disable <code>info</code> from the response by passing <code>info=false</code> in your
-					request.
-				</li>
-			</ul>
+            <h3 class="mt-64">...</h3>
+            <ul>
+                <li>
+                    The sorting order of the rates is not guaranteed to be the same.
+                </li>
+                <li>
+                    You can disable <code>info</code> from the response by passing <code>info=false</code> in your
+                    REST requests.
+                </li>
+                <li>
+                    Caching rates when possible is encouraged as rates are only scanned hourly.
+                </li>
+            </ul>
 
-			<h4>
-				Disclaimer:
-			</h4>
-			<p class="text-sm mb-0">
-				As a developer, I guess your are familiar with how we (as software developers) hate to write
-				documentation for software. After all we are not bloggers. But I have tried to be as extensive as
-				possible, please contact me if all this does not make sense after reading through a few times.
-			</p>
-
-		</div>
-	</div>
+        </div>
+    </div>
 </section>

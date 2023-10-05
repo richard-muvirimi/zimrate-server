@@ -13,6 +13,10 @@ export class RatesService {
         private http: HttpClient,
         private graphqlService: GraphQlService,
     ) {
+        this.getRates = this.getRates.bind(this);
+        this.getCurrencies = this.getCurrencies.bind(this);
+        this.getCallBackExample = this.getCallBackExample.bind(this);
+        this.getGraphqlExample = this.getGraphqlExample.bind(this);
     }
 
     async getRates(): Promise<Object> {
@@ -44,8 +48,12 @@ export class RatesService {
                     currency
                 }
                 rates : rate (cors : true) {
+                    rate
+                    last_rate
                     last_checked
+                    last_updated
                     currency
+                    currency_base
                     url
                 }
                 notice : info
