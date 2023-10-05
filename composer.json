@@ -30,7 +30,6 @@
         "ext-intl": "*",
         "ext-json": "*",
         "bootstrapdash/skydash-free-bootstrap-admin-template": "1.0",
-        "br33f/php-ga4-mp": "^0.1.3",
         "freshbitsweb/laravel-google-analytics-4-measurement-protocol": "^1.2",
         "guzzlehttp/guzzle": "^7.8",
         "laravel/framework": "^10.25",
@@ -41,12 +40,12 @@
         "nuwave/lighthouse": "^6.21",
         "symfony/css-selector": "^6.3",
         "symfony/dom-crawler": "^6.3",
-        "wapmorgan/time-parser": "^2.0"
+        "wapmorgan/time-parser": "^2.0",
+        "doctrine/dbal": "^3.7",
+        "inpsyde/composer-assets-compiler": "^3.0"
     },
     "require-dev": {
-        "doctrine/dbal": "^3.7",
         "fakerphp/faker": "^1.23",
-        "inpsyde/composer-assets-compiler": "^3.0",
         "laravel/pint": "^1.13",
         "laravel/sail": "^1.25",
         "mikey179/vfsstream": "^1.6",
