@@ -18,13 +18,13 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::post('login', [AuthController::class, 'login']);
-Route::get('logout', [AuthController::class, 'logout']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::get('/logout', [AuthController::class, 'logout']);
 
 Route::match(['get', 'post'], '/', [RatesController::class, 'version0']);
 Route::match(['get', 'post'], '/v1', [RatesController::class, 'version1']);
 
-Route::prefix('admin')->group(function () {
+Route::prefix('/admin')->group(function () {
     Route::get('/account', [AuthController::class, 'account']);
 
     Route::resource('/user', UserController::class);
