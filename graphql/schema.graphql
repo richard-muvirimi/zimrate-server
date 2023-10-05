@@ -1,107 +1,24 @@
-"A datetime string with format `Y-m-d H:i:s`, e.g. `2018-05-23 13:43:32`."
-scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
-
 "Indicates what fields are available at the top level of a query operation."
 type Query  {
 
     rate(
-        search: String @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "search") @rules(apply: ["string"])
-        date: Int @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "date") @rules(apply: ["numeric", "date_format:U", "before:now"])
-        currency: Currency @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "currency") @rules(apply : ["string", "exists:rates,rate_currency"])
-        cors: Boolean @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "cors") @rules(apply: ["boolean"])
-        prefer: Prefer @scope(name : "logAnalyticsEvent") @scope(name : "enabled") @scope(name : "updated") @scope(name: "preferred") @rules(apply: ["string"])
+        search: String @scope(name : "enabled") @scope(name : "updated") @scope(name: "search") @rules(apply: ["string"])
+        date: Int @scope(name : "enabled") @scope(name : "updated") @scope(name: "date") @rules(apply: ["numeric", "date_format:U", "before:now"])
+        currency: Currency @scope(name : "enabled") @scope(name : "updated") @scope(name: "currency") @rules(apply : ["string", "exists:rates,rate_currency"])
+        cors: Boolean @scope(name: "cors") @scope(name : "enabled") @scope(name : "updated") @deprecated
+        prefer: Prefer @scope(name : "enabled") @scope(name : "updated") @scope(name: "preferred") @rules(apply: ["string"])
     ): [Rate!]! @all
 
     info : String! @field(resolver: "App\\GraphQL\\Queries\\InfoQuery")
-
-    "Find a single user by an identifying attribute."
-    user (
-        "Search by primary key."
-        id: ID @eq @rules(apply: ["prohibits:email", "required_without:email"])
-
-        "Search by email address."
-        email: String @eq @rules(apply: ["prohibits:id", "required_without:id", "email"])
-    ): User @find @guard
-
-    "List multiple users."
-    users (
-        "Filters by name. Accepts SQL LIKE wildcards `%` and `_`."
-        name: String @where(operator: "like")
-    ): [User!]! @paginate(defaultCount: 10)  @guard
-
-    option (
-        id: ID @eq
-    ): Option @find @guard
-
-    options (
-        key: String @eq
-    ): [Option!]! @paginate(defaultCount: 10) @guard
-}
-
-type Mutation  {
-    "Log in to a new session and get the user."
-    login(email: String!, password: String!): User!
-
-    "Log out from the current session, showing the user one last time."
-    logout: User @guard
-
-    "User"
-    createUser(
-        name: String
-        email: String!
-    ): User! @create @guard
-
-    updateUser(
-        id: ID!
-        name: String
-        email: String
-    ): User @update @guard
-
-    deleteUser(
-        id: ID
-    ): User @delete @guard
-
-    "Option"
-    createOption(
-        key: String!
-        value: String!
-    ): Option! @create @guard
-
-    updateOption(
-        id: ID!
-        key: String
-        value: String
-    ): Option @update @guard
-
-    deleteOption(
-        id: ID!
-    ): Option @delete @guard
-}
-
-"Account of a person who utilizes this application."
-type User {
-    id: ID!
-    name: String!
-    email: String!
-    email_verified_at: DateTime
-    created_at: DateTime!
-    updated_at: DateTime!
-    token : String!
-}
-
-type Option{
-    id: ID!
-    key: String!
-    value: String!
-    created_at: DateTime!
-    updated_at: DateTime!
 }
 
 type Rate {
-    currency : String @rename(attribute : "rate_currency")
+    currency : String!
     last_checked : Int!
     last_updated: Int!
-    name : String @rename(attribute : "rate_name")
+    name : String
     rate : Float!
-    url : String @rename(attribute : "source_url")
+    last_rate : Float
+    currency_base : String!
+    url : String
 }

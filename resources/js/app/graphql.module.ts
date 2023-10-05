@@ -3,7 +3,7 @@ import {HttpLink} from 'apollo-angular/http';
 import {NgModule} from '@angular/core';
 import {ApolloClientOptions, DefaultOptions, InMemoryCache} from '@apollo/client/core';
 
-const uri = 'api/graphql'; // <-- add the URL of the GraphQL server here
+const uri: string = 'api/graphql'; // <-- add the URL of the GraphQL server here
 
 const defaultOptions: DefaultOptions = {
     query: {

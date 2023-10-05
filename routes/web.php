@@ -15,6 +15,22 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+Route::get('documentation/admin', function () {
+    return view('documentation.admin');
+})->middleware('auth:sanctum');
+
+Route::get('documentation/public', function () {
+    return view('documentation.public');
+});
+
+Route::get('setup', function () {
+    Artisan::call('migrate');
+});
+
+Route::get('crawl', function () {
+    Artisan::call('app:scrape');
+});
+
 Route::fallback(function () {
     $appData = json_decode(file_get_contents(base_path('composer.json')), true);
 
@@ -26,12 +42,4 @@ Route::fallback(function () {
     ];
 
     return view('index', compact('data'));
-});
-
-Route::get('setup', function () {
-    Artisan::call('migrate');
-});
-
-Route::get('crawl', function () {
-    Artisan::call('app:scrape');
 });

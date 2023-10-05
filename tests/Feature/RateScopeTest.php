@@ -33,6 +33,8 @@ class RateScopeTest extends TestCase
         $rates->each(function (Rate $rate) {
             if ($rate->status === false) {
                 $this->assertGreaterThanOrEqual(Carbon::now()->startOfHour()->subWeek()->timestamp, $rate->updated_at->timestamp);
+            } else {
+                $this->assertTrue($rate->status);
             }
         });
     }
@@ -85,27 +87,27 @@ class RateScopeTest extends TestCase
     {
 
         foreach (Rate::AGGREGATES as $aggregate) {
-            $rates = Rate::query()->preferred($aggregate)->get(['rate', 'rate_currency']);
+            $rates = Rate::query()->orderByDesc('rate')->preferred($aggregate)->get(['rate', 'rate_currency']);
 
             $rates->each(function (Rate $rate) use ($aggregate) {
                 switch (strtolower($aggregate)) {
                     case 'min':
-                        $this->assertEquals($rate->rate, Rate::query()->currency($rate->rate_currency)->min('rate'));
+                        $this->assertEquals($rate->rate, Rate::query()->orderByDesc('rate')->currency($rate->rate_currency)->min('rate'));
                         break;
                     case 'max':
-                        $this->assertEquals($rate->rate, Rate::query()->currency($rate->rate_currency)->max('rate'));
+                        $this->assertEquals($rate->rate, Rate::query()->orderByDesc('rate')->currency($rate->rate_currency)->max('rate'));
                         break;
                     case 'mean':
-                        $this->assertEquals($rate->rate, Rate::query()->currency($rate->rate_currency)->avg('rate'));
+                        $this->assertEquals($rate->rate, Rate::query()->orderByDesc('rate')->currency($rate->rate_currency)->avg('rate'));
                         break;
                     case 'mode':
-                        $this->assertContains(intval($rate->rate), Rate::query()->preferred($aggregate)->currency($rate->rate_currency)->get(['rate'])->mode('rate'));
+                        $this->assertContains(intval($rate->rate), Rate::query()->orderByDesc('rate')->preferred($aggregate)->currency($rate->rate_currency)->get(['rate'])->mode('rate'));
                         break;
                     case 'median':
-                        $this->assertEquals(floor($rate->rate), floor(Rate::query()->preferred($aggregate)->currency($rate->rate_currency)->get(['rate'])->median('rate')));
+                        $this->assertEquals(floor($rate->rate), floor(Rate::query()->orderByDesc('rate')->preferred($aggregate)->currency($rate->rate_currency)->get(['rate'])->median('rate')));
                         break;
                     case 'random':
-                        $this->assertContains($rate->rate, Rate::query()->currency($rate->rate_currency)->get(['rate'])->pluck('rate'));
+                        $this->assertContains($rate->rate, Rate::query()->orderByDesc('rate')->currency($rate->rate_currency)->get(['rate'])->pluck('rate'));
                         break;
                 }
             });

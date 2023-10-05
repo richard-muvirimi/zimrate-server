@@ -25,22 +25,18 @@ class AuthController extends BaseController
                 'password' => 'required',
             ]);
 
-            $user = User::where('email', $request->email)->first();
+            $user = User::query()->where('email', $request->get('email'))->first();
 
-            if (! $user || ! Hash::check($request->password, $user->password)) {
+            if (! $user || ! Hash::check($request->get('password'), $user->password)) {
                 throw ValidationException::withMessages([
                     'email' => ['The provided credentials are incorrect.'],
                 ]);
             }
 
-            $permissions = $this->getPermissions($user);
-
-            return response()->json(
-                [
-                    'status' => true,
-                    'data' => $user->createToken('token', $permissions)->plainTextToken,
-                ]
-            );
+            return response()->json([
+                'status' => true,
+                'data' => $user->createToken('token', [])->plainTextToken,
+            ]);
         } catch (Exception $e) {
             return response()->json([
                 'status' => false,
@@ -49,30 +45,23 @@ class AuthController extends BaseController
         }
     }
 
-    private function getPermissions(User $user): array
+    public function account(Request $request): JsonResponse
     {
-        $permissions = [
-            'view:content',
-            'create:content',
-            'delete:content',
-            'update:content',
-            'view:account',
-            'create:account',
-            'delete:account',
-            'update:account',
-        ];
+        return response()->json([
+            'status' => true,
+            'data' => $request->user(),
+        ]);
+    }
 
-        if ($user->role === 'administrator') {
-            $permissions = array_merge($permissions, array_map(function ($perm) {
-                return str_replace(':', ':others:', $perm);
-            }, $permissions));
-        }
+    public function logout(Request $request): JsonResponse
+    {
 
-        return array_merge($permissions, [
-            'view:option',
-            'create:option',
-            'delete:option',
-            'update:option',
+        $user = $request->user();
+        $user->currentAccessToken()->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Successfully logged out.',
         ]);
     }
 }

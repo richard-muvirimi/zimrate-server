@@ -21,23 +21,25 @@ current days rate.
 
     1. The following fields will be created:
 
-        - `id` Unique site identifyer
-        - `status` Can only be 0 (failed) or 1 (Success) representing last scan state
-        - `enabled` Can only be 0 (failed) or 1 (Success) representing whether the site is enabled for scanning
-        - `javascript` Can only be 0 (failed) or 1 (Success) representing whether the site needs to be treated as client
+        - `id` Unique site identifier
+        - `status` Can only be 0 (false) or 1 (true) representing last scan state
+        - `enabled` Can only be 0 (false) or 1 (true) representing whether the site is enabled for scanning
+        - `javascript` Can only be 0 (false) or 1 (true) representing whether the site needs to be treated as client
           side rendered
         - `rate_name` Name of site, will be used filtering sites based on source
         - `rate_currency` Name of currency e.g USD, ZAR
+        - `rate_currency_base` Base currency of rate e.g USD, ZAR, included in extra rate parameters
         - `source_url` The url of the site you want scanned.
         - `rate_selector` The css selector of the currency field
 
             - Best obtained by right-clicking in browser, inspect element then copy selector
-            - Its best to be very specific as a page you did not create can have multiple ids or elements with same
+            - It's best to be very specific as a page you did not create can have multiple ids or elements with same
               class
               names and would only confuse the app
             - the site will discard all non-numeric values and take the highest numeric value
 
         - `rate` The rate from site, (initially set to 1)
+        - `last_rate` The previously set rate, used in rate change calculations, (initially set to 1)
         - `transform` The formula to apply on the rate to get the correct rate relative to 1 USD (initially set
           to `1 * x`)
         - `rate_updated_at` The timestamp when scan was last performed (initially set to 0)
@@ -58,7 +60,7 @@ current days rate.
        more about security)
 
     3. Once done goto `your-site/crawl` and the app will scan rates from specified sites. You can also set up a cron
-       job to do this automatically using laravels `schedule:run` command
+       job to do this automatically using Laravel `schedule:run` command
 
     4. Set up a cron job pointing to the crawler:
         - URL `your-site/crawl`

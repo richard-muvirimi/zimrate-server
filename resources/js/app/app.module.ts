@@ -18,6 +18,9 @@ import {FaqComponent} from './faq/faq.component';
 import {DevelopersComponent} from './developers/developers.component';
 import {CommonModule, NgOptimizedImage} from "@angular/common";
 import {GraphQLModule} from "./graphql.module";
+import {RatesCardComponent} from './rates-display/rates-card/rates-card.component';
+import {RatesItemComponent} from './rates-display/rates-item/rates-item.component';
+import {RatesDetailedComponent} from "./rates-display/rates-detailed/rates-detailed.component";
 
 @NgModule({
     declarations: [
@@ -32,7 +35,11 @@ import {GraphQLModule} from "./graphql.module";
         HomeComponent,
         PrivacyComponent,
         FaqComponent,
-        DevelopersComponent
+        DevelopersComponent,
+        RatesDetailedComponent,
+        RatesCardComponent,
+        RatesItemComponent,
+        RatesDetailedComponent
     ],
     imports: [
         CommonModule,

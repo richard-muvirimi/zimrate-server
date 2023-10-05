@@ -15,6 +15,8 @@ declare global {
 export class AnimeService {
 
     constructor() {
+        this.reviewComponents = this.reviewComponents.bind(this);
+
         window.sr = ScrollReveal();
         window.anime = anime;
     }

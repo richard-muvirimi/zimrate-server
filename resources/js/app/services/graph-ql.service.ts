@@ -11,6 +11,7 @@ export class GraphQlService {
     constructor(
         private apollo: Apollo,
     ) {
+        this.query = this.query.bind(this);
     }
 
     query<T>(query: TypedDocumentNode, variables: EmptyObject = {}): Promise<T> {

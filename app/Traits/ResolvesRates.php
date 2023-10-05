@@ -25,14 +25,10 @@ trait ResolvesRates
             'currency' => 'string|exists:rates,rate_currency',
             'prefer' => ['string', Rule::in([...Rate::AGGREGATES, ...Arr::map(Rate::AGGREGATES, 'strtoupper')])],
             'callback' => 'string',
-            'cors' => [new IsBoolean()],
+            'extra' => [new IsBoolean()],
         ]);
 
         $query = Rate::query();
-
-        if (Str::of($request->get('cors'))->toBoolean()) {
-            $query->cors();
-        }
 
         if ($request->has('search')) {
             $query->search($request->get('search'));
@@ -49,21 +45,23 @@ trait ResolvesRates
         $query->enabled();
         $query->updated();
 
-        $query->logAnalyticsEvent();
-
         if ($request->has('prefer')) {
             $query->preferred($request->get('prefer'));
         }
 
-        return $query->get()->map(function ($rate) use ($request) {
-            $fields = collect(['currency', 'last_checked', 'last_updated', 'rate']);
+        // Fields
+        $fields = collect(['currency', 'last_checked', 'last_updated', 'rate']);
 
-            if (! $request->has('prefer')) {
-                $fields->push('name', 'url');
-            }
+        if (! $request->has('prefer')) {
+            $fields->push('name', 'url');
+        }
 
+        if (Str::of($request->get('extra', 'false'))->toBoolean()) {
+            $fields->push('currency_base', 'last_rate');
+        }
+
+        return $query->get()->map(function ($rate) use ($fields) {
             return $rate->only($fields->sort()->toArray());
-
         })->toArray();
     }
 }

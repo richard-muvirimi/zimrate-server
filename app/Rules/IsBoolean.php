@@ -17,12 +17,12 @@ class IsBoolean implements ValidationRule
     /**
      * Run the validation rule.
      *
-     * @param Closure(string): PotentiallyTranslatedString $fail
+     * @param  Closure(string): PotentiallyTranslatedString  $fail
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) === null) {
-            $fail('The ' . Str::snake($attribute, ' ') . ' field must be true or false.');
+            $fail('The '.Str::snake($attribute, ' ').' field must be true or false.');
         }
     }
 }
