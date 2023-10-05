@@ -73,7 +73,7 @@ jobs:
           branch: master
 
       - name: Prepare Deploy
-        run: rsync -rvzt --include 'vendor' --include 'resources/views' --include 'public_html/build' --exclude-from=.gitignore --exclude '.git' --exclude '.github' --exclude '.vscode' --exclude 'resources/js/' ./ ./distribution/
+        run: rsync -rvzt --include-from=.rsync --exclude-from=.gitignore --exclude '.rsync' ./ ./distribution/
 
       - name: Deploy
         uses: SamKirkland/FTP-Deploy-Action@4.3.2

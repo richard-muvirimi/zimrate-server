@@ -1,0 +1,11 @@
+
+vendor
+resources/views
+public_html/build
+resources/views/index.blade.php
+resources/views/documentation/**.blade.php
+
+!.git
+!.github
+!.vscode
+!resources/js/
