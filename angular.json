@@ -37,7 +37,9 @@
                             "resources/js/styles.scss"
                         ],
                         "scripts": [
-                            "node_modules/safe-email/dist/safe-email.min.js"
+                            "node_modules/safe-email/dist/safe-email.min.js",
+                            "vendor/bootstrapdash/skydash-free-bootstrap-admin-template/template/vendors/js/vendor.bundle.base.js",
+                            "vendor/bootstrapdash/skydash-free-bootstrap-admin-template/template/js/hoverable-collapse.js"
                         ]
                     },
                     "configurations": {
@@ -46,13 +48,13 @@
                             "budgets": [
                                 {
                                     "type": "initial",
-                                    "maximumWarning": "900kb",
-                                    "maximumError": "1mb"
+                                    "maximumWarning": "2mb",
+                                    "maximumError": "5mb"
                                 },
                                 {
                                     "type": "anyComponentStyle",
-                                    "maximumWarning": "2kb",
-                                    "maximumError": "4kb"
+                                    "maximumWarning": "1mb",
+                                    "maximumError": "2mb"
                                 }
                             ],
                             "fileReplacements": [
