@@ -34,9 +34,7 @@
                             "resources/js/assets"
                         ],
                         "styles": [
-                            "resources/js/styles.scss",
-                            "node_modules/github-fork-ribbon-css/gh-fork-ribbon.css",
-                            "resources/js/assets/scss/style.scss"
+                            "resources/js/styles.scss"
                         ],
                         "scripts": [
                             "node_modules/safe-email/dist/safe-email.min.js"

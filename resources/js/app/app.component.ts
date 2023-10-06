@@ -1,5 +1,4 @@
 import {Component} from '@angular/core';
-import {install} from 'ga-gtag';
 
 @Component({
     selector: 'app-root',
@@ -8,10 +7,5 @@ import {install} from 'ga-gtag';
 })
 export class AppComponent {
 
-    constructor() {
-        const measurementId: string = document.querySelector("meta[name='gtag-id']")!.getAttribute('content')!!;
-
-        install(measurementId);
-    }
 
 }
