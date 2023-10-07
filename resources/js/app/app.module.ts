@@ -9,7 +9,9 @@ import {CommonModule, NgOptimizedImage} from "@angular/common";
 import {GraphQLModule} from "./modules/graphql.module";
 
 @NgModule({
-    declarations: [],
+    declarations: [
+        AppComponent,
+    ],
     imports: [
         CommonModule,
         BrowserModule,

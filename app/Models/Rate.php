@@ -47,6 +47,7 @@ class Rate extends Model
         'created_at',
         'source_timezone',
         'transform',
+        "status_message"
     ];
 
     /**
@@ -70,7 +71,7 @@ class Rate extends Model
      */
     public function scopeSearch(Builder $query, string $search): Builder
     {
-        return $query->where('rate_name', 'like', '%'.$search.'%');
+        return $query->where('rate_name', 'like', '%' . $search . '%');
     }
 
     /**
