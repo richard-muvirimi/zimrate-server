@@ -15,16 +15,17 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/documentation/admin', function () {
-    return view('documentation.admin');
+Route::get('/documentation/back-end', function () {
+    return view('documentation.back-end');
 })->middleware('auth:sanctum');
 
-Route::get('/documentation/public', function () {
-    return view('documentation.public');
+Route::get('/documentation/front-end', function () {
+    return view('documentation.front-end');
 });
 
 Route::get('/setup', function () {
     Artisan::call('migrate');
+    Artisan::call('route:cache');
 });
 
 Route::get('/crawl', function () {
