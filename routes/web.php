@@ -31,15 +31,21 @@ Route::get('/crawl', function () {
     Artisan::call('app:scrape');
 });
 
-Route::fallback(function () {
-    $appData = json_decode(file_get_contents(base_path('composer.json')), true);
+$appData = json_decode(file_get_contents(base_path('composer.json')), true);
 
-    $data = [
-        'author' => Arr::get($appData, 'authors.0.name'),
-        'title' => config('app.name'),
-        'description' => Arr::get($appData, 'description'),
-        'keywords' => collect(Arr::get($appData, 'keywords'))->join(', '),
-    ];
+$data = [
+    'author' => Arr::get($appData, 'authors.0.name'),
+    'title' => config('app.name'),
+    'description' => Arr::get($appData, 'description'),
+    'keywords' => collect(Arr::get($appData, 'keywords'))->join(', '),
+];
 
-    return view('index', compact('data'));
+Route::prefix('admin')->group(function () use ($data) {
+    Route::get("/", function () use ($data) {
+        return view('back-end', compact('data'));
+    });
+});
+
+Route::fallback(function () use ($data) {
+    return view('front-end', compact('data'));
 });

@@ -1,0 +1,57 @@
+<div class="mt-64 hide-scrollbar" style="max-width: 100%; overflow-x: auto">
+    <table>
+        <thead>
+        <tr>
+            <td>
+                &nbsp;
+            </td>
+            <td class="hidden-small">
+                Rates
+            </td>
+            <td class="hidden-medium">
+                Updated
+            </td>
+            <td>
+                &nbsp;
+            </td>
+        </tr>
+        </thead>
+        <tbody>
+        <ng-container *ngFor="let currency of currencies$">
+            <tr style="border-bottom: none;">
+                <th [style.visibility]="!currency.expanded ? 'visible' : 'hidden'">
+                    <p class="mb-0">{{currency.currency | uppercase}}</p>
+                    <small *ngIf="currency.currency.toUpperCase() !== currency.currency_base.toUpperCase()"
+                           class="font-size-small">
+                        {{currency.currency_base | uppercase}}
+                    </small>
+                </th>
+                <td [style.visibility]="!currency.expanded ? 'visible' : 'hidden'" class="hidden-small">
+                    <p style="text-overflow: ellipsis; white-space: nowrap; max-width: max(calc(100vw / 7), 100px); overflow-x: hidden">
+                        <span
+                            *ngFor="let rate of currency.rates.reverse()" class="mr-8 text-white">
+                            {{rate.rate | currency: rate.currency_base:'symbol-narrow':'1.0-5'}}
+                        </span>
+                    </p>
+                </td>
+                <td [style.visibility]="!currency.expanded ? 'visible' : 'hidden'" class="hidden-medium"
+                    style="text-overflow: fade(25%); white-space: nowrap">
+                    {{DateTime.fromSeconds(currency.last_updated).toJSDate() | date:'MMM d, y HH:mm'}}
+                </td>
+                <td style="width: 1%">
+                    <button (click)="onToggleExpanded($event, currency)"
+                            [title]="currency.expanded ?'Compat': 'Detailed' " class="button"
+                            type="button">
+                        {{currency.expanded ? '&triangle;' : '&triangledown;' }}
+                    </button>
+                </td>
+            </tr>
+            <tr *ngIf="currency.expanded">
+                <td colspan="4" style="max-width: 75vw; overflow-x: auto">
+                    <app-rates-item [currency]="currency"></app-rates-item>
+                </td>
+            </tr>
+        </ng-container>
+        </tbody>
+    </table>
+</div>
