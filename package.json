@@ -1,73 +1,74 @@
 {
-  "name": "zimrate",
-  "version": "1.0.0",
-  "description": "All Zimbabwean exchange rates from multiple sites in one RESTful / Graphql api. No need to scrounge the internet for the current days rate.",
-  "main": "index.js",
-  "directories": {
-    "test": "tests"
-  },
-  "scripts": {
-    "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build --configuration production",
-    "dev": "ng build --configuration development",
-    "watch": "ng build --watch --configuration development",
-    "postbuild": "php artisan app:redocly",
-    "postdev": "npm run postbuild"
-  },
-  "private": true,
-  "dependencies": {
-    "@angular/animations": "^16.2.8",
-    "@angular/common": "^16.2.8",
-    "@angular/compiler": "^16.2.8",
-    "@angular/core": "^16.2.8",
-    "@angular/forms": "^16.2.8",
-    "@angular/platform-browser": "^16.2.8",
-    "@angular/platform-browser-dynamic": "^16.2.8",
-    "@angular/router": "^16.2.8",
-    "animejs": "3.0.1",
-    "apollo-angular": "^5.0.1",
-    "base-64": "^1.0.0",
-    "ga-gtag": "^1.1.1",
-    "github-fork-ribbon-css": "^0.2.3",
-    "graphql": "^16",
-    "lodash": "^4.17.21",
-    "luxon": "^3.3.0",
-    "rxjs": "~7.5.0",
-    "safe-email": "^1.1.1",
-    "scrollreveal": "4.0.0",
-    "sprintf-js": "^1.1.2",
-    "tslib": "^2.3.0",
-    "zone.js": "~0.13.3"
-  },
-  "devDependencies": {
-    "@angular-devkit/build-angular": "^16.2.5",
-    "@angular/cli": "~16.2.5",
-    "@angular/compiler-cli": "^16.2.8",
-    "@redocly/cli": "^1.2.0",
-    "@types/animejs": "^3.1.6",
-    "@types/base-64": "^1.0.0",
-    "@types/jasmine": "~4.0.0",
-    "@types/lodash": "^4.14.185",
-    "@types/luxon": "^3.0.1",
-    "@types/scrollreveal": "^0.0.8",
-    "@types/sprintf-js": "^1.1.2",
-    "jasmine-core": "~4.5.0",
-    "karma": "~6.4.0",
-    "karma-chrome-launcher": "~3.1.0",
-    "karma-coverage": "~2.2.0",
-    "karma-jasmine": "~5.1.0",
-    "karma-jasmine-html-reporter": "~2.0.0",
-    "typescript": "~4.9.4"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/richard-muvirimi/Zimrate-Server.git"
-  },
-  "author": "Richard Muvirimi <richard@tyganeutronics.com>",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/richard-muvirimi/Zimrate-Server/issues"
-  },
-  "homepage": "https//github.com/richard-muvirimi/Zimrate-Server#readme"
+    "name": "zimrate",
+    "version": "1.0.0",
+    "description": "All Zimbabwean exchange rates from multiple sites in one RESTful / Graphql api. No need to scrounge the internet for the current days rate.",
+    "main": "index.js",
+    "directories": {
+        "test": "tests"
+    },
+    "scripts": {
+        "ng": "ng",
+        "start": "ng serve",
+        "build": "ng build front-end --configuration production && ng build back-end --configuration production",
+        "dev": "ng build front-end --configuration development && ng build back-end --configuration development",
+        "watch-front-end": "ng build front-end --watch --configuration development",
+        "watch-back-end": "ng build back-end --watch --configuration development",
+        "postbuild": "php artisan app:redocly",
+        "postdev": "npm run postbuild"
+    },
+    "private": true,
+    "dependencies": {
+        "@angular/animations": "^16.2.8",
+        "@angular/common": "^16.2.8",
+        "@angular/compiler": "^16.2.8",
+        "@angular/core": "^16.2.8",
+        "@angular/forms": "^16.2.8",
+        "@angular/platform-browser": "^16.2.8",
+        "@angular/platform-browser-dynamic": "^16.2.8",
+        "@angular/router": "^16.2.8",
+        "animejs": "3.0.1",
+        "apollo-angular": "^5.0.1",
+        "base-64": "^1.0.0",
+        "ga-gtag": "^1.1.1",
+        "github-fork-ribbon-css": "^0.2.3",
+        "graphql": "^16",
+        "lodash": "^4.17.21",
+        "luxon": "^3.3.0",
+        "rxjs": "~7.5.0",
+        "safe-email": "^1.1.1",
+        "scrollreveal": "4.0.0",
+        "sprintf-js": "^1.1.2",
+        "tslib": "^2.3.0",
+        "zone.js": "~0.13.3"
+    },
+    "devDependencies": {
+        "@angular-devkit/build-angular": "^16.2.5",
+        "@angular/cli": "~16.2.5",
+        "@angular/compiler-cli": "^16.2.8",
+        "@redocly/cli": "^1.2.0",
+        "@types/animejs": "^3.1.6",
+        "@types/base-64": "^1.0.0",
+        "@types/jasmine": "~4.0.0",
+        "@types/lodash": "^4.14.185",
+        "@types/luxon": "^3.0.1",
+        "@types/scrollreveal": "^0.0.8",
+        "@types/sprintf-js": "^1.1.2",
+        "jasmine-core": "~4.5.0",
+        "karma": "~6.4.0",
+        "karma-chrome-launcher": "~3.1.0",
+        "karma-coverage": "~2.2.0",
+        "karma-jasmine": "~5.1.0",
+        "karma-jasmine-html-reporter": "~2.0.0",
+        "typescript": "~4.9.4"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/richard-muvirimi/Zimrate-Server.git"
+    },
+    "author": "Richard Muvirimi <richard@tyganeutronics.com>",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/richard-muvirimi/Zimrate-Server/issues"
+    },
+    "homepage": "https//github.com/richard-muvirimi/Zimrate-Server#readme"
 }

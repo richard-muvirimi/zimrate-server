@@ -1,0 +1,32 @@
+.hide-scrollbar {
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+}
+
+.text-white {
+    color: white;
+}
+
+.font-size-small {
+    font-size: small;
+}
+
+@media (max-width: 480px) {
+    .hidden-small {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .hidden-medium {
+        display: none;
+    }
+}
+
+
+

@@ -55,6 +55,7 @@ current days rate.
           correct timestamp)
         - `source_timezone` the timezone of site
         - `created_at` The timestamp when site was added
+        - `status_message` The last scrape status message, blank if no errors occurred.
 
     2. Add sites you want scanned manually into the database (there is no interface for that as i would have to worry
        more about security)
