@@ -42,7 +42,7 @@ $data = [
 ];
 
 Route::prefix('admin')->group(function () use ($data) {
-    Route::get("/", function () use ($data) {
+    Route::get('/', function () use ($data) {
         return view('back-end', compact('data'));
     });
 });
