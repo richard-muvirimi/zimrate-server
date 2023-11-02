@@ -1,7 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {RatesService} from '../../../services/rates.service';
 import {DateTime} from "luxon";
-import {Dictionary, groupBy, map, mapValues, maxBy, pick, uniqBy} from "lodash";
+import {Dictionary, groupBy, map, mapValues, maxBy, minBy, pick, uniqBy} from "lodash";
 import {AnimeService} from '../../../services/anime.service';
 import RateAggregate from "../../../@types/rate-aggregate";
 import Rate from "../../../@types/rate";
@@ -63,6 +63,8 @@ export class RatesComponent implements OnInit {
                         rates: uniqBy<Rate>(rates, (item: Rate) => {
                             return JSON.stringify(pick(item, ["rate", "last_rate"]));
                         }),
+                        minRate: minBy<Rate>(rates, "rate")!!,
+                        maxRate: maxBy<Rate>(rates, "rate")!!,
                         urls: map(uniqBy<Rate>(rates, "url"), (item: Rate): URL => new URL(item.url)),
                         aggregated: {
                             max: aggregated['max'][rate.currency][0].rate,
