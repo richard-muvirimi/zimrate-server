@@ -32,7 +32,7 @@ trait ScrapesRates
                 return;
             }
 
-            $site = '<html lang="en-US"><body>'.$site.'</body></html>';
+            $site = '<html lang="en-US"><body>' . $site . '</body></html>';
 
             Cache::set($this->source_url, $site, CarbonInterval::minutes(30));
         }
@@ -49,7 +49,7 @@ trait ScrapesRates
     {
 
         $headers = [
-            'Authorization' => 'Bearer '.env('SCRAPPY_TOKEN'),
+            'Authorization' => 'Bearer ' . env('SCRAPPY_TOKEN'),
         ];
 
         $body = [
@@ -67,7 +67,7 @@ trait ScrapesRates
 
         $client = new Client($options);
 
-        $response = $client->post(env('SCRAPPY_SERVER').'/scrape', [
+        $response = $client->post(env('SCRAPPY_SERVER') . '/scrape', [
             'headers' => $headers,
             'form_params' => $body,
         ]);
@@ -91,7 +91,7 @@ trait ScrapesRates
     {
         $agent = Cache::get('user-agent');
 
-        if (! $agent) {
+        if (!$agent) {
             $agent = env('USER_AGENT');
 
             $agent = preg_replace('/headless/i', '', $agent);
@@ -116,7 +116,7 @@ trait ScrapesRates
             $converter = new CssSelectorConverter();
 
             $selector = $this->rate_selector;
-            if (! $this->isXpath($selector)) {
+            if (!$this->isXpath($selector)) {
                 $selector = $converter->toXPath($selector);
             }
 
@@ -133,22 +133,22 @@ trait ScrapesRates
                 }
 
                 $selector = $this->rate_updated_at_selector;
-                if (! $this->isXpath($selector)) {
+                if (!$this->isXpath($selector)) {
                     $selector = $converter->toXPath($selector);
                 }
 
                 //date
                 $this->rate_updated_at = $this->cleanDate($crawler->filterXPath($selector)->text(), $this->source_timezone);
                 $this->status = true;
-                $this->statusMessage = '';
+                $this->status_message = '';
 
             } else {
                 $this->status = false;
-                $this->statusMessage = 'Rate is an empty string.';
+                $this->status_message = 'Rate is an empty string.';
             }
         } catch (Exception $e) {
             $this->status = false;
-            $this->statusMessage = $e->getMessage();
+            $this->status_message = $e->getMessage();
         } finally {
             $this->save();
         }
@@ -179,7 +179,7 @@ trait ScrapesRates
          */
         $amount = preg_replace('/(\d)\s+(\d)/', '$1$2', $amount);
 
-        if (! is_numeric($amount)) {
+        if (!is_numeric($amount)) {
             // separate alpha characters from numeric
             $amount = preg_replace('/([^0-9,.]*)([0-9,.]+)([^0-9,.]*)/i', '$1 $2 $3', $amount);
 
@@ -308,7 +308,7 @@ trait ScrapesRates
             $months[] = strtolower(DateTime::createFromFormat('n', $i)->format('F'));
         }
 
-        $regex = "/\b(?!(".implode('|', $months).'|(\w[0-9][a-z])))(\w*[a-z]+[^\s]*|(\w[^\D\d\w]))/i';
+        $regex = "/\b(?!(" . implode('|', $months) . '|(\w[0-9][a-z])))(\w*[a-z]+[^\s]*|(\w[^\D\d\w]))/i';
 
         $rawDate = preg_replace($regex, '', $rawDate);
 
