@@ -30,5 +30,4 @@ export class RatesDetailedComponent implements OnInit {
             return item;
         });
     }
-
 }

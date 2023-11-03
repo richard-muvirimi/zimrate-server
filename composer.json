@@ -109,8 +109,7 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true,
-            "inpsyde/composer-assets-compiler": true,
-            "dealerdirect/phpcodesniffer-composer-installer": false
+            "inpsyde/composer-assets-compiler": true
         },
         "platform": {
             "php": "8.1"

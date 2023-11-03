@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Mail\Scrappy;
 use App\Models\Rate;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -29,7 +28,7 @@ class Scrape extends Command
      */
     public function handle(): void
     {
-        $this->info("Retrieving rates for scraping...");
+        $this->info('Retrieving rates for scraping...');
         $this->newLine();
 
         $rates = Rate::query()->enabled()->whereDate('updated_at', '<', Carbon::now('UTC')->subMinutes(30)->format(CarbonInterface::DEFAULT_TO_STRING_FORMAT))->get();

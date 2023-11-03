@@ -27,10 +27,13 @@
                     </small>
                 </th>
                 <td [style.visibility]="!currency.expanded ? 'visible' : 'hidden'" class="hidden-small">
-                    <p style="text-overflow: ellipsis; white-space: nowrap; max-width: max(calc(100vw / 7), 100px); overflow-x: hidden">
-                        <span
-                            *ngFor="let rate of currency.rates.reverse()" class="mr-8 text-white">
-                            {{rate.rate | currency: rate.currency_base:'symbol-narrow':'1.0-5'}}
+                    <p class="mb-0">
+                        <span class="text-white">
+                            {{currency.minRate.rate | currency: currency.currency_base:'symbol-narrow':'1.0-5'}}
+                        </span>
+                        <span *ngIf="currency.maxRate.rate != currency.minRate.rate" class="text-white">
+                            &dash;
+                            {{currency.maxRate.rate | currency: currency.currency_base:'symbol-narrow':'1.0-5'}}
                         </span>
                     </p>
                 </td>
@@ -42,7 +45,7 @@
                     <button (click)="onToggleExpanded($event, currency)"
                             [title]="currency.expanded ?'Compat': 'Detailed' " class="button"
                             type="button">
-                        {{currency.expanded ? '&triangle;' : '&triangledown;' }}
+                        {{currency.expanded ? 'Less &triangle;' : 'More &triangledown;' }}
                     </button>
                 </td>
             </tr>
