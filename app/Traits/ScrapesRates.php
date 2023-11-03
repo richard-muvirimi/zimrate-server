@@ -47,38 +47,44 @@ trait ScrapesRates
      */
     private function getHtmlContent(): string
     {
+        try {
 
-        $headers = [
-            'Authorization' => 'Bearer ' . env('SCRAPPY_TOKEN'),
-        ];
+            $headers = [
+                'Authorization' => 'Bearer ' . env('SCRAPPY_TOKEN'),
+            ];
 
-        $body = [
-            'url' => $this->source_url,
-            'format' => 'html',
-            'timeout' => env('SCRAPPY_TIMEOUT'),
-            'user_agent' => $this->getUserAgent(),
-            'css' => 'body',
-            'javascript' => var_export($this->javascript, true),
-        ];
+            $body = [
+                'url' => $this->source_url,
+                'format' => 'html',
+                'timeout' => env('SCRAPPY_TIMEOUT'),
+                'user_agent' => $this->getUserAgent(),
+                'css' => 'body',
+                'javascript' => var_export($this->javascript, true),
+            ];
 
-        $options = [
-            'verify' => false,
-        ];
+            $options = [
+                'verify' => false,
+            ];
 
-        $client = new Client($options);
+            $client = new Client($options);
 
-        $response = $client->post(env('SCRAPPY_SERVER') . '/scrape', [
-            'headers' => $headers,
-            'form_params' => $body,
-        ]);
+            $response = $client->post(env('SCRAPPY_SERVER') . '/scrape', [
+                'headers' => $headers,
+                'form_params' => $body,
+            ]);
 
-        if ($response->getStatusCode() === 200) {
+            if ($response->getStatusCode() === 200) {
 
-            $content = json_decode($response->getBody(), true);
+                $content = json_decode($response->getBody(), true);
 
-            if ($content['data'] !== 'false') {
-                return $content['data'];
+                if ($content['data'] !== 'false') {
+                    return $content['data'];
+                }
             }
+        } catch (Exception $e) {
+            $this->status = false;
+            $this->status_message = $e->getMessage();
+            $this->save();
         }
 
         return '';
