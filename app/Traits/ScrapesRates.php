@@ -7,6 +7,7 @@ use Carbon\CarbonInterval;
 use DateTime;
 use Exception;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -32,7 +33,7 @@ trait ScrapesRates
                 return;
             }
 
-            $site = '<html lang="en-US"><body>' . $site . '</body></html>';
+            $site = '<html lang="en-US"><body>'.$site.'</body></html>';
 
             Cache::set($this->source_url, $site, CarbonInterval::minutes(30));
         }
@@ -50,7 +51,7 @@ trait ScrapesRates
         try {
 
             $headers = [
-                'Authorization' => 'Bearer ' . env('SCRAPPY_TOKEN'),
+                'Authorization' => 'Bearer '.env('SCRAPPY_TOKEN'),
             ];
 
             $body = [
@@ -62,13 +63,16 @@ trait ScrapesRates
                 'javascript' => var_export($this->javascript, true),
             ];
 
+            $base_uri = rtrim(env('SCRAPPY_SERVER'), '\\/').'/api/';
+
             $options = [
+                'base_uri' => $base_uri,
                 'verify' => false,
             ];
 
             $client = new Client($options);
 
-            $response = $client->post(env('SCRAPPY_SERVER') . '/scrape', [
+            $response = $client->post('scrape', [
                 'headers' => $headers,
                 'form_params' => $body,
             ]);
@@ -81,7 +85,7 @@ trait ScrapesRates
                     return $content['data'];
                 }
             }
-        } catch (Exception $e) {
+        } catch (Exception|GuzzleException $e) {
             $this->status = false;
             $this->status_message = $e->getMessage();
             $this->save();
@@ -97,7 +101,7 @@ trait ScrapesRates
     {
         $agent = Cache::get('user-agent');
 
-        if (!$agent) {
+        if (! $agent) {
             $agent = env('USER_AGENT');
 
             $agent = preg_replace('/headless/i', '', $agent);
@@ -122,7 +126,7 @@ trait ScrapesRates
             $converter = new CssSelectorConverter();
 
             $selector = $this->rate_selector;
-            if (!$this->isXpath($selector)) {
+            if (! $this->isXpath($selector)) {
                 $selector = $converter->toXPath($selector);
             }
 
@@ -139,7 +143,7 @@ trait ScrapesRates
                 }
 
                 $selector = $this->rate_updated_at_selector;
-                if (!$this->isXpath($selector)) {
+                if (! $this->isXpath($selector)) {
                     $selector = $converter->toXPath($selector);
                 }
 
@@ -185,7 +189,7 @@ trait ScrapesRates
          */
         $amount = preg_replace('/(\d)\s+(\d)/', '$1$2', $amount);
 
-        if (!is_numeric($amount)) {
+        if (! is_numeric($amount)) {
             // separate alpha characters from numeric
             $amount = preg_replace('/([^0-9,.]*)([0-9,.]+)([^0-9,.]*)/i', '$1 $2 $3', $amount);
 
@@ -314,7 +318,7 @@ trait ScrapesRates
             $months[] = strtolower(DateTime::createFromFormat('n', $i)->format('F'));
         }
 
-        $regex = "/\b(?!(" . implode('|', $months) . '|(\w[0-9][a-z])))(\w*[a-z]+[^\s]*|(\w[^\D\d\w]))/i';
+        $regex = "/\b(?!(".implode('|', $months).'|(\w[0-9][a-z])))(\w*[a-z]+[^\s]*|(\w[^\D\d\w]))/i';
 
         $rawDate = preg_replace($regex, '', $rawDate);
 
