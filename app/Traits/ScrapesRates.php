@@ -77,13 +77,10 @@ trait ScrapesRates
                 'form_params' => $body,
             ]);
 
-            if ($response->getStatusCode() === 200) {
+            $content = json_decode($response->getBody()->getContents(), true);
 
-                $content = json_decode($response->getBody(), true);
-
-                if ($content['data'] !== 'false') {
-                    return $content['data'];
-                }
+            if ($content['data'] !== 'false') {
+                return $content['data'];
             }
         } catch (Exception|GuzzleException $e) {
             $this->status = false;
