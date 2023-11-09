@@ -9,7 +9,6 @@ use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class RatesController extends Controller
@@ -39,12 +38,12 @@ class RatesController extends Controller
 
             $response['USD'] = $this->getRates($request);
 
-            if (Str::of($request->get('info', 'true'))->toBoolean()) {
+            if ($request->string('info', 'true')->toBoolean()) {
                 $response['info'] = (new InfoQuery())(null, []);
             }
 
             if ($request->has('callback')) {
-                return response()->jsonp($request->get('callback'),
+                return response()->jsonp($request->input('callback'),
                     $response,
                 );
             } else {
