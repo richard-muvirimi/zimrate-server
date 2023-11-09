@@ -43,7 +43,8 @@
         "nuwave/lighthouse": "^6.21",
         "symfony/css-selector": "^6.3",
         "symfony/dom-crawler": "^6.3",
-        "wapmorgan/time-parser": "^2.0"
+        "wapmorgan/time-parser": "^2.0",
+        "ext-pdo": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
