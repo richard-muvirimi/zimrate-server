@@ -6,7 +6,6 @@ use App\Models\Rate;
 use App\Rules\IsBoolean;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 trait ResolvesRates
@@ -31,32 +30,32 @@ trait ResolvesRates
         $query = Rate::query();
 
         if ($request->has('search')) {
-            $query->search($request->get('search'));
+            $query->search($request->input('search'));
         }
 
         if ($request->has('currency')) {
-            $query->currency($request->get('currency'));
+            $query->currency($request->input('currency'));
         }
 
         if ($request->has('date')) {
-            $query->date($request->get('date'));
+            $query->date($request->input('date'));
         }
 
         $query->enabled();
         $query->updated();
 
         if ($request->has('prefer')) {
-            $query->preferred($request->get('prefer'));
+            $query->preferred($request->input('prefer'));
         }
 
         // Fields
         $fields = collect(['currency', 'last_checked', 'last_updated', 'rate']);
 
-        if (! $request->has('prefer')) {
+        if (!$request->has('prefer')) {
             $fields->push('name', 'url');
         }
 
-        if (Str::of($request->get('extra', 'false'))->toBoolean()) {
+        if ($request->string('extra', 'false')->toBoolean()) {
             $fields->push('currency_base', 'last_rate');
         }
 
