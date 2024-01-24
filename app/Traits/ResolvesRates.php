@@ -51,7 +51,7 @@ trait ResolvesRates
         // Fields
         $fields = collect(['currency', 'last_checked', 'last_updated', 'rate']);
 
-        if (!$request->has('prefer')) {
+        if (! $request->has('prefer')) {
             $fields->push('name', 'url');
         }
 
