@@ -46,9 +46,9 @@ Thumbs.db
 
 # Laravel
 /.phpunit.cache
-/public/build
-/public/hot
-/public/storage
+/public_html/build
+/public_html/hot
+/public_html/storage
 /storage/*.key
 .env
 .env.backup
@@ -74,4 +74,3 @@ DOCKER_ENV
 output.log
 
 .ftp-deploy-sync-state.json
-/public_html/build/
