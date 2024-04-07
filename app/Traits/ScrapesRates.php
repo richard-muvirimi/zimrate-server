@@ -4,7 +4,9 @@ namespace App\Traits;
 
 use App\Models\Rate;
 use Carbon\CarbonInterval;
+use Carbon\CarbonTimeZone;
 use DateTime;
+use Error;
 use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
@@ -175,7 +177,7 @@ trait ScrapesRates
     /**
      * Convert number to an int
      *
-     * @throws  Exception
+     * @throws Exception
      */
     private function cleanRate(string $value, string $locale): float
     {
@@ -203,7 +205,7 @@ trait ScrapesRates
             $numbers = implode(' ', $numbered);
 
             $fmt = new NumberFormatter($locale, NumberFormatter::DECIMAL);
-            $numbers = $fmt->parse($numbers);
+            $numbers = $fmt->parse($numbers) ?: 0;
 
             //split by non-numeric
             $figures = preg_split('/[^0-9,.]/', $numbers, -1, PREG_SPLIT_NO_EMPTY);
@@ -261,17 +263,15 @@ trait ScrapesRates
         /**
          * Remove all non-alphanumeric characters except spaces
          */
-        $value = implode(' ', array_map(function (string $word): string {
+        return implode(' ', array_map(function (string $word): string {
             return trim($word, '-,:;\'"()[]{}<>!?*');
         }, explode(' ', $value)));
-
-        return Str::squish($value);
     }
 
     /**
      * Parse a date from raw text
      *
-     * @throws  Exception
+     * @throws Exception
      */
     private function cleanDate(string $value, string $timezone): Carbon
     {
@@ -286,9 +286,9 @@ trait ScrapesRates
             $parsed = $parser->parse($rawDate, true);
 
             if ($parsed !== false) {
-                return Carbon::parse($parsed)->shiftTimezone($timezone);
+                return Carbon::parse($parsed, CarbonTimeZone::create($timezone))->shiftTimezone('UTC');
             }
-        } catch (Exception) {
+        } catch (Exception|Error) {
             //do nothing
         }
 
@@ -327,6 +327,6 @@ trait ScrapesRates
         /**
          * Parse the date
          */
-        return Carbon::parse($rawDate)->shiftTimezone($timezone);
+        return Carbon::parse($rawDate, CarbonTimeZone::create($timezone))->shiftTimezone('UTC');
     }
 }
