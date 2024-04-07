@@ -261,11 +261,9 @@ trait ScrapesRates
         /**
          * Remove all non-alphanumeric characters except spaces
          */
-        $value = implode(' ', array_map(function (string $word): string {
+        return implode(' ', array_map(function (string $word): string {
             return trim($word, '-,:;\'"()[]{}<>!?*');
         }, explode(' ', $value)));
-
-        return Str::squish($value);
     }
 
     /**
