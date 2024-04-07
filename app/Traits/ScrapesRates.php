@@ -5,6 +5,7 @@ namespace App\Traits;
 use App\Models\Rate;
 use Carbon\CarbonInterval;
 use DateTime;
+use Error;
 use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
@@ -286,7 +287,7 @@ trait ScrapesRates
             if ($parsed !== false) {
                 return Carbon::parse($parsed)->shiftTimezone($timezone);
             }
-        } catch (Exception) {
+        } catch (Exception|Error) {
             //do nothing
         }
 
