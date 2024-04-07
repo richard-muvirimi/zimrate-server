@@ -204,7 +204,7 @@ trait ScrapesRates
             $numbers = implode(' ', $numbered);
 
             $fmt = new NumberFormatter($locale, NumberFormatter::DECIMAL);
-            $numbers = $fmt->parse($numbers);
+            $numbers = $fmt->parse($numbers) ?: 0;
 
             //split by non-numeric
             $figures = preg_split('/[^0-9,.]/', $numbers, -1, PREG_SPLIT_NO_EMPTY);
