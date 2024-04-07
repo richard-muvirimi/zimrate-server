@@ -4,6 +4,7 @@ namespace App\Traits;
 
 use App\Models\Rate;
 use Carbon\CarbonInterval;
+use Carbon\CarbonTimeZone;
 use DateTime;
 use Error;
 use Exception;
@@ -176,7 +177,7 @@ trait ScrapesRates
     /**
      * Convert number to an int
      *
-     * @throws  Exception
+     * @throws Exception
      */
     private function cleanRate(string $value, string $locale): float
     {
@@ -270,7 +271,7 @@ trait ScrapesRates
     /**
      * Parse a date from raw text
      *
-     * @throws  Exception
+     * @throws Exception
      */
     private function cleanDate(string $value, string $timezone): Carbon
     {
@@ -285,7 +286,7 @@ trait ScrapesRates
             $parsed = $parser->parse($rawDate, true);
 
             if ($parsed !== false) {
-                return Carbon::parse($parsed)->shiftTimezone($timezone);
+                return Carbon::parse($parsed, CarbonTimeZone::create($timezone))->shiftTimezone('UTC');
             }
         } catch (Exception|Error) {
             //do nothing
@@ -326,6 +327,6 @@ trait ScrapesRates
         /**
          * Parse the date
          */
-        return Carbon::parse($rawDate)->shiftTimezone($timezone);
+        return Carbon::parse($rawDate, CarbonTimeZone::create($timezone))->shiftTimezone('UTC');
     }
 }
