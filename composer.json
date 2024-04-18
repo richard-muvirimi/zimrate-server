@@ -41,7 +41,6 @@
         "madorin/matex": "^1.0",
         "mll-lab/laravel-graphiql": "^3.1",
         "nuwave/lighthouse": "^6.22",
-        "symfony/css-selector": "^6.3",
         "symfony/dom-crawler": "^6.3",
         "wapmorgan/time-parser": "^2.0",
         "ext-pdo": "*"

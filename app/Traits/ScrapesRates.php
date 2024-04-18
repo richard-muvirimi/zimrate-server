@@ -10,12 +10,12 @@ use Error;
 use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Matex\Evaluator;
 use NumberFormatter;
-use Symfony\Component\CssSelector\CssSelectorConverter;
 use Symfony\Component\DomCrawler\Crawler;
 use wapmorgan\TimeParser\TimeParser;
 
@@ -28,6 +28,8 @@ trait ScrapesRates
     {
         $site = Cache::get($this->source_url, '');
 
+        $locale = 'en-US';
+
         if (empty($site)) {
             $site = $this->getHtmlContent();
 
@@ -35,13 +37,13 @@ trait ScrapesRates
                 return;
             }
 
-            $site = '<html lang="en-US"><body>'.$site.'</body></html>';
+            $site = "<html lang=\"$locale\"><body>$site</body></html>";
 
             Cache::set($this->source_url, $site, CarbonInterval::minutes(30));
         }
 
         if (Str::of($site)->isNotEmpty()) {
-            $this->parseHtml($site);
+            $this->parseHtml($site, $locale);
         }
     }
 
@@ -114,7 +116,7 @@ trait ScrapesRates
     /**
      * Parse given html for required values
      */
-    private function parseHtml(string $html): void
+    private function parseHtml(string $html, string $locale = 'en-US'): void
     {
 
         try {
@@ -122,18 +124,23 @@ trait ScrapesRates
             $crawler = new Crawler();
             $crawler->addHtmlContent($html);
 
-            $converter = new CssSelectorConverter();
-
-            $selector = $this->rate_selector;
-            if (! $this->isXpath($selector)) {
-                $selector = $converter->toXPath($selector);
+            //rate
+            switch ($this->selector_type) {
+                case 'xpath':
+                    $rate = $crawler->filterXPath($this->rate_selector)->text();
+                    break;
+                case 'css':
+                    $rate = $crawler->filter($this->rate_selector)->text();
+                    break;
+                case 'json':
+                    $data = json_decode($crawler->text(), true);
+                    $rate = strval(Arr::get($data, $this->rate_selector));
+                    break;
+                default:
+                    throw new Exception('Unexpected selector type!');
             }
 
-            //locale
-            $locale = $crawler->getNode(0)->getAttribute('lang');
-
-            //rate
-            $rate = $this->cleanRate($crawler->filterXPath($selector)->text(), $locale);
+            $rate = $this->cleanRate($rate ?? 0, $locale);
 
             if ($rate) {
                 if ($this->rate !== $rate) {
@@ -141,13 +148,25 @@ trait ScrapesRates
                     $this->rate = $rate;
                 }
 
-                $selector = $this->rate_updated_at_selector;
-                if (! $this->isXpath($selector)) {
-                    $selector = $converter->toXPath($selector);
+                //date
+                $date = Carbon::now()->toDateTimeString();
+                switch ($this->selector_type) {
+                    case 'xpath':
+                        $date = $crawler->filterXPath($this->rate_updated_at_selector)->text();
+                        break;
+                    case 'css':
+                        $date = $crawler->filter($this->rate_updated_at_selector)->text();
+                        break;
+                    case 'json':
+                        $data = json_decode($crawler->text(), true);
+                        $date = strval(Arr::get($data, $this->rate_updated_at_selector));
+                        break;
+                    default:
+                        throw new Exception('Unexpected selector type!');
                 }
 
-                //date
-                $this->rate_updated_at = $this->cleanDate($crawler->filterXPath($selector)->text(), $this->source_timezone);
+                $this->rate_updated_at = $this->cleanDate($date, $this->source_timezone);
+
                 $this->status = true;
                 $this->status_message = '';
 
@@ -161,17 +180,6 @@ trait ScrapesRates
         } finally {
             $this->save();
         }
-    }
-
-    /**
-     * Check if a given text is an xpath
-     */
-    private function isXpath(string $selector): bool
-    {
-        return match ($selector) {
-            'text', 'comment' => true,
-            default => str_starts_with($selector, '//'),
-        };
     }
 
     /**
