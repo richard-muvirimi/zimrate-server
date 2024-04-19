@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\GraphQL\Queries\InfoQuery;
+use App\Mail\StatusMail;
 use App\Rules\IsBoolean;
+use App\Traits\QueriesFaultyRates;
 use App\Traits\ResolvesRates;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -13,7 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class RatesController extends Controller
 {
-    use ResolvesRates;
+    use QueriesFaultyRates, ResolvesRates;
 
     public function version0(Request $request): JsonResponse
     {
@@ -56,5 +58,10 @@ class RatesController extends Controller
                 'message' => $e->getMessage(),
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public function status(): StatusMail
+    {
+        return new StatusMail($this->getFaultyRates());
     }
 }

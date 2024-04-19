@@ -15,6 +15,8 @@ class Kernel extends ConsoleKernel
         // $schedule->command('inspire')->hourly();
         $schedule->command('sanctum:prune-expired --hours=24')->hourly();
         $schedule->command('app:scrape')->hourly()->between('8:00', '20:00');
+
+        $schedule->command('app:status')->daily()->at('06:00');
     }
 
     /**
