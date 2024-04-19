@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\RatesController;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
@@ -31,6 +32,8 @@ Route::get('/setup', function () {
 Route::get('/crawl', function () {
     Artisan::call('app:scrape');
 });
+
+Route::get('/status', [RatesController::class, 'status']);
 
 $appData = json_decode(file_get_contents(base_path('composer.json')), true);
 
