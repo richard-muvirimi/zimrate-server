@@ -1,6 +1,5 @@
 import {Component, Input, OnInit} from '@angular/core';
 import RateAggregate from "../../../../@types/rate-aggregate";
-import {DateTime} from "luxon";
 
 @Component({
     selector: 'app-rates-item',
@@ -10,8 +9,6 @@ import {DateTime} from "luxon";
 export class RatesItemComponent implements OnInit {
 
     @Input("currency") currency!: RateAggregate;
-
-    protected readonly DateTime = DateTime;
 
     constructor() {
         this.ngOnInit = this.ngOnInit.bind(this);

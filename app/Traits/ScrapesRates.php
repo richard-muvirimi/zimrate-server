@@ -4,7 +4,6 @@ namespace App\Traits;
 
 use App\Models\Rate;
 use Carbon\CarbonInterval;
-use Carbon\CarbonTimeZone;
 use DateTime;
 use Error;
 use Exception;
@@ -252,7 +251,13 @@ trait ScrapesRates
             }
         }
 
-        return $amount;
+        /**
+         * Remove extra spaces
+         */
+        $amount = Str::squish($amount);
+
+        return floatval($amount);
+
     }
 
     /**
@@ -264,16 +269,23 @@ trait ScrapesRates
         $value = strip_tags($value);
         $value = str_replace('&nbsp;', ' ', $value);
         $value = preg_replace('/\s+/', ' ', $value);
-        $value = trim($value);
 
         // $value = strip_tags(trim(html_entity_decode($value), " \t\n\r\0\x0B\xC2\xA0"));
 
         /**
+         * Normalize the string
+         */
+        $value = Str::transliterate($value);
+        $value = Str::ascii($value);
+
+        /**
          * Remove all non-alphanumeric characters except spaces
          */
-        return implode(' ', array_map(function (string $word): string {
+        $value = implode(' ', array_map(function (string $word): string {
             return trim($word, '-,:;\'"()[]{}<>!?*');
         }, explode(' ', $value)));
+
+        return Str::squish($value);
     }
 
     /**
@@ -294,7 +306,9 @@ trait ScrapesRates
             $parsed = $parser->parse($rawDate, true);
 
             if ($parsed !== false) {
-                return Carbon::parse($parsed, CarbonTimeZone::create($timezone))->shiftTimezone('UTC');
+
+                // Parsed date is in UTC, shift to source timezone
+                return Carbon::parse($parsed)->shiftTimezone($timezone)->setTimezone('UTC');
             }
         } catch (Exception|Error) {
             //do nothing
@@ -335,6 +349,6 @@ trait ScrapesRates
         /**
          * Parse the date
          */
-        return Carbon::parse($rawDate, CarbonTimeZone::create($timezone))->shiftTimezone('UTC');
+        return Carbon::parse($rawDate)->shiftTimezone($timezone)->setTimezone('UTC');
     }
 }

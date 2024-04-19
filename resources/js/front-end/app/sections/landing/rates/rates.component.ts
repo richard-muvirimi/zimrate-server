@@ -20,8 +20,6 @@ export class RatesComponent implements OnInit {
 
     ratesDisplay: string = "";
 
-    protected readonly DateTime = DateTime;
-
     constructor(private rateService: RatesService, private animeService: AnimeService) {
         this.ngOnInit = this.ngOnInit.bind(this);
 
@@ -79,7 +77,7 @@ export class RatesComponent implements OnInit {
                 });
 
             // Last Checked
-            this.lastChecked$ = maxBy<Rate>(data["rates"], "last_checked")?.last_checked || DateTime.now().toSeconds();
+            this.lastChecked$ = maxBy<Rate>(data["rates"], "last_checked")?.last_checked || DateTime.utc().toSeconds();
 
             setTimeout((): void => {
                 this.animeService.reviewComponents();

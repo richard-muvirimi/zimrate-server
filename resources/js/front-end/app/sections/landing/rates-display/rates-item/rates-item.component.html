@@ -4,24 +4,24 @@
         <tr>
             <th class="text-white" colspan="2">
                 <span class="font-xxx-large">
-                    {{currency.currency | uppercase}}
+                    {{ currency.currency | uppercase }}
                 </span>
                 <small *ngIf="currency.currency.toUpperCase() !== currency.currency_base.toUpperCase()">
-                    {{currency.currency_base | uppercase}}
+                    {{ currency.currency_base | uppercase }}
                 </small>
             </th>
             <th colspan="2" style="text-align: right" title="When we last scanned rates.">
-                <p class="mb-0">{{DateTime.fromSeconds(currency.last_checked).toJSDate() | date:'MMM d y, HH:mm'}}</p>
+                <p class="mb-0">{{ currency.last_checked| localDate }}</p>
                 <small class="font-size-small">Checked</small>
             </th>
             <th colspan="2" style="text-align: right" title="When rate was last updated.">
-                <p class="mb-0">{{DateTime.fromSeconds(currency.last_updated).toJSDate() | date:'MMM d, y HH:mm'}}</p>
+                <p class="mb-0">{{ currency.last_updated | localDate }}</p>
                 <small class="font-size-small">Updated</small>
             </th>
         </tr>
         <tr>
             <th class="text-center">
-                <p class="mb-0 text-white font-bold">{{ currency.aggregated.max | currency: currency.currency_base:'symbol-narrow':'1.0-2'}}</p>
+                <p class="mb-0 text-white font-bold">{{ currency.aggregated.max | currency: currency.currency_base:'symbol-narrow':'1.0-2' }}</p>
                 <small class="font-size-small">Max</small>
             </th>
             <th class="text-center">
@@ -49,7 +49,7 @@
             <td colspan="3" style="vertical-align: bottom">
                 <ul>
                     <li *ngFor="let url of currency.urls">
-                        <a [href]="url.toString()" target="_blank">{{url.hostname}}</a>
+                        <a [href]="url.toString()" target="_blank">{{ url.hostname }}</a>
                     </li>
                 </ul>
             </td>
@@ -71,13 +71,13 @@
                     <tbody>
                     <tr *ngFor="let rate of currency.rates">
                         <th class="text-white text-center">
-                            {{rate.rate | currency: currency.currency_base:'symbol-narrow':'1.0-5'}}
+                            {{ rate.rate | currency: currency.currency_base:'symbol-narrow':'1.0-5' }}
                         </th>
                         <td class="text-center">
-                            {{rate.last_rate | currency: currency.currency_base:'symbol-narrow':'1.0-5'}}
+                            {{ rate.last_rate | currency: currency.currency_base:'symbol-narrow':'1.0-5' }}
                         </td>
                         <td class="text-center">
-                            {{ (rate.rate - rate.last_rate) / rate.last_rate | percent:'1.2'}}
+                            {{ (rate.rate - rate.last_rate) / rate.last_rate | percent:'1.2' }}
                         </td>
                     </tr>
                     </tbody>
