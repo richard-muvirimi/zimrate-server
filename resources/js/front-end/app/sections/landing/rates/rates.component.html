@@ -7,7 +7,7 @@
                     Last Checked
                 </p>
                 <h2 *ngIf="lastChecked$ !== undefined" [attr.data-checked]="lastChecked$" class="section-title mt-0">
-                    {{ DateTime.fromSeconds(lastChecked$).toJSDate() | date:'MMM d, y HH:mm' }}
+                    {{ lastChecked$ | localDate }}
                 </h2>
             </div>
 

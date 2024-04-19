@@ -5,7 +5,7 @@ import {HttpClientModule} from '@angular/common/http';
 
 import {AppRoutingModule} from './app-routing.module';
 import {AppComponent} from './app.component';
-import {CommonModule, NgOptimizedImage} from "@angular/common";
+import {CommonModule, DATE_PIPE_DEFAULT_OPTIONS, NgOptimizedImage} from "@angular/common";
 import {GraphQLModule} from "./modules/graphql.module";
 import {HeaderComponent} from "./sections/other/header/header.component";
 import {HeroComponent} from "./sections/other/hero/hero.component";
@@ -21,6 +21,8 @@ import {RatesDetailedComponent} from "./sections/landing/rates-display/rates-det
 import {RatesCardComponent} from "./sections/landing/rates-display/rates-card/rates-card.component";
 import {RatesItemComponent} from "./sections/landing/rates-display/rates-item/rates-item.component";
 import {HomeComponent} from "./pages/home/home.component";
+import {DateTime, Settings} from "luxon";
+import {LocalDatePipe} from './pipes/local-date.pipe';
 
 @NgModule({
     declarations: [
@@ -38,7 +40,8 @@ import {HomeComponent} from "./pages/home/home.component";
         RatesDetailedComponent,
         RatesCardComponent,
         RatesItemComponent,
-        HomeComponent
+        HomeComponent,
+        LocalDatePipe
     ],
     imports: [
         CommonModule,
@@ -48,10 +51,23 @@ import {HomeComponent} from "./pages/home/home.component";
         NgOptimizedImage,
         GraphQLModule
     ],
-    providers: [],
+    providers: [
+        {
+            provide: DATE_PIPE_DEFAULT_OPTIONS,
+            useValue: {
+                timezone: DateTime.now().zoneName,
+                dateFormat: 'MMM d, y HH:mm'
+            }
+        }
+    ],
     bootstrap: [
         AppComponent
     ],
 })
 export class AppModule {
+
+    constructor() {
+        Settings.defaultZone = "utc";
+    }
+
 }
