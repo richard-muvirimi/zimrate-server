@@ -35,13 +35,13 @@ class RatesController extends Controller
     {
         try {
             $request->validate([
-                'info' => [new IsBoolean()],
+                'info' => [new IsBoolean],
             ]);
 
             $response['USD'] = $this->getRates($request);
 
             if ($request->string('info', 'true')->toBoolean()) {
-                $response['info'] = (new InfoQuery())(null, []);
+                $response['info'] = (new InfoQuery)(null, []);
             }
 
             if ($request->has('callback')) {

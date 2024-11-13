@@ -24,7 +24,7 @@ trait ResolvesRates
             'currency' => 'string|exists:rates,rate_currency',
             'prefer' => ['string', Rule::in([...Rate::AGGREGATES, ...Arr::map(Rate::AGGREGATES, 'strtoupper')])],
             'callback' => 'string',
-            'extra' => [new IsBoolean()],
+            'extra' => [new IsBoolean],
         ]);
 
         $query = Rate::query();

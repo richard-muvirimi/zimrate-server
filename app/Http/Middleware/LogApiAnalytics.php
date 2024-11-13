@@ -39,7 +39,7 @@ class LogApiAnalytics
                     'User-Agent' => $userAgent,
                 ]);
 
-                $baseRequest = new BaseRequest();
+                $baseRequest = new BaseRequest;
                 $baseRequest->setClientId($ip);
 
                 $sessionId = md5($ip.$userAgent);

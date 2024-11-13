@@ -120,7 +120,7 @@ trait ScrapesRates
 
         try {
             //get html dom
-            $crawler = new Crawler();
+            $crawler = new Crawler;
             $crawler->addHtmlContent($html);
 
             //rate
@@ -223,7 +223,7 @@ trait ScrapesRates
         /**
          * Apply transformation to rate
          */
-        $evaluator = new Evaluator();
+        $evaluator = new Evaluator;
         $evaluator->variables = [
             'x' => floatval($amount),
         ];

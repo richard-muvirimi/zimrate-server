@@ -58,9 +58,9 @@ class RateController extends BaseController
     {
         try {
             $rules = [
-                'status' => ['required', new IsBoolean()],
-                'enabled' => ['required', new IsBoolean()],
-                'javascript' => ['required', new IsBoolean()],
+                'status' => ['required', new IsBoolean],
+                'enabled' => ['required', new IsBoolean],
+                'javascript' => ['required', new IsBoolean],
                 'rate_name' => 'required|string',
                 'rate_currency' => 'required|string',
                 'source_url' => 'required|url',
@@ -107,9 +107,9 @@ class RateController extends BaseController
     {
         try {
             $rules = [
-                'status' => ['required', new IsBoolean()],
-                'enabled' => ['required', new IsBoolean()],
-                'javascript' => ['required', new IsBoolean()],
+                'status' => ['required', new IsBoolean],
+                'enabled' => ['required', new IsBoolean],
+                'javascript' => ['required', new IsBoolean],
                 'rate_name' => 'required|string',
                 'rate_currency' => 'required|string',
                 'source_url' => 'required|url',
