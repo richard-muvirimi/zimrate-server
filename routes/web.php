@@ -1,7 +1,7 @@
 <?php
 
+use App\Http\Controllers\Controller;
 use App\Http\Controllers\RatesController;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
@@ -24,32 +24,14 @@ Route::get('/documentation/front-end', function () {
     return view('documentation.front-end');
 });
 
-Route::get('/setup', function () {
-    Artisan::call('migrate');
-    Artisan::call('route:cache');
-});
-
 Route::get('/crawl', function () {
     Artisan::call('app:scrape');
 });
 
 Route::get('/status', [RatesController::class, 'status']);
 
-$appData = json_decode(file_get_contents(base_path('composer.json')), true);
-
-$data = [
-    'author' => Arr::get($appData, 'authors.0.name'),
-    'title' => config('app.name'),
-    'description' => Arr::get($appData, 'description'),
-    'keywords' => collect(Arr::get($appData, 'keywords'))->join(', '),
-];
-
-Route::prefix('admin')->group(function () use ($data) {
-    Route::get('/', function () use ($data) {
-        return view('back-end', compact('data'));
-    });
+Route::prefix('admin')->group(function () {
+    Route::fallback([Controller::class, 'backEnd']);
 });
 
-Route::fallback(function () use ($data) {
-    return view('front-end', compact('data'));
-});
+Route::fallback([Controller::class, 'frontEnd']);

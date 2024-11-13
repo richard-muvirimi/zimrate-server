@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\GraphQL\Queries;
 
+use App\Enums\OptionKey;
 use App\Models\Option;
 
 final class InfoQuery
@@ -13,6 +14,6 @@ final class InfoQuery
      */
     public function __invoke($_, array $args)
     {
-        return Option::query()->firstWhere('key', 'notice')->value('value');
+        return Option::query()->firstWhere('key', OptionKey::SYSTEM_NOTICE)?->value('value') ?? '';
     }
 }

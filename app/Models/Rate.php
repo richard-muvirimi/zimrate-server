@@ -165,7 +165,7 @@ class Rate extends Model
                     return $rates;
                 });
 
-                $query->whereIn('id', $rates->flatten(2)->first()->pluck('id'));
+                $query->whereIn('id', $rates->flatten(2)->first()?->pluck('id') ?? []);
                 break;
             default:
                 break;

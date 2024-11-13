@@ -4,7 +4,6 @@ namespace App\Traits;
 
 use App\Models\Rate;
 use Carbon\Carbon;
-use Carbon\CarbonInterface;
 
 trait QueriesFaultyRates
 {
@@ -12,9 +11,9 @@ trait QueriesFaultyRates
     {
         return Rate::query()
             ->enabled()
-            ->whereDate('updated_at', '<', Carbon::now('UTC')->subHours(6)->format(CarbonInterface::DEFAULT_TO_STRING_FORMAT))
-            ->where('status_message', '<>', '')
-            ->where('status', '=', true)
+            ->whereDate('updated_at', '<', Carbon::now('UTC')->subHours(6))
+            ->where('status_message', '!=', '')
+            ->where('status', 0)
             ->get();
     }
 }
