@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('rates', function (Blueprint $table) {
-            $table->enum('selector_type', ['css', 'xpath', 'json'])->after('rate_selector')->default('css');
+            $table->enum('selector_type', ['css', 'xpath', 'json'])
+                ->after('rate_selector')
+                ->default('css');
         });
     }
 

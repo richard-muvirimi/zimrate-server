@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('rates', function (Blueprint $table) {
-            $table->string('transform')->default('1 * x')->after('rate');
+            $table->string('transform')
+                ->default('1 * x')
+                ->after('rate');
         });
     }
 

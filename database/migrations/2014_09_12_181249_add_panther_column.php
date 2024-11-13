@@ -13,7 +13,9 @@ return new class extends Migration
     {
         if (! Schema::hasColumn('zimrate', 'javascript')) {
             Schema::table('zimrate', function (Blueprint $table) {
-                $table->boolean('javascript')->default(false);
+                $table->boolean('javascript')
+                    ->after('enabled')
+                    ->default(false);
             });
         }
     }
