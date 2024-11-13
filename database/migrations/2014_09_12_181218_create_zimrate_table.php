@@ -25,7 +25,6 @@ return new class extends Migration
                 $table->string('last_updated_selector');
                 $table->integer('last_updated');
                 $table->string('timezone');
-                $table->timestamps();
             });
         }
     }

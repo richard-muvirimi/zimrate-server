@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('rates', function (Blueprint $table) {
-            $table->string('status_message');
+            $table->string('status_message')
+                ->after('status');
         });
     }
 

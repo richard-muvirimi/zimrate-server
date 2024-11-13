@@ -46,7 +46,7 @@ return new class extends Migration
         ]);
 
         Schema::table('rates', function (Blueprint $table) {
-            $table->dropColumn('checked_at');
+            $table->dropColumn('rate_updated_at');
             $table->dropTimestamps();
         });
     }

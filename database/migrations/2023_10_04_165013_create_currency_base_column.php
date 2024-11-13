@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('rates', function (Blueprint $table) {
-            $table->string('rate_currency_base')->after('rate_currency')->default('ZWL');
+            $table->string('rate_currency_base')
+                ->after('rate_currency')
+                ->default('ZWL');
         });
     }
 

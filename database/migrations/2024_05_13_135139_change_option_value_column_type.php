@@ -11,10 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('rates', function (Blueprint $table) {
-            $table->float('last_rate', null, null)
-                ->after('rate')
-                ->default(1);
+        Schema::table('options', function (Blueprint $table) {
+            $table->text('value')->change();
         });
     }
 
@@ -23,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('rates', function (Blueprint $table) {
-            $table->dropColumn('last_rate');
+        Schema::table('options', function (Blueprint $table) {
+            $table->string('value')->change();
         });
     }
 };
