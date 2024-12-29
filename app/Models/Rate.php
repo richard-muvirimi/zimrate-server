@@ -5,12 +5,14 @@ namespace App\Models;
 use App\Traits\ScrapesRates;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class Rate extends Model
 {
+    use HasFactory;
     use ScrapesRates;
 
     /**
@@ -125,47 +127,59 @@ class Rate extends Model
     {
         switch (strtolower($prefer)) {
             case 'max':
-                $query->selectRaw('rate_currency, MAX(updated_at) as updated_at, MAX(rate_updated_at) as rate_updated_at, MAX(rate) as rate')
-                    ->groupBy('rate_currency');
+                $query->selectRaw('rate_currency, rate_currency_base, MAX(updated_at) as updated_at, MAX(rate_updated_at) as rate_updated_at, MAX(rate) as rate, MAX(last_rate) as last_rate')
+                    ->groupBy(['rate_currency', 'rate_currency_base']);
                 break;
             case 'min':
-                $query->selectRaw('rate_currency, MAX(updated_at) as updated_at, MAX(rate_updated_at) as rate_updated_at, MIN(rate) as rate')
-                    ->groupBy('rate_currency');
+                $query->selectRaw('rate_currency, rate_currency_base, MAX(updated_at) as updated_at, MAX(rate_updated_at) as rate_updated_at, MIN(rate) as rate, MIN(last_rate) as last_rate')
+                    ->groupBy(['rate_currency', 'rate_currency_base']);
                 break;
             case 'mean':
-                $query->selectRaw('rate_currency, MAX(updated_at) as updated_at, MAX(rate_updated_at) as rate_updated_at, AVG(rate) as rate')
-                    ->groupBy('rate_currency');
+                $query->selectRaw('rate_currency, rate_currency_base, MAX(updated_at) as updated_at, MAX(rate_updated_at) as rate_updated_at, AVG(rate) as rate, AVG(last_rate) as last_rate')
+                    ->groupBy(['rate_currency', 'rate_currency_base']);
                 break;
             case 'random':
-                $rates = $query->clone()->get(['id', 'rate_currency'])->groupBy('rate_currency')->map(function (Collection $rates) {
-                    return $rates->random();
-                });
+                $rates = $query->clone()
+                    ->get(['id', 'rate_currency'])
+                    ->groupBy('rate_currency')
+                    ->map(function (Collection $rates) {
+                        return $rates->random();
+                    });
 
                 $query->whereIn('id', $rates->pluck('id'));
                 break;
             case 'median':
-                $rates = $query->clone()->get(['id', 'rate_currency', 'rate'])->groupBy('rate_currency')->map(function (Collection $rates) {
-                    if ($rates->count() % 2 === 0) {
-                        return $rates->sortBy('rate', SORT_NUMERIC)->slice(floor($rates->count() / 2) - 1, 2);
-                    } else {
-                        return $rates->sortBy('rate', SORT_NUMERIC)->slice(floor($rates->count() / 2), 1);
-                    }
-                });
+                $rates = $query->clone()
+                    ->get(['id', 'rate_currency', 'rate'])
+                    ->groupBy('rate_currency')
+                    ->map(function (Collection $rates) {
+                        if ($rates->count() % 2 === 0) {
+                            return $rates->sortBy('rate', SORT_NUMERIC)->slice(floor($rates->count() / 2) - 1, 2);
+                        } else {
+                            return $rates->sortBy('rate', SORT_NUMERIC)->slice(floor($rates->count() / 2), 1);
+                        }
+                    });
 
                 $query->whereIn('id', $rates->flatten(1)->pluck('id'));
                 $query->preferred('MEAN');
                 break;
             case 'mode':
-                $rates = $query->clone()->get(['id', 'rate_currency', 'rate'])->groupBy('rate_currency')->map(function (Collection $rates) {
+                $rates = $query->clone()
+                    ->get(['id', 'rate_currency', 'rate'])
+                    ->groupBy('rate_currency')
+                    ->map(function (Collection $rates) {
+                        return $rates->groupBy('rate')
+                            ->sortByDesc(function (Collection $rates) {
+                                return $rates->count();
+                            }, SORT_NUMERIC);
+                    })
+                    ->flatten(2)
+                    ->groupBy('rate_currency')
+                    ->map(function (Collection $rates) {
+                        return $rates->first();
+                    });
 
-                    $rates = $rates->groupBy('rate')->sortBy(function (Collection $rates) {
-                        return $rates->count();
-                    }, SORT_NUMERIC);
-
-                    return $rates;
-                });
-
-                $query->whereIn('id', $rates->flatten(2)->first()?->pluck('id') ?? []);
+                $query->whereIn('id', $rates->pluck('id') ?? []);
                 break;
             default:
                 break;
@@ -181,7 +195,7 @@ class Rate extends Model
     {
         return Attribute::make(
             get: function (mixed $value, array $attributes) {
-                return $attributes['rate_name'];
+                return $attributes['rate_name'] ?? null;
             },
             set: function (mixed $value, array $attributes) {
                 $this->attributes['rate_name'] = $value;
@@ -195,7 +209,7 @@ class Rate extends Model
     {
         return Attribute::make(
             get: function (mixed $value, array $attributes) {
-                return $attributes['rate_currency'];
+                return $attributes['rate_currency'] ?? null;
             },
             set: function (mixed $value, array $attributes) {
                 $this->attributes['rate_currency'] = $value;
@@ -209,7 +223,7 @@ class Rate extends Model
     {
         return Attribute::make(
             get: function (mixed $value, array $attributes) {
-                return $attributes['rate_currency_base'];
+                return $attributes['rate_currency_base'] ?? null;
             },
             set: function (mixed $value, array $attributes) {
                 $this->attributes['rate_currency_base'] = $value;
@@ -223,7 +237,7 @@ class Rate extends Model
     {
         return Attribute::make(
             get: function (mixed $value, array $attributes) {
-                return $attributes['source_url'];
+                return $attributes['source_url'] ?? null;
             },
             set: function (mixed $value, array $attributes) {
                 $this->attributes['source_url'] = $value;
@@ -237,7 +251,7 @@ class Rate extends Model
     {
         return Attribute::make(
             get: function (mixed $value, array $attributes) {
-                return Carbon::parse($attributes['rate_updated_at'])->getTimestamp();
+                return Carbon::parse($attributes['rate_updated_at'] ?? null)->getTimestamp();
             },
             set: function (mixed $value, array $attributes) {
                 $this->attributes['rate_updated_at'] = Carbon::createFromTimestamp($value);
@@ -251,7 +265,7 @@ class Rate extends Model
     {
         return Attribute::make(
             get: function (mixed $value, array $attributes) {
-                return Carbon::parse($attributes['updated_at'])->getTimestamp();
+                return Carbon::parse($attributes['updated_at'] ?? null)->getTimestamp();
             },
             set: function (mixed $value, array $attributes) {
                 $this->attributes['updated_at'] = Carbon::createFromTimestamp($value);
