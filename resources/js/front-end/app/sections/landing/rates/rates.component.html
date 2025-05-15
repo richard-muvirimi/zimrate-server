@@ -1,11 +1,8 @@
 <section class="pricing section" id="rates">
     <div class="container-sm">
         <div *ngIf="currencies$.length !== 0" class="pricing-inner section-inner">
-
             <div class="pricing-header text-center">
-                <p class="section-paragraph mb-0">
-                    Last Checked
-                </p>
+                <p class="section-paragraph mb-0">Last Checked</p>
                 <h2 *ngIf="lastChecked$ !== undefined" [attr.data-checked]="lastChecked$" class="section-title mt-0">
                     {{ lastChecked$ | localDate }}
                 </h2>
@@ -19,13 +16,10 @@
                 <app-rates-detailed *ngSwitchCase="'detailed'" [currencies]="currencies$"></app-rates-detailed>
                 <app-rates-card *ngSwitchDefault [currencies]="currencies$"></app-rates-card>
             </ng-container>
-
         </div>
 
         <div *ngIf="currencies$.length === 0" class="pricing-header mt-64">
-            <p class="section-paragraph mb-0 text-center">
-                Loading Rates...
-            </p>
+            <p class="section-paragraph mb-0 text-center">Loading Rates...</p>
         </div>
 
         <app-official></app-official>

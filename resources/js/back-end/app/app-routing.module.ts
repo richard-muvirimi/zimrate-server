@@ -1,34 +1,35 @@
-import {NgModule} from '@angular/core';
-import {RouterModule, Routes} from '@angular/router';
-import {IsLoggedGuard, IsLoggedMatch, IsNotLoggedGuard, IsNotLoggedMatch} from "./guards/session.guard";
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { IsLoggedGuard, IsLoggedMatch, IsNotLoggedGuard, IsNotLoggedMatch } from './guards/session.guard';
 
 const routes: Routes = [
     {
-        path: "admin",
+        path: 'admin',
         children: [
             {
-                path: "",
+                path: '',
                 canMatch: [IsLoggedMatch],
                 canActivate: [IsLoggedGuard],
-                loadChildren: () => import('./modules/authenticated/authenticated.module').then(m => m.AuthenticatedModule)
+                loadChildren: () => import('./modules/authenticated/authenticated.module').then((m) => m.AuthenticatedModule),
             },
             {
-                path: "",
+                path: '',
                 canMatch: [IsNotLoggedMatch],
                 canActivate: [IsNotLoggedGuard],
-                loadChildren: () => import('./modules/un-authenticated/un-authenticated.module').then(m => m.UnAuthenticatedModule)
-            }
-        ]
-    }
+                loadChildren: () => import('./modules/un-authenticated/un-authenticated.module').then((m) => m.UnAuthenticatedModule),
+            },
+        ],
+    },
 ];
 
 @NgModule({
-    imports: [RouterModule.forRoot(routes, {
-        scrollPositionRestoration: "enabled",
-        anchorScrolling: "enabled",
-        initialNavigation: "enabledNonBlocking",
-    })],
-    exports: [RouterModule]
+    imports: [
+        RouterModule.forRoot(routes, {
+            scrollPositionRestoration: 'enabled',
+            anchorScrolling: 'enabled',
+            initialNavigation: 'enabledNonBlocking',
+        }),
+    ],
+    exports: [RouterModule],
 })
-export class AppRoutingModule {
-}
+export class AppRoutingModule {}

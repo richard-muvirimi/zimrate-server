@@ -1,216 +1,214 @@
 openapi: 3.0.0
 info:
-  title: ZimRate Rest Api Documentation
-  description: Documentation for the ZimRate Rest Api.
-  version: 1.0.0
+    title: ZimRate Rest Api Documentation
+    description: Documentation for the ZimRate Rest Api.
+    version: 1.0.0
 servers:
-  - url: http://localhost:8000/public_html/api
-    description: Development Server.
-  - url: https://zimrate.tyganeutronics.com/api
-    description: Production Server.
+    - url: http://localhost:8000/public_html/api
+      description: Development Server.
+    - url: https://zimrate.tyganeutronics.com/api
+      description: Production Server.
 components:
-  schemas:
-    Rate:
-      properties:
-        name:
-          type: string
-          description: The name of the rate provider.
-        currency:
-          type: string
-          description: The currency code of the rate.
-        currency_base:
-          type: string
-          description: The base currency code of the rate.
-        url:
-          type: string
-          description: The source url the rate was obtained.
-        rate:
-          type: number
-          description: The actual rate.
-        last_rate:
-          type: number
-          description: The previously scanned rate.
-        last_checked:
-          type: number
-          description: The date the rate was last updated on source site.
-        last_updated:
-          type: number
-          description: The date the rate was last updated.
+    schemas:
+        Rate:
+            properties:
+                name:
+                    type: string
+                    description: The name of the rate provider.
+                currency:
+                    type: string
+                    description: The currency code of the rate.
+                currency_base:
+                    type: string
+                    description: The base currency code of the rate.
+                url:
+                    type: string
+                    description: The source url the rate was obtained.
+                rate:
+                    type: number
+                    description: The actual rate.
+                last_rate:
+                    type: number
+                    description: The previously scanned rate.
+                last_checked:
+                    type: number
+                    description: The date the rate was last updated on source site.
+                last_updated:
+                    type: number
+                    description: The date the rate was last updated.
 
 paths:
-
-  /v1:
-    get:
-      tags:
-        - Rate
-      summary: Get All Rates.
-      description: Get all rates in the system.
-      parameters:
-        - in: query
-          name: search
-          example: RBZ
-          description: Search for a rate by name.
-          schema:
-            type: string
-        - in: query
-          name: date
-          description: Return rates last updated after this specific date.
-          schema:
-            type: number
-        - in: query
-          name: currency
-          example: RBZ
-          description: Filter rates by currency.
-          schema:
-            type: string
-        - in: query
-          name: cors
-          example: true
-          description: Set cors header to allow cross origin requests.
-          schema:
-            type: boolean
-        - in: query
-          name: prefer
-          example: MIN
-          description: Aggregate rates by currency.
-          schema:
-            type: string
-            enum:
-              - MIN
-              - MAX
-              - MEAN
-              - MEDIAN
-              - MODE
-              - RANDOM
-        - in: query
-          name: callback
-          example: callback
-          description: JSONP callback function name.
-          schema:
-            type: string
-        - in: query
-          name: extra
-          example: true
-          description: Whether to include extra rate details in the result.
-          schema:
-            type: boolean
-      responses:
-        "200":
-          description: An object with the rates and notice message.
-          headers:
-            Content-Type:
-              schema:
-                type: string
-                oneOf:
-                  - type: string
-                    description: "Content-Type: application/json"
-                    example: application/json
-                  - type: string
-                    description: "Content-Type: text/javascript"
-                    example: text/javascript
-            Access-Control-Allow-Origin:
-              schema:
-                type: string
-                example: "*"
-                description: "Access-Control-Allow-Origin: *"
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  info:
-                    type: string
-                    description: Notice message.
-                  USD:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Rate"
-            text/plain:
-              schema:
-                type: string
-                example: "callback({...});"
-                description: "callback({...});"
-    post:
-      tags:
-        - Rate
-      summary: Get All Rates.
-      description: Get all rates in the system.
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              properties:
-                search:
-                  type: string
+    /v1:
+        get:
+            tags:
+                - Rate
+            summary: Get All Rates.
+            description: Get all rates in the system.
+            parameters:
+                - in: query
+                  name: search
                   example: RBZ
                   description: Search for a rate by name.
-                date:
-                  type: number
+                  schema:
+                      type: string
+                - in: query
+                  name: date
                   description: Return rates last updated after this specific date.
-                currency:
-                  type: string
+                  schema:
+                      type: number
+                - in: query
+                  name: currency
                   example: RBZ
                   description: Filter rates by currency.
-                cors:
-                  type: boolean
+                  schema:
+                      type: string
+                - in: query
+                  name: cors
                   example: true
                   description: Set cors header to allow cross origin requests.
-                prefer:
-                  type: string
+                  schema:
+                      type: boolean
+                - in: query
+                  name: prefer
                   example: MIN
                   description: Aggregate rates by currency.
-                  enum:
-                    - MIN
-                    - MAX
-                    - MEAN
-                    - MEDIAN
-                    - MODE
-                    - RANDOM
-                callback:
-                  type: string
+                  schema:
+                      type: string
+                      enum:
+                          - MIN
+                          - MAX
+                          - MEAN
+                          - MEDIAN
+                          - MODE
+                          - RANDOM
+                - in: query
+                  name: callback
                   example: callback
                   description: JSONP callback function name.
-                extra:
-                  type: boolean
+                  schema:
+                      type: string
+                - in: query
+                  name: extra
                   example: true
                   description: Whether to include extra rate details in the result.
+                  schema:
+                      type: boolean
+            responses:
+                '200':
+                    description: An object with the rates and notice message.
+                    headers:
+                        Content-Type:
+                            schema:
+                                type: string
+                                oneOf:
+                                    - type: string
+                                      description: 'Content-Type: application/json'
+                                      example: application/json
+                                    - type: string
+                                      description: 'Content-Type: text/javascript'
+                                      example: text/javascript
+                        Access-Control-Allow-Origin:
+                            schema:
+                                type: string
+                                example: '*'
+                                description: 'Access-Control-Allow-Origin: *'
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    info:
+                                        type: string
+                                        description: Notice message.
+                                    USD:
+                                        type: array
+                                        items:
+                                            $ref: '#/components/schemas/Rate'
+                        text/plain:
+                            schema:
+                                type: string
+                                example: 'callback({...});'
+                                description: 'callback({...});'
+        post:
+            tags:
+                - Rate
+            summary: Get All Rates.
+            description: Get all rates in the system.
+            requestBody:
+                required: true
+                content:
+                    application/x-www-form-urlencoded:
+                        schema:
+                            type: object
+                            properties:
+                                search:
+                                    type: string
+                                    example: RBZ
+                                    description: Search for a rate by name.
+                                date:
+                                    type: number
+                                    description: Return rates last updated after this specific date.
+                                currency:
+                                    type: string
+                                    example: RBZ
+                                    description: Filter rates by currency.
+                                cors:
+                                    type: boolean
+                                    example: true
+                                    description: Set cors header to allow cross origin requests.
+                                prefer:
+                                    type: string
+                                    example: MIN
+                                    description: Aggregate rates by currency.
+                                    enum:
+                                        - MIN
+                                        - MAX
+                                        - MEAN
+                                        - MEDIAN
+                                        - MODE
+                                        - RANDOM
+                                callback:
+                                    type: string
+                                    example: callback
+                                    description: JSONP callback function name.
+                                extra:
+                                    type: boolean
+                                    example: true
+                                    description: Whether to include extra rate details in the result.
 
-      responses:
-        "200":
-          description: An object with the rates and notice message.
-          headers:
-            Content-Type:
-              schema:
-                type: string
-                oneOf:
-                  - type: string
-                    description: "Content-Type: application/json"
-                    example: application/json
-                  - type: string
-                    description: "Content-Type: text/javascript"
-                    example: text/javascript
-            Access-Control-Allow-Origin:
-              schema:
-                type: string
-                example: "*"
-                description: "Access-Control-Allow-Origin: *"
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  info:
-                    type: string
-                    description: Notice message.
-                  USD:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Rate"
-            text/javascript:
-              schema:
-                type: string
-                example: "callback({...});"
-                description: "callback({...});"
-
+            responses:
+                '200':
+                    description: An object with the rates and notice message.
+                    headers:
+                        Content-Type:
+                            schema:
+                                type: string
+                                oneOf:
+                                    - type: string
+                                      description: 'Content-Type: application/json'
+                                      example: application/json
+                                    - type: string
+                                      description: 'Content-Type: text/javascript'
+                                      example: text/javascript
+                        Access-Control-Allow-Origin:
+                            schema:
+                                type: string
+                                example: '*'
+                                description: 'Access-Control-Allow-Origin: *'
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    info:
+                                        type: string
+                                        description: Notice message.
+                                    USD:
+                                        type: array
+                                        items:
+                                            $ref: '#/components/schemas/Rate'
+                        text/javascript:
+                            schema:
+                                type: string
+                                example: 'callback({...});'
+                                description: 'callback({...});'

@@ -1,23 +1,22 @@
-import {NgModule} from '@angular/core';
-import {RouterModule, Routes} from '@angular/router';
-import {DashboardComponent} from "../../pages/panel/dashboard/dashboard.component";
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { DashboardComponent } from '../../pages/panel/dashboard/dashboard.component';
 
 const routes: Routes = [
     {
-        path: "",
-        redirectTo: "dashboard",
-        pathMatch: "full"
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full',
     },
     {
-        path: "dashboard",
-        title: "Dashboard",
+        path: 'dashboard',
+        title: 'Dashboard',
         component: DashboardComponent,
-    }
+    },
 ];
 
 @NgModule({
     imports: [RouterModule.forChild(routes)],
-    exports: [RouterModule]
+    exports: [RouterModule],
 })
-export class AuthenticatedRoutingModule {
-}
+export class AuthenticatedRoutingModule {}

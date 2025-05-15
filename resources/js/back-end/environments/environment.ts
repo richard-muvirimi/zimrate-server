@@ -5,11 +5,11 @@
 export const environment = {
     production: false,
     author: {
-        url: "https://richard.co.zw",
-        email: "richard@tyganeutronics.com"
+        url: 'https://richard.co.zw',
+        email: 'richard@tyganeutronics.com',
     },
-    appTitle: "ZimRate",
-    ratesDisplay: "detailed"
+    appTitle: 'ZimRate',
+    ratesDisplay: 'detailed',
 };
 
 /*

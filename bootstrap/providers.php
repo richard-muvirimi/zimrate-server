@@ -5,5 +5,5 @@ use App\Providers\GraphQLServiceProvider;
 
 return [
     AppServiceProvider::class,
-    GraphQLServiceProvider::class
+    GraphQLServiceProvider::class,
 ];

@@ -1,9 +1,7 @@
 <div class="mt-64 pricing-tables-wrap">
-
     <div *ngFor="let currency of currencies$" class="pricing-table">
-        <div class="pricing-table-inner is-revealing" style="height: initial;">
+        <div class="pricing-table-inner is-revealing" style="height: initial">
             <div class="pricing-table-main">
-
                 <div class="pricing-table-features-title text-xs pt-24 pb-24">
                     {{ currency.currency }}
                 </div>
@@ -11,100 +9,71 @@
                 <div class="pricing-table-header pb-24">
                     <div class="pricing-table-price">
                         <span class="pricing-table-price-amount h1">
-                            {{ currency.aggregated.max | currency: currency.currency:'':'1.0-5' }}
+                            {{ currency.aggregated.max | currency: currency.currency : '' : '1.0-5' }}
                         </span>
-                        <span class="pricing-table-price-currency h2">
-                            %
-                        </span>
-                        <span class="text-xs">
-                            Highest
-                        </span>
+                        <span class="pricing-table-price-currency h2"> % </span>
+                        <span class="text-xs"> Highest </span>
                     </div>
                 </div>
 
                 <div class="pricing-table-header pb-24">
                     <div class="pricing-table-price">
                         <span class="pricing-table-price-amount h1">
-                            {{ currency.aggregated.mean | currency: currency.currency:'':'1.0-5' }}
+                            {{ currency.aggregated.mean | currency: currency.currency : '' : '1.0-5' }}
                         </span>
-                        <span class="pricing-table-price-currency h2">
-                            %
-                        </span>
-                        <span class="text-xs">
-                            Average
-                        </span>
+                        <span class="pricing-table-price-currency h2"> % </span>
+                        <span class="text-xs"> Average </span>
                     </div>
                 </div>
 
                 <div class="pricing-table-header pb-24">
                     <div class="pricing-table-price">
                         <span class="pricing-table-price-amount h1">
-                            {{ currency.aggregated.min | currency: currency.currency:'':'1.0-5' }}
+                            {{ currency.aggregated.min | currency: currency.currency : '' : '1.0-5' }}
                         </span>
-                        <span class="pricing-table-price-currency h2">
-                            %
-                        </span>
-                        <span class="text-xs">
-                            Lowest
-                        </span>
+                        <span class="pricing-table-price-currency h2"> % </span>
+                        <span class="text-xs"> Lowest </span>
                     </div>
                 </div>
 
                 <div class="pricing-table-header pb-24">
                     <div class="pricing-table-price">
                         <span class="pricing-table-price-amount h1">
-                            {{ currency.aggregated.median | currency: currency.currency:'':'1.0-5' }}
+                            {{ currency.aggregated.median | currency: currency.currency : '' : '1.0-5' }}
                         </span>
-                        <span class="pricing-table-price-currency h2">
-                            %
-                        </span>
-                        <span class="text-xs">
-                            Median
-                        </span>
+                        <span class="pricing-table-price-currency h2"> % </span>
+                        <span class="text-xs"> Median </span>
                     </div>
                 </div>
 
                 <div class="pricing-table-header pb-24">
                     <div class="pricing-table-price">
                         <span class="pricing-table-price-amount h1">
-                            {{ currency.aggregated.mode | currency: currency.currency:'':'1.0-5' }}
+                            {{ currency.aggregated.mode | currency: currency.currency : '' : '1.0-5' }}
                         </span>
-                        <span class="pricing-table-price-currency h2">
-                            %
-                        </span>
-                        <span class="text-xs">
-                            Mode
-                        </span>
+                        <span class="pricing-table-price-currency h2"> % </span>
+                        <span class="text-xs"> Mode </span>
                     </div>
                 </div>
 
                 <div class="pricing-table-header pb-24">
                     <div class="pricing-table-price">
                         <span class="pricing-table-price-amount h1">
-                            {{ currency.aggregated.random | currency: currency.currency:'':'1.0-5' }}
+                            {{ currency.aggregated.random | currency: currency.currency : '' : '1.0-5' }}
                         </span>
-                        <span class="pricing-table-price-currency h2">
-                            %
-                        </span>
-                        <span class="text-xs">
-                            Random
-                        </span>
+                        <span class="pricing-table-price-currency h2"> % </span>
+                        <span class="text-xs"> Random </span>
                     </div>
                 </div>
-
 
                 <ul class="pricing-table-features list-reset text-xs">
-
                     <li *ngFor="let url of currency.urls">
                         <span>
-                            <a [href]="url.toString()">{{url.hostname}}</a>
+                            <a [href]="url.toString()">{{ url.hostname }}</a>
                         </span>
                     </li>
-
                 </ul>
-
             </div>
         </div>
     </div>
-
 </div>
