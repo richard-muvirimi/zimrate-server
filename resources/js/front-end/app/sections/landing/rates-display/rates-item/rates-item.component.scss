@@ -1,13 +1,13 @@
 .bg-card {
     border-radius: 8px;
-    background: #2C3039;
+    background: #2c3039;
 
     table {
         table-layout: fixed;
 
         tr {
             & {
-                border-bottom-color: #8A94A7;
+                border-bottom-color: #8a94a7;
             }
         }
     }
@@ -29,7 +29,8 @@
     font-size: small;
 }
 
-td, th {
+td,
+th {
     small {
         text-transform: uppercase;
     }

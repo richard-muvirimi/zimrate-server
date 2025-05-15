@@ -1,3 +1,3 @@
 export type Currency = {
-	currency: string
-}
+    currency: string;
+};

@@ -119,11 +119,11 @@ trait ScrapesRates
     {
 
         try {
-            //get html dom
+            // get html dom
             $crawler = new Crawler;
             $crawler->addHtmlContent($html);
 
-            //rate
+            // rate
             switch ($this->selector_type) {
                 case 'xpath':
                     $rate = $crawler->filterXPath($this->rate_selector)->text();
@@ -147,7 +147,7 @@ trait ScrapesRates
                     $this->rate = $rate;
                 }
 
-                //date
+                // date
                 $date = Carbon::now()->toDateTimeString();
                 switch ($this->selector_type) {
                     case 'xpath':
@@ -201,20 +201,20 @@ trait ScrapesRates
 
             $words = explode(' ', $amount);
 
-            //remove non-numeric words
+            // remove non-numeric words
             $numbered = array_filter($words, function ($word) {
                 preg_match('/[0-9]/', $word, $matches);
 
                 return count($matches) > 0;
             });
 
-            //join to allow removing non-numeric characters
+            // join to allow removing non-numeric characters
             $numbers = implode(' ', $numbered);
 
             $fmt = new NumberFormatter($locale, NumberFormatter::DECIMAL);
             $numbers = $fmt->parse($numbers) ?: 0;
 
-            //split by non-numeric
+            // split by non-numeric
             $figures = preg_split('/[^0-9,.]/', $numbers, -1, PREG_SPLIT_NO_EMPTY);
 
             $amount = count($figures) > 0 ? max($figures) : 0;
@@ -311,7 +311,7 @@ trait ScrapesRates
                 return Carbon::parse($parsed)->shiftTimezone($timezone)->setTimezone('UTC');
             }
         } catch (Exception|Error) {
-            //do nothing
+            // do nothing
         }
 
         /**

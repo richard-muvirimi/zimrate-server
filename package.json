@@ -14,7 +14,12 @@
         "watch-front-end": "ng build front-end --watch --configuration development",
         "watch-back-end": "ng build back-end --watch --configuration development",
         "postbuild": "php artisan app:redocly",
-        "postdev": "npm run postbuild"
+        "postdev": "npm run postbuild",
+        "check-version": "node scripts/check-version.js",
+        "prepare": "husky install",
+        "postinstall": "husky install",
+        "format": "prettier --write resources/",
+        "format:check": "prettier --check resources/"
     },
     "private": true,
     "dependencies": {
@@ -26,6 +31,7 @@
         "@angular/platform-browser": "^16.2.8",
         "@angular/platform-browser-dynamic": "^16.2.8",
         "@angular/router": "^16.2.8",
+        "@apollo/client": "^3.13.8",
         "animejs": "^3.2.2",
         "apollo-angular": "^7.2.1",
         "base-64": "^1.0.0",
@@ -53,12 +59,15 @@
         "@types/luxon": "^3.0.1",
         "@types/scrollreveal": "^0.0.11",
         "@types/sprintf-js": "^1.1.2",
+        "husky": "^9.1.7",
         "jasmine-core": "^5.4.0",
         "karma": "~6.4.0",
         "karma-chrome-launcher": "^3.2.0",
         "karma-coverage": "~2.2.0",
         "karma-jasmine": "~5.1.0",
         "karma-jasmine-html-reporter": "^2.1.0",
+        "prettier": "^3.4.2",
+        "prettier-plugin-organize-imports": "^4.1.0",
         "typescript": "^4.9.3"
     },
     "repository": {

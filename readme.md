@@ -3,7 +3,7 @@
 All Zimbabwean exchange rates from multiple sites in one RESTful / Graphql api. No need to scrounge the internet for the
 current days rate.
 
-![Screenshot1](resources/js/assets/images/zimrate_screenshot.png)
+![Screenshot1](resources/js/front-end/assets/images/zimrate_screenshot.png)
 
 ### Features
 

@@ -3,13 +3,9 @@
     "extends": "./tsconfig.json",
     "compilerOptions": {
         "outDir": "./out-tsc/app",
-        "types": []
+        "types": [],
+        "skipLibCheck": true
     },
-    "files": [
-        "front-end/main.ts",
-        "back-end/main.ts"
-    ],
-    "include": [
-        "**/*.d.ts"
-    ]
+    "files": ["front-end/main.ts", "back-end/main.ts"],
+    "include": ["**/*.d.ts"]
 }

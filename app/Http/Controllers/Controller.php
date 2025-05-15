@@ -25,24 +25,7 @@ class Controller extends BaseController
      */
     public function setup(Request $request): JsonResponse
     {
-        // Start Maintenance
-        Artisan::call('down --refresh=15');
-
-        // Clear cache
-        Artisan::call('optimize:clear');
-        Artisan::call('cache:clear');
-
-        // Generate storage link, ignore errors
-        @Artisan::call('storage:link');
-
-        // Optimize Application
-        Artisan::call('optimize');
-
-        // Run migrations
-        @Artisan::call('migrate');
-
-        // End Maintenance
-        Artisan::call('up');
+        Artisan::call('app:setup');
 
         $composer = File::json(app()->basePath('composer.json'));
 
