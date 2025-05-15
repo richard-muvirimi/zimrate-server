@@ -18,13 +18,17 @@
 # most recent version of that tag when you build your Dockerfile.
 # If reproducibility is important, consider using a specific digest SHA, like
 # php@sha256:99cede493dfd88720b610eb8077c8688d3cca50003d76d1d539b0efc8cca72b4.
-FROM php:8.2
+FROM php:8.2-apache
 
 # Check if running in GitHub Actions
 ARG GITHUB_ACTIONS=false
 ENV GITHUB_ACTIONS=${GITHUB_ACTIONS}
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public_html
 
 WORKDIR /var/www/html
+
+RUN a2enmod rewrite
+RUN a2enmod negotiation
 
 # Set environment variables
 ARG TZ=UTC
@@ -69,7 +73,6 @@ RUN install-php-extensions \
     pdo_mysql \
     redis \
     soap \
-    xdebug \
     xml \
     xsl \
     zip
@@ -81,13 +84,6 @@ RUN apt-get update && apt-get upgrade -y \
     && apt-get update \
     && apt-get install -y nodejs jq gnupg supervisor dnsutils ffmpeg nano
 
-RUN apt-get update \
-    && apt-get install -y cron \
-    && echo "* * * * * /usr/bin/php /var/www/html/artisan schedule:run >> /dev/null 2>&1" > /etc/cron.d/schedule \
-    && chmod 0644 /etc/cron.d/schedule \
-    && crontab /etc/cron.d/schedule \
-    && touch /var/log/cron.log
-
 # Cleanup all downloaded packages
 RUN apt-get -y autoclean && \
     apt-get -y autoremove && \
@@ -98,20 +94,11 @@ RUN apt-get -y autoclean && \
 # https://github.com/docker-library/docs/tree/master/php#configuration
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
-# Comment out xdebug extension line per default
-RUN sed -i 's/^zend_extension=/;zend_extension=/g' /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-
-# Copy xdebug configuration for remote debugging
-COPY ./docker/php/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
-
 #
 #--------------------------------------------------------------------------
 # Final Touches
 #--------------------------------------------------------------------------
 #
-
-# Copy the php-fpm config
-COPY ./docker/php/php-dev.ini /usr/local/etc/php/conf.d/php.ini
 
 # Configure non-root user.
 ARG PUID=1000
@@ -144,17 +131,18 @@ RUN --mount=type=bind,source=composer.json,target=composer.json \
     --mount=type=cache,target=/tmp/cache \
     composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
-# Build the app and clean up.
-RUN npm run build \
-    && rm -rf /var/www/html/node_modules
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+RUN sed -ri -e 's!80!8000!g' /etc/apache2/ports.conf /etc/apache2/sites-available/*.conf
 
 RUN chown -R www-data:www-data /var/www/html
 
-COPY ./docker/php/start-container.sh /usr/local/bin/start-container
-RUN chmod +x /usr/local/bin/start-container
-
-COPY ./docker/php/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Build the app and clean up.
+RUN npm run build
 
 EXPOSE 8000/tcp
 
-ENTRYPOINT ["start-container"]
+# Switch to use a non-root user.
+USER www-data
+
+CMD ["/usr/bin/bash", "-c", "/usr/local/bin/php /var/www/html/artisan app:setup && exec apache2-foreground"]
