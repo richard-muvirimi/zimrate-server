@@ -14,7 +14,7 @@
 
     <link rel="icon" type="image/x-icon" href="{{ url('build/back-end/assets/images/logo.svg') }}"/>
 
-    <meta name="gtag-id" content="{{ env('MEASUREMENT_ID') }}"/>
+    <meta name="gtag-id" content="{{ config('analytics.measurement_id') }}"/>
 
     <title>{{ $data['title'] }}</title>
     <meta name="author" content="{{ $data['author']  }}"/>

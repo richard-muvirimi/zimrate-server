@@ -22,8 +22,8 @@ class LogApiAnalytics
     public function handle(Request $request, Closure $next): Response
     {
 
-        $measurementId = env('MEASUREMENT_ID', '');
-        $measurementSecret = env('MEASUREMENT_PROTOCOL_API_SECRET', '');
+        $measurementId = config('analytics.measurement_id', '');
+        $measurementSecret = config('analytics.measurement_protocol_api_secret', '');
 
         if (Str::of($measurementId)->isNotEmpty() && Str::of($measurementSecret)->isNotEmpty()) {
             try {
