@@ -1,7 +1,7 @@
 {
     "name": "richard-muvirimi/zimrate",
     "type": "project",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "All Zimbabwean exchange rates from multiple sites in one RESTful / Graphql api. No need to scrounge the internet for the current days rate.",
     "homepage": "https://zimrate.tyganeutronics.com",
     "license": "MIT",
