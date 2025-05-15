@@ -3,7 +3,7 @@ name: Create Tag and Release
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - 'composer.json'
 
