@@ -1,19 +1,11 @@
-import {NgModule} from '@angular/core';
-import {CommonModule, NgOptimizedImage} from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
+import { NgModule } from '@angular/core';
 
-import {AuthenticatedRoutingModule} from './authenticated-routing.module';
-import {DashboardComponent} from "../../pages/panel/dashboard/dashboard.component";
-
+import { DashboardComponent } from '../../pages/panel/dashboard/dashboard.component';
+import { AuthenticatedRoutingModule } from './authenticated-routing.module';
 
 @NgModule({
-    declarations: [
-        DashboardComponent
-    ],
-    imports: [
-        CommonModule,
-        AuthenticatedRoutingModule,
-        NgOptimizedImage,
-    ]
+    declarations: [DashboardComponent],
+    imports: [CommonModule, AuthenticatedRoutingModule, NgOptimizedImage],
 })
-export class AuthenticatedModule {
-}
+export class AuthenticatedModule {}

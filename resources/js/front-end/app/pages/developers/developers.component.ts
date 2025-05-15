@@ -1,17 +1,16 @@
-import {Component, OnInit} from '@angular/core';
-import {trimEnd, uniqBy} from 'lodash';
-import {sprintf} from 'sprintf-js';
-import {AnimeService} from '../../services/anime.service';
-import {RatesService} from '../../services/rates.service';
-import {Currency} from "../../../@types/app";
+import { Component, OnInit } from '@angular/core';
+import { trimEnd, uniqBy } from 'lodash';
+import { sprintf } from 'sprintf-js';
+import { Currency } from '../../../@types/app';
+import { AnimeService } from '../../services/anime.service';
+import { RatesService } from '../../services/rates.service';
 
 @Component({
     selector: 'app-developers',
     templateUrl: './developers.component.html',
-    styleUrls: ['./developers.component.scss']
+    styleUrls: ['./developers.component.scss'],
 })
 export class DevelopersComponent implements OnInit {
-
     currencies$: string;
     prefer$: string;
 
@@ -26,33 +25,35 @@ export class DevelopersComponent implements OnInit {
     ) {
         this.ngOnInit = this.ngOnInit.bind(this);
 
-        this.currencies$ = "";
-        this.prefer$ = ["MAX", "MIN", "MEAN", "MEDIAN", "RANDOM", "MODE"].join(", ");
+        this.currencies$ = '';
+        this.prefer$ = ['MAX', 'MIN', 'MEAN', 'MEDIAN', 'RANDOM', 'MODE'].join(', ');
 
-        this.exampleCallback$ = "";
-        this.exampleGraphql$ = "";
+        this.exampleCallback$ = '';
+        this.exampleGraphql$ = '';
 
-        this.baseUrl$ = trimEnd(document.querySelector<HTMLBaseElement>("base[href]")!!.href, "/");
+        this.baseUrl$ = trimEnd(document.querySelector<HTMLBaseElement>('base[href]')!!.href, '/');
     }
 
     ngOnInit(): void {
         setTimeout(async (): Promise<void> => {
             const data: { rates: Currency[] } = await this.ratesService.getCurrencies();
 
-            this.currencies$ = uniqBy<string>(data["rates"].map((item: Currency): string => item.currency), (currency: string) => currency).join(", ");
+            this.currencies$ = uniqBy<string>(
+                data['rates'].map((item: Currency): string => item.currency),
+                (currency: string) => currency,
+            ).join(', ');
         }, 0);
 
         this.ratesService.getCallBackExample().subscribe((data: string): void => {
-            this.exampleCallback$ = sprintf(data, this.baseUrl$)
+            this.exampleCallback$ = sprintf(data, this.baseUrl$);
         });
 
         this.ratesService.getGraphqlExample().subscribe((data: string): void => {
-            this.exampleGraphql$ = data
+            this.exampleGraphql$ = data;
         });
 
         setTimeout((): void => {
             this.animeService.reviewComponents();
         }, 0);
     }
-
 }

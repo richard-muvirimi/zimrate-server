@@ -1,89 +1,101 @@
-<div class="mt-16 pl-8 pr-8" style="border: 1px #8A94A7 solid; border-radius: 5px; max-width: 100%; overflow-x: auto">
+<div class="mt-16 pl-8 pr-8" style="border: 1px #8a94a7 solid; border-radius: 5px; max-width: 100%; overflow-x: auto">
     <table class="mb-0">
         <tbody>
-        <tr>
-            <th class="text-white" colspan="2">
-                <span class="font-xxx-large">
-                    {{ currency.currency | uppercase }}
-                </span>
-                <small *ngIf="currency.currency.toUpperCase() !== currency.currency_base.toUpperCase()">
-                    {{ currency.currency_base | uppercase }}
-                </small>
-            </th>
-            <th colspan="2" style="text-align: right" title="When we last scanned rates.">
-                <p class="mb-0">{{ currency.last_checked| localDate }}</p>
-                <small class="font-size-small">Checked</small>
-            </th>
-            <th colspan="2" style="text-align: right" title="When rate was last updated.">
-                <p class="mb-0">{{ currency.last_updated | localDate }}</p>
-                <small class="font-size-small">Updated</small>
-            </th>
-        </tr>
-        <tr>
-            <th class="text-center">
-                <p class="mb-0 text-white font-bold">{{ currency.aggregated.max | currency: currency.currency_base:'symbol-narrow':'1.0-2' }}</p>
-                <small class="font-size-small">Max</small>
-            </th>
-            <th class="text-center">
-                <p class="mb-0 text-white font-bold">{{ currency.aggregated.mean | currency: currency.currency_base:'symbol-narrow':'1.0-2' }}</p>
-                <small class="font-size-small">Mean</small>
-            </th>
-            <th class="text-center">
-                <p class="mb-0 text-white font-bold">{{ currency.aggregated.min | currency: currency.currency_base:'symbol-narrow':'1.0-2' }}</p>
-                <small class="font-size-small">Min</small>
-            </th>
-            <th class="text-center">
-                <p class="mb-0 text-white font-bold">{{ currency.aggregated.median | currency: currency.currency_base:'symbol-narrow':'1.0-2' }}</p>
-                <small class="font-size-small">Median</small>
-            </th>
-            <th class="text-center">
-                <p class="mb-0 text-white font-bold">{{ currency.aggregated.mode | currency: currency.currency_base:'symbol-narrow':'1.0-2' }}</p>
-                <small class="font-size-small">Mode</small>
-            </th>
-            <th class="text-center">
-                <p class="mb-0 text-white font-bold">{{ currency.aggregated.random | currency: currency.currency_base:'symbol-narrow':'1.0-2' }}</p>
-                <small class="font-size-small">Random</small>
-            </th>
-        </tr>
-        <tr style="border-bottom: none;">
-            <td colspan="3" style="vertical-align: bottom">
-                <ul>
-                    <li *ngFor="let url of currency.urls">
-                        <a [href]="url.toString()" target="_blank">{{ url.hostname }}</a>
-                    </li>
-                </ul>
-            </td>
-            <td colspan="3" style="vertical-align: top">
-                <table>
-                    <thead>
-                    <tr>
-                        <td class="text-center">
-                            <small>Current</small>
-                        </td>
-                        <td class="text-center">
-                            <small>Previous</small>
-                        </td>
-                        <td class="text-center">
-                            <small>Delta</small>
-                        </td>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr *ngFor="let rate of currency.rates">
-                        <th class="text-white text-center">
-                            {{ rate.rate | currency: currency.currency_base:'symbol-narrow':'1.0-5' }}
-                        </th>
-                        <td class="text-center">
-                            {{ rate.last_rate | currency: currency.currency_base:'symbol-narrow':'1.0-5' }}
-                        </td>
-                        <td class="text-center">
-                            {{ (rate.rate - rate.last_rate) / rate.last_rate | percent:'1.2' }}
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-            </td>
-        </tr>
+            <tr>
+                <th class="text-white" colspan="2">
+                    <span class="font-xxx-large">
+                        {{ currency.currency | uppercase }}
+                    </span>
+                    <small *ngIf="currency.currency.toUpperCase() !== currency.currency_base.toUpperCase()">
+                        {{ currency.currency_base | uppercase }}
+                    </small>
+                </th>
+                <th colspan="2" style="text-align: right" title="When we last scanned rates.">
+                    <p class="mb-0">{{ currency.last_checked | localDate }}</p>
+                    <small class="font-size-small">Checked</small>
+                </th>
+                <th colspan="2" style="text-align: right" title="When rate was last updated.">
+                    <p class="mb-0">{{ currency.last_updated | localDate }}</p>
+                    <small class="font-size-small">Updated</small>
+                </th>
+            </tr>
+            <tr>
+                <th class="text-center">
+                    <p class="mb-0 text-white font-bold">
+                        {{ currency.aggregated.max | currency: currency.currency_base : 'symbol-narrow' : '1.0-2' }}
+                    </p>
+                    <small class="font-size-small">Max</small>
+                </th>
+                <th class="text-center">
+                    <p class="mb-0 text-white font-bold">
+                        {{ currency.aggregated.mean | currency: currency.currency_base : 'symbol-narrow' : '1.0-2' }}
+                    </p>
+                    <small class="font-size-small">Mean</small>
+                </th>
+                <th class="text-center">
+                    <p class="mb-0 text-white font-bold">
+                        {{ currency.aggregated.min | currency: currency.currency_base : 'symbol-narrow' : '1.0-2' }}
+                    </p>
+                    <small class="font-size-small">Min</small>
+                </th>
+                <th class="text-center">
+                    <p class="mb-0 text-white font-bold">
+                        {{ currency.aggregated.median | currency: currency.currency_base : 'symbol-narrow' : '1.0-2' }}
+                    </p>
+                    <small class="font-size-small">Median</small>
+                </th>
+                <th class="text-center">
+                    <p class="mb-0 text-white font-bold">
+                        {{ currency.aggregated.mode | currency: currency.currency_base : 'symbol-narrow' : '1.0-2' }}
+                    </p>
+                    <small class="font-size-small">Mode</small>
+                </th>
+                <th class="text-center">
+                    <p class="mb-0 text-white font-bold">
+                        {{ currency.aggregated.random | currency: currency.currency_base : 'symbol-narrow' : '1.0-2' }}
+                    </p>
+                    <small class="font-size-small">Random</small>
+                </th>
+            </tr>
+            <tr style="border-bottom: none">
+                <td colspan="3" style="vertical-align: bottom">
+                    <ul>
+                        <li *ngFor="let url of currency.urls">
+                            <a [href]="url.toString()" target="_blank">{{ url.hostname }}</a>
+                        </li>
+                    </ul>
+                </td>
+                <td colspan="3" style="vertical-align: top">
+                    <table>
+                        <thead>
+                            <tr>
+                                <td class="text-center">
+                                    <small>Current</small>
+                                </td>
+                                <td class="text-center">
+                                    <small>Previous</small>
+                                </td>
+                                <td class="text-center">
+                                    <small>Delta</small>
+                                </td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let rate of currency.rates">
+                                <th class="text-white text-center">
+                                    {{ rate.rate | currency: currency.currency_base : 'symbol-narrow' : '1.0-5' }}
+                                </th>
+                                <td class="text-center">
+                                    {{ rate.last_rate | currency: currency.currency_base : 'symbol-narrow' : '1.0-5' }}
+                                </td>
+                                <td class="text-center">
+                                    {{ (rate.rate - rate.last_rate) / rate.last_rate | percent: '1.2' }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
         </tbody>
     </table>
 </div>

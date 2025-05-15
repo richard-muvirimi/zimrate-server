@@ -1,1 +1,1 @@
-declare module 'ga-gtag'
+declare module 'ga-gtag';

@@ -1,22 +1,18 @@
-import {Injectable} from '@angular/core';
-import {HttpClient} from "@angular/common/http";
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
 
 @Injectable({
-    providedIn: 'root'
+    providedIn: 'root',
 })
 export class AuthenticationService {
-
-    constructor(
-        private client: HttpClient
-    ) {
-    }
+    constructor(private client: HttpClient) {}
 
     get authToken(): string {
-        return localStorage.getItem("zimrate:token") || "";
+        return localStorage.getItem('zimrate:token') || '';
     }
 
     set authToken(token: string) {
-        localStorage.setItem("zimrate:token", token);
+        localStorage.setItem('zimrate:token', token);
     }
 
     get hasToken(): boolean {
@@ -24,7 +20,7 @@ export class AuthenticationService {
     }
 
     get isLoggedIn(): boolean {
-        return this.hasToken
+        return this.hasToken;
     }
 
     // csrfToken(): string {

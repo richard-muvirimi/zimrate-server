@@ -1,0 +1,10 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Check if the package.json version already has a git tag
+npm run check-version
+
+# Run only if package.json is staged
+if git diff --cached --name-only | grep -q "package.json"; then
+  npm run check-version
+fi

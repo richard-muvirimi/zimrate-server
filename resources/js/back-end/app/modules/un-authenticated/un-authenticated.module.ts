@@ -1,19 +1,11 @@
-import {NgModule} from '@angular/core';
-import {CommonModule, NgOptimizedImage} from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
+import { NgModule } from '@angular/core';
 
-import {UnAuthenticatedRoutingModule} from './un-authenticated-routing.module';
-import {LoginComponent} from "../../pages/authentication/login/login.component";
-
+import { LoginComponent } from '../../pages/authentication/login/login.component';
+import { UnAuthenticatedRoutingModule } from './un-authenticated-routing.module';
 
 @NgModule({
-    declarations: [
-        LoginComponent
-    ],
-    imports: [
-        CommonModule,
-        UnAuthenticatedRoutingModule,
-        NgOptimizedImage,
-    ]
+    declarations: [LoginComponent],
+    imports: [CommonModule, UnAuthenticatedRoutingModule, NgOptimizedImage],
 })
-export class UnAuthenticatedModule {
-}
+export class UnAuthenticatedModule {}
