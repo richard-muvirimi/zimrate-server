@@ -2,14 +2,11 @@
 
 namespace App\Console\Commands;
 
-use App\Traits\QueriesFaultyRates;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 
 class Setup extends Command
 {
-    use QueriesFaultyRates;
-
     /**
      * The name and signature of the console command.
      *
@@ -40,7 +37,12 @@ class Setup extends Command
         Artisan::call('cache:clear');
 
         // Generate storage link, ignore errors
-        @Artisan::call('storage:link');
+        if (file_exists(public_path('storage'))) {
+            $this->warn('Storage link already exists, skipping...');
+        } else {
+            $this->info('Creating storage link...');
+            @Artisan::call('storage:link');
+        }
 
         // Optimize Application
         Artisan::call('optimize');

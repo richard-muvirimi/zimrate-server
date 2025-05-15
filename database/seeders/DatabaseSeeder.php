@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use App\Enums\OptionKey;
+// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use App\Models\Option;
 use App\Models\Rate;
 use App\Models\User;
@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::factory()->count(10)->create();
+        //        User::factory()->count(10)->create();
 
         if (Option::query()->count() === 0) {
 

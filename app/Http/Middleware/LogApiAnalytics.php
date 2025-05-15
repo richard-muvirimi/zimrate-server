@@ -74,7 +74,7 @@ class LogApiAnalytics
                 // Send
                 $ga4Service->send($baseRequest);
             } catch (Exception) {
-                //do nothing
+                // do nothing
             } finally {
                 ob_clean();
             }
