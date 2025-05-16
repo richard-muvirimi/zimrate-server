@@ -1,79 +1,133 @@
 # Zimrate
 
-All Zimbabwean exchange rates from multiple sites in one RESTful / Graphql api. No need to scrounge the internet for the
-current days rate.
+All Zimbabwean exchange rates from multiple sites in one RESTful / GraphQL API. No need to scrounge the internet for the
+current day's rate.
 
 ![Screenshot1](resources/js/front-end/assets/images/zimrate_screenshot.png)
 
-### Features
+## Features
 
-1. Scrapes specified websites using [Scrappy](https://scrappy.tyganeutronics.com) for currency rates and provides an api
+1. Scrapes specified websites using [Scrappy](https://scrappy.tyganeutronics.com) for currency rates and provides an API
    that users can use to access exchange rates.
-2. If a scan is failed the site is flagged as failed and will not affect api queries
+2. If a scan fails, the site is flagged as failed and will not affect API queries.
 
 ### Installation (Setting Up)
 
-1. Clone the repository `git clone https://github.com/richard-muvirimi/zimrate-server.git`
-2. Run `composer install` to install required dependencies, will build npm packages as well (is case it fails run `npm
-   install && npm run build`
-3. Setup you `.env` file and run `php artisan migrate` to create database fields
-4. You are set up and done now onto adding sites to scan:
+#### Standard Setup
 
-    1. The following fields will be created:
+1. Clone the repository: `git clone https://github.com/richard-muvirimi/zimrate-server.git`
+2. Run `composer install` to install required dependencies
+3. Run `npm install` to install frontend dependencies
+4. Run `npm run build` to build the frontend assets
+5. Set up your `.env` file by copying from `.env.example` and generate an application key:
 
-        - `id` Unique site identifier
-        - `status` Can only be 0 (false) or 1 (true) representing last scan state
-        - `enabled` Can only be 0 (false) or 1 (true) representing whether the site is enabled for scanning
-        - `javascript` Can only be 0 (false) or 1 (true) representing whether the site needs to be treated as client
-          side rendered
-        - `rate_name` Name of site, will be used filtering sites based on source
-        - `rate_currency` Name of currency e.g USD, ZAR
-        - `rate_currency_base` Base currency of rate e.g USD, ZAR, included in extra rate parameters
-        - `source_url` The url of the site you want scanned.
-        - `rate_selector` The css selector of the currency field
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-            - Best obtained by right-clicking in browser, inspect element then copy selector
-            - It's best to be very specific as a page you did not create can have multiple ids or elements with same
-              class
-              names and would only confuse the app
-            - the site will discard all non-numeric values and take the highest numeric value
+6. Configure your database connection in the `.env` file and run the application setup command:
 
-        - `rate` The rate from site, (initially set to 1)
-        - `last_rate` The previously set rate, used in rate change calculations, (initially set to 1)
-        - `transform` The formula to apply on the rate to get the correct rate relative to 1 USD (initially set
-          to `1 * x`)
-        - `rate_updated_at` The timestamp when scan was last performed (initially set to 0)
-        - `rate_updated_at_selector` The css selector of the date field
+   ```bash
+   php artisan app:setup
+   ```
 
-            - Best obtained by right-clicking in browser, inspect element then copy selector
-            - Its best to be very specific as a page you did not create can have multiple id or elements with same class
-              names and would only confuse the app
-            - the site will first try to parse the date, if it fails it will remove words that do not refer to a date
-              and try parsing again
+   This command will:
+   - Create a storage link
+   - Clear and optimize cache
+   - Run database migrations
+   - Prepare the application for use
 
-        - `updated_at` The timestamp when site was last updated. depends on the timezone of site (set below to get
-          correct timestamp)
-        - `source_timezone` the timezone of site
-        - `created_at` The timestamp when site was added
-        - `status_message` The last scrape status message, blank if no errors occurred.
+#### Docker Setup
 
-    2. Add sites you want scanned manually into the database (there is no interface for that as i would have to worry
-       more about security)
+1. Clone the repository: `git clone https://github.com/richard-muvirimi/zimrate-server.git`
+2. Set up your `.env` file by copying from `.env.example`:
 
-    3. Once done goto `your-site/crawl` and the app will scan rates from specified sites. You can also set up a cron
-       job to do this automatically using Laravel `schedule:run` command
+   ```bash
+   cp .env.example .env
+   ```
 
-    4. Set up a cron job pointing to the crawler:
-        - URL `your-site/crawl`
-        - CLI `php your-site-path/artisan schedule:run` (note the spaces)
+3. Modify the `.env` file to use the Docker database configuration:
 
-5. Visit `your-site/api` or `your-site/api/v1` for the api
+   ```bash
+   DB_CONNECTION=mysql
+   DB_HOST=db
+   DB_PORT=3306
+   DB_DATABASE=zimrate
+   DB_USERNAME=zimrate
+   DB_PASSWORD=zimrate_password
+   ```
+
+4. Build and start the Docker containers:
+
+   ```bash
+   docker compose up --build -d
+   ```
+
+   The Dockerfile's CMD will automatically handle application setup, including key generation and migrations.
+
+See [README.Docker.md](README.Docker.md) for more Docker-specific instructions.
+
+### Adding Sites to Scan
+
+When adding sites to scan, the following fields will be used:
+
+| Field | Description | Default Value |
+|-------|-------------|--------------|
+| `id` | Unique site identifier | Auto-increment |
+| `status` | Last scan state (0 = false, 1 = true) | 1 |
+| `enabled` | Whether the site is enabled for scanning (0 = false, 1 = true) | 1 |
+| `javascript` | Whether the site needs client-side rendering (0 = false, 1 = true) | 0 |
+| `rate_name` | Name of site, used for filtering based on source | Required |
+| `rate_currency` | Name of currency (e.g., USD, ZAR) | Required |
+| `rate_currency_base` | Base currency of rate (e.g., USD, ZAR), included in extra parameters | Required |
+| `source_url` | URL of the site to be scanned | Required |
+| `rate_selector` | CSS selector for the currency field | Required |
+| `rate` | Rate from site | 1 |
+| `last_rate` | Previously set rate, used for change calculations | 1 |
+| `transform` | Formula to apply on the rate for correct USD relative value | `1 * x` |
+| `rate_updated_at` | Timestamp when scan was last performed | 0 |
+| `rate_updated_at_selector` | CSS selector for the date field | Optional |
+| `updated_at` | Timestamp when site was last updated (depends on site timezone) | Current time |
+| `source_timezone` | Timezone of the site | Required |
+| `created_at` | Timestamp when site was added | Current time |
+| `status_message` | Last scrape status message (blank if no errors) | Empty string |
+
+#### Notes on Selectors
+
+- **For `rate_selector` and `rate_updated_at_selector`**:
+  - Best obtained by right-clicking in a browser, using inspect element, then copying the selector
+  - Be very specific as pages may have multiple elements with the same IDs or classes
+  - For rate selectors, the system discards all non-numeric values and takes the highest numeric value
+  - For date selectors, the system first tries to parse the date directly, and if it fails, it removes non-date words and tries parsing again
+
+### Usage Instructions
+
+1. Add sites you want scanned manually into the database (there is no interface for this as it would require additional security considerations)
+
+2. Once done, go to `your-site/crawl` and the app will scan rates from the specified sites. You can also set up a cron job to do this automatically using Laravel's `schedule:run` command:
+
+   ```bash
+   php artisan schedule:run
+   ```
+
+3. Set up a cron job pointing to the crawler:
+   - URL Method: `your-site/crawl` (not recommended for production)
+   - CLI Method (recommended): Add this to your server's crontab:
+
+     ```bash
+     * * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
+     ```
+
+   - Docker Method: See [README.Docker.md](README.Docker.md) for instructions on setting up a cron job with Docker.
+
+4. Visit `your-site/api` or `your-site/api/v1` to access the API
 
 ### Tests
 
-1. Make sure the server is running `php artisan serve`
-2. Run `php artisan test`
+1. Make sure the server is running: `php artisan serve`
+2. Run the tests: `php artisan test`
 
 ### Contributions and Issues
 
-Contributions are more than welcome, as well as issues
+Contributions are more than welcome, as well as issue reports.

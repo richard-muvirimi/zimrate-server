@@ -1,6 +1,6 @@
 {
     "name": "zimrate",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "description": "All Zimbabwean exchange rates from multiple sites in one RESTful / Graphql api. No need to scrounge the internet for the current days rate.",
     "main": "index.js",
     "directories": {
