@@ -33,7 +33,7 @@
                         class="hidden-medium"
                         style="text-overflow: fade(25%); white-space: nowrap"
                     >
-                        {{ currency.last_updated | localDate }}
+                        {{ currency.last_updated.toJSDate() | date }}
                     </td>
                     <td style="width: 1%">
                         <button

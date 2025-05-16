@@ -13,7 +13,7 @@ import { RatesService } from '../../../services/rates.service';
     styleUrls: ['./rates.component.scss'],
 })
 export class RatesComponent implements OnInit {
-    lastChecked$: number | undefined;
+    lastChecked$: DateTime | undefined;
     currencies$: RateAggregate[];
     notice$: String;
 
@@ -55,8 +55,8 @@ export class RatesComponent implements OnInit {
                 return {
                     currency: rate.currency,
                     currency_base: rate.currency_base,
-                    last_checked: maxBy<Rate>(rates, 'last_checked')!!.last_checked,
-                    last_updated: maxBy<Rate>(rates, 'last_updated')!!.last_updated,
+                    last_checked: DateTime.fromSeconds(maxBy<Rate>(rates, 'last_checked')!!.last_checked),
+                    last_updated: DateTime.fromSeconds(maxBy<Rate>(rates, 'last_updated')!!.last_updated),
                     rates: uniqBy<Rate>(rates, (item: Rate) => {
                         return JSON.stringify(pick(item, ['rate', 'last_rate']));
                     }),
@@ -76,11 +76,9 @@ export class RatesComponent implements OnInit {
             });
 
             // Last Checked
-            this.lastChecked$ = maxBy<Rate>(data['rates'], 'last_checked')?.last_checked || DateTime.utc().toSeconds();
-
-            setTimeout((): void => {
-                this.animeService.reviewComponents();
-            }, 0);
+            this.lastChecked$ = DateTime.fromSeconds(maxBy<Rate>(data['rates'], 'last_checked')?.last_checked || DateTime.utc().toSeconds());
         }, 0);
+
+        this.animeService.reviewComponents();
     }
 }

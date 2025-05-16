@@ -11,11 +11,11 @@
                     </small>
                 </th>
                 <th colspan="2" style="text-align: right" title="When we last scanned rates.">
-                    <p class="mb-0">{{ currency.last_checked | localDate }}</p>
+                    <p class="mb-0">{{ currency.last_checked.toJSDate() | date }}</p>
                     <small class="font-size-small">Checked</small>
                 </th>
                 <th colspan="2" style="text-align: right" title="When rate was last updated.">
-                    <p class="mb-0">{{ currency.last_updated | localDate }}</p>
+                    <p class="mb-0">{{ currency.last_updated.toJSDate() | date }}</p>
                     <small class="font-size-small">Updated</small>
                 </th>
             </tr>

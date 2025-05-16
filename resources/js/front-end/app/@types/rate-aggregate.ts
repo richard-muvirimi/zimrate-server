@@ -1,4 +1,5 @@
 import Rate from './rate';
+import {DateTime} from "luxon";
 
 export default interface RateAggregate {
     currency: string;
@@ -7,8 +8,8 @@ export default interface RateAggregate {
     minRate: Rate;
     maxRate: Rate;
     urls: URL[];
-    last_checked: number;
-    last_updated: number;
+    last_checked: DateTime;
+    last_updated: DateTime;
     aggregated: {
         max: string;
         mean: string;
