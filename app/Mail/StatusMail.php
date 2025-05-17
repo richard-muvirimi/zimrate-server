@@ -29,8 +29,8 @@ class StatusMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            to : new Address(env('MAIL_TO_ADDRESS'), env('MAIL_TO_ADDRESS')),
-            subject: sprintf('%s server status email! %d issues!', env('APP_NAME'), $this->rates->count()),
+            to : new Address(config('mail.to.address'), config('mail.to.name', config('mail.to.address'))),
+            subject: sprintf('%s server status email! %d issues!', config('app.name'), $this->rates->count()),
         );
     }
 

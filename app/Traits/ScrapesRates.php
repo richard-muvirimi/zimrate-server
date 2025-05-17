@@ -54,19 +54,19 @@ trait ScrapesRates
         try {
 
             $headers = [
-                'Authorization' => 'Bearer '.env('SCRAPPY_TOKEN'),
+                'Authorization' => 'Bearer '.config('scrappy.token'),
             ];
 
             $body = [
                 'url' => $this->source_url,
                 'format' => 'html',
-                'timeout' => env('SCRAPPY_TIMEOUT'),
+                'timeout' => config('scrappy.timeout'),
                 'user_agent' => $this->getUserAgent(),
                 'css' => 'body',
                 'javascript' => var_export($this->javascript, true),
             ];
 
-            $base_uri = rtrim(env('SCRAPPY_SERVER'), '\\/').'/api/';
+            $base_uri = rtrim(config('scrappy.server'), '\\/').'/api/';
 
             $options = [
                 'base_uri' => $base_uri,
@@ -102,7 +102,7 @@ trait ScrapesRates
         $agent = Cache::get('user-agent');
 
         if (! $agent) {
-            $agent = env('USER_AGENT');
+            $agent = config('scrappy.user_agent');
 
             $agent = preg_replace('/headless/i', '', $agent);
 

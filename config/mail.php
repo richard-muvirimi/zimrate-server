@@ -18,6 +18,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Mail Recipients
+    |--------------------------------------------------------------------------
+    |
+    | Here you may configure the default recipients for your application's
+    | automated emails. These values will be used when no specific recipient
+    | is provided in the mail sending code.
+    |
+    */
+
+    'to' => [
+        'address' => env('MAIL_TO_ADDRESS'),
+        'name' => env('MAIL_TO_NAME', env('MAIL_TO_ADDRESS')),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Mailer Configurations
     |--------------------------------------------------------------------------
     |
