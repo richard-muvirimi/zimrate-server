@@ -82,7 +82,7 @@ RUN apt-get update && apt-get upgrade -y \
     && curl -sLS https://getcomposer.org/installer | php -- --install-dir=/usr/bin/ --filename=composer \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get update \
-    && apt-get install -y nodejs jq gnupg supervisor dnsutils ffmpeg nano
+    && apt-get install -y nodejs gnupg ffmpeg
 
 # Cleanup all downloaded packages
 RUN apt-get -y autoclean && \
@@ -135,14 +135,11 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
 RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 RUN sed -ri -e 's!80!8000!g' /etc/apache2/ports.conf /etc/apache2/sites-available/*.conf
 
-RUN chown -R www-data:www-data /var/www/html
-
-# Build the app and clean up.
-RUN npm run build
+RUN chown -R www-data:www-data --from root:root /var/www/html
 
 EXPOSE 8000/tcp
 
 # Switch to use a non-root user.
 USER www-data
 
-CMD ["/usr/bin/bash", "-c", "/usr/local/bin/php /var/www/html/artisan app:setup && exec apache2-foreground"]
+CMD ["/usr/bin/bash", "-c", "npm run build && php artisan app:setup && exec apache2-foreground"]

@@ -1,11 +1,9 @@
-name: Create Tag and Release
+name: Check Version, Create Tag and Release
 
 on:
   push:
     branches:
       - master
-    paths:
-      - 'composer.json'
 
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:
@@ -35,7 +33,19 @@ jobs:
         id: package-version
         run: |
           PACKAGE_VERSION=$(node -p "require('./composer.json').version")
+          # Remove 'v' prefix if it exists in the version
+          CLEAN_VERSION=${PACKAGE_VERSION#v}
           echo "version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "clean_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if composer.json was changed
+        id: check-composer-changed
+        run: |
+          if git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep -q "composer.json"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Check if tag exists
         id: check-tag
@@ -46,26 +56,37 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Should create tag and publish
+        id: should-publish
+        run: |
+          if [[ "${{ steps.check-composer-changed.outputs.changed }}" == "true" && "${{ steps.check-tag.outputs.exists }}" == "false" ]]; then
+            echo "publish=true" >> $GITHUB_OUTPUT
+          else
+            echo "publish=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create tag
-        if: steps.check-tag.outputs.exists == 'false'
+        if: steps.should-publish.outputs.publish == 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git tag -a "v${{ steps.package-version.outputs.version }}" -m "Release v${{ steps.package-version.outputs.version }}"
-          git push origin "v${{ steps.package-version.outputs.version }}"
+          # Use the original version for the tag (if it already has 'v', use it as is)
+          git tag -a "${{ steps.package-version.outputs.version }}" -m "Release ${{ steps.package-version.outputs.version }}"
+          git push origin "${{ steps.package-version.outputs.version }}"
 
       - name: Create GitHub Release
-        if: steps.check-tag.outputs.exists == 'false'
+        if: steps.should-publish.outputs.publish == 'true'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: "v${{ steps.package-version.outputs.version }}"
-          name: "Release v${{ steps.package-version.outputs.version }}"
+          tag_name: "${{ steps.package-version.outputs.version }}"
+          name: "Release ${{ steps.package-version.outputs.version }}"
           draft: false
           prerelease: false
           generate_release_notes: true
 
       # Uses the `docker/login-action` action to log in to the Container registry registry using the account and password that will publish the packages.
       - name: Log in to the Container registry
+        if: steps.should-publish.outputs.publish == 'true'
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
           registry: ${{ env.REGISTRY }}
@@ -74,6 +95,7 @@ jobs:
 
       # This step uses [docker/metadata-action](https://github.com/docker/metadata-action#about) to extract tags and labels
       - name: Extract metadata (tags, labels) for Docker
+        if: steps.should-publish.outputs.publish == 'true'
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
@@ -81,6 +103,7 @@ jobs:
 
       # This step uses the `docker/build-push-action` action to build the image
       - name: Build and push Docker image
+        if: steps.should-publish.outputs.publish == 'true'
         id: push
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
@@ -91,7 +114,7 @@ jobs:
 
       # This step generates an artifact attestation for the image
       - name: Generate artifact attestation
-        if: ${{ github.repository_visibility == 'public' }}
+        if: ${{ github.repository_visibility == 'public' && steps.should-publish.outputs.publish == 'true' }}
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
