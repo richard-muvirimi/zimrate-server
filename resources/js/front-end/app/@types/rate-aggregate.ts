@@ -1,5 +1,5 @@
+import { DateTime } from 'luxon';
 import Rate from './rate';
-import {DateTime} from "luxon";
 
 export default interface RateAggregate {
     currency: string;

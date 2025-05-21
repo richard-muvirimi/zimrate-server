@@ -10,10 +10,10 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
-class ScrapeRate implements ShouldQueue, ShouldBeUnique
+class ScrapeRate implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    
+
     /**
      * The number of seconds after which the job's unique lock will be released.
      *
@@ -35,20 +35,20 @@ class ScrapeRate implements ShouldQueue, ShouldBeUnique
      * @var int
      */
     public $timeout = 90;
-    
+
     /**
      * The number of seconds to wait before retrying the job.
      *
      * @var int
      */
     public $backoff = 60; // 1 minute
-    
+
     /**
      * The unique ID of the job.
      */
     public function uniqueId(): string
     {
-        return 'scrape_rate_' . $this->rate->id;
+        return 'scrape_rate_'.$this->rate->id;
     }
 
     /**
