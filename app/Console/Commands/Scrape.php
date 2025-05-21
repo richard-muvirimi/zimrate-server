@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\ScrapeRate;
 use App\Models\Rate;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -34,11 +35,11 @@ class Scrape extends Command
         $rates = Rate::query()->enabled()->whereDate('updated_at', '<', Carbon::now('UTC')->subMinutes(30)->format(CarbonInterface::DEFAULT_TO_STRING_FORMAT))->get();
 
         $this->withProgressBar($rates, function (Rate $rate) {
-            $rate->scrape();
+            ScrapeRate::dispatch($rate);
         });
         $this->newLine();
 
-        $this->info(sprintf('Scanned %d sites', $rates->count()));
+        $this->info(sprintf('Dispatched %d scraping jobs', $rates->count()));
         $this->newLine();
     }
 }

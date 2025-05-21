@@ -3,15 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\GraphQL\Queries\InfoQuery;
-use App\Mail\StatusMail;
+use App\Notifications\StatusNotification;
 use App\Rules\IsBoolean;
 use App\Traits\QueriesFaultyRates;
 use App\Traits\ResolvesRates;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Config;
 
 class RatesController extends Controller
 {
@@ -60,8 +61,21 @@ class RatesController extends Controller
         }
     }
 
-    public function status(): StatusMail
+    public function status(): Response
     {
-        return new StatusMail($this->getFaultyRates());
+        $rates = $this->getFaultyRates();
+        $notification = new StatusNotification($rates);
+        
+        // Create a mock notifiable object with an email property
+        $notifiable = new class {
+            public function routeNotificationFor($channel)
+            {
+                return Config::get('mail.to.address');
+            }
+        };
+        
+        $mailData = $notification->toMail($notifiable);
+        
+        return response()->view($mailData->markdown, $mailData->viewData);
     }
 }

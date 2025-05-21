@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use App\Mail\StatusMail;
+use App\Notifications\StatusNotification;
 use App\Traits\QueriesFaultyRates;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 
 class Status extends Command
 {
@@ -38,11 +38,12 @@ class Status extends Command
         if ($rates->count() === 0) {
             $this->info('No rates have issues, all good!');
         } else {
-            $this->info('Sending status mail...');
+            $this->info('Sending status notification...');
 
-            Mail::send(new StatusMail($rates));
+            Notification::route('mail', config('mail.to.address'))
+                ->notify(new StatusNotification($rates));
 
-            $this->info('Status mail sent!');
+            $this->info('Status notification sent!');
         }
 
         $this->newLine();
