@@ -36,6 +36,7 @@
         "bootstrapdash/skydash-free-bootstrap-admin-template": "^1.0",
         "br33f/php-ga4-mp": "^0.1.5",
         "laravel/framework": "^12.0",
+        "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "madorin/matex": "^1.0",
         "mll-lab/laravel-graphiql": "^3.2",
