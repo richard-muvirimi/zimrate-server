@@ -30,7 +30,9 @@ Route::get('/crawl', function () {
 
 Route::get('/status', [RatesController::class, 'status']);
 
-Route::prefix('admin')->group(function () {
+Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
+    Route::get('/', [Controller::class, 'backEnd']);
+    Route::get('/dashboard', [Controller::class, 'backEnd']);
     Route::fallback([Controller::class, 'backEnd']);
 });
 

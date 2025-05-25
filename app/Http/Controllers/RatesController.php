@@ -65,17 +65,18 @@ class RatesController extends Controller
     {
         $rates = $this->getFaultyRates();
         $notification = new StatusNotification($rates);
-        
+
         // Create a mock notifiable object with an email property
-        $notifiable = new class {
+        $notifiable = new class
+        {
             public function routeNotificationFor($channel)
             {
                 return Config::get('mail.to.address');
             }
         };
-        
+
         $mailData = $notification->toMail($notifiable);
-        
+
         return response()->view($mailData->markdown, $mailData->viewData);
     }
 }

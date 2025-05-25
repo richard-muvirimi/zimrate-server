@@ -4,7 +4,7 @@
             <div class="pricing-header text-center">
                 <p class="section-paragraph mb-0">Last Checked</p>
                 <h2 *ngIf="lastChecked$ !== undefined" [attr.data-checked]="lastChecked$" class="section-title mt-0">
-                    {{ lastChecked$.toJSDate() | date}}
+                    {{ lastChecked$.toJSDate() | date }}
                 </h2>
             </div>
 
