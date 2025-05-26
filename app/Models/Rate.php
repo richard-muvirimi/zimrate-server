@@ -113,14 +113,6 @@ class Rate extends Model
     }
 
     /**
-     * Scope response to have cors header.
-     */
-    public function scopeCors(Builder $query, bool $enable = true): Builder
-    {
-        return $query;
-    }
-
-    /**
      * Scope a query to only include aggregated results.
      */
     public function scopePreferred(Builder $query, string $prefer): Builder

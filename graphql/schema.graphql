@@ -5,7 +5,6 @@ type Query  {
         search: String @scope(name : "enabled") @scope(name : "updated") @scope(name: "search") @rules(apply: ["string"])
         date: Int @scope(name : "enabled") @scope(name : "updated") @scope(name: "date") @rules(apply: ["numeric", "date_format:U", "before:now"])
         currency: Currency @scope(name : "enabled") @scope(name : "updated") @scope(name: "currency") @rules(apply : ["string", "exists:rates,rate_currency"])
-        cors: Boolean @scope(name: "cors") @scope(name : "enabled") @scope(name : "updated") @deprecated
         prefer: Prefer @scope(name : "enabled") @scope(name : "updated") @scope(name: "preferred") @rules(apply: ["string"])
     ): [Rate!]! @all
 

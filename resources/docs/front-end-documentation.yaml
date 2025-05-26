@@ -48,26 +48,26 @@ paths:
                 - in: query
                   name: search
                   example: RBZ
-                  description: Search for a rate by name.
+                  description: Search for a rate by name. Cannot be used with 'name' or 'source' parameters.
+                  schema:
+                      type: string
+                - in: query
+                  name: name
+                  example: RBZ
+                  description: Filter rates by name. Cannot be used with 'search' or 'source' parameters.
                   schema:
                       type: string
                 - in: query
                   name: date
-                  description: Return rates last updated after this specific date.
+                  description: Return rates last updated after this specific date. Uses Unix timestamp format.
                   schema:
                       type: number
                 - in: query
                   name: currency
                   example: RBZ
-                  description: Filter rates by currency.
+                  description: Filter rates by currency. Must exist in the system.
                   schema:
                       type: string
-                - in: query
-                  name: cors
-                  example: true
-                  description: Set cors header to allow cross origin requests.
-                  schema:
-                      type: boolean
                 - in: query
                   name: prefer
                   example: MIN
@@ -84,15 +84,27 @@ paths:
                 - in: query
                   name: callback
                   example: callback
-                  description: JSONP callback function name.
+                  description: JSONP callback function name. When provided, response will be in JSONP format.
                   schema:
                       type: string
                 - in: query
                   name: extra
                   example: true
-                  description: Whether to include extra rate details in the result.
+                  description: Whether to include extra rate details (currency_base, last_rate) in the result.
                   schema:
                       type: boolean
+                - in: query
+                  name: info
+                  example: true
+                  description: Whether to include system notice information in the response.
+                  schema:
+                      type: boolean
+                - in: query
+                  name: source
+                  example: RBZ
+                  description: Filter rates by source. Deprecated, use 'name' instead. Cannot be used with 'search' or 'name' parameters.
+                  schema:
+                      type: string
             responses:
                 '200':
                     description: An object with the rates and notice message.
@@ -119,7 +131,7 @@ paths:
                                 properties:
                                     info:
                                         type: string
-                                        description: Notice message.
+                                        description: System notice message. Only included when info parameter is true.
                                     USD:
                                         type: array
                                         items:
@@ -144,18 +156,18 @@ paths:
                                 search:
                                     type: string
                                     example: RBZ
-                                    description: Search for a rate by name.
+                                    description: Search for a rate by name. Cannot be used with 'name' or 'source' parameters.
+                                name:
+                                    type: string
+                                    example: RBZ
+                                    description: Filter rates by name. Cannot be used with 'search' or 'source' parameters.
                                 date:
                                     type: number
-                                    description: Return rates last updated after this specific date.
+                                    description: Return rates last updated after this specific date. Uses Unix timestamp format.
                                 currency:
                                     type: string
                                     example: RBZ
-                                    description: Filter rates by currency.
-                                cors:
-                                    type: boolean
-                                    example: true
-                                    description: Set cors header to allow cross origin requests.
+                                    description: Filter rates by currency. Must exist in the system.
                                 prefer:
                                     type: string
                                     example: MIN
@@ -170,11 +182,19 @@ paths:
                                 callback:
                                     type: string
                                     example: callback
-                                    description: JSONP callback function name.
+                                    description: JSONP callback function name. When provided, response will be in JSONP format.
                                 extra:
                                     type: boolean
                                     example: true
-                                    description: Whether to include extra rate details in the result.
+                                    description: Whether to include extra rate details (currency_base, last_rate) in the result.
+                                info:
+                                    type: boolean
+                                    example: true
+                                    description: Whether to include system notice information in the response.
+                                source:
+                                    type: string
+                                    example: RBZ
+                                    description: Filter rates by source. Deprecated, use 'name' instead. Cannot be used with 'search' or 'name' parameters.
 
             responses:
                 '200':
@@ -202,7 +222,7 @@ paths:
                                 properties:
                                     info:
                                         type: string
-                                        description: Notice message.
+                                        description: System notice message. Only included when info parameter is true.
                                     USD:
                                         type: array
                                         items:
