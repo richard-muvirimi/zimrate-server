@@ -18,13 +18,14 @@ trait ResolvesRates
 
         $request->validate([
             'search' => 'string|prohibits:source,name',
-            'source' => 'string|prohibits:search,name',
             'name' => 'string|prohibits:search,source',
             'date' => 'numeric|date_format:U|before:now',
             'currency' => 'string|exists:rates,rate_currency',
             'prefer' => ['string', Rule::in([...Rate::AGGREGATES, ...Arr::map(Rate::AGGREGATES, 'strtoupper')])],
             'callback' => 'string',
             'extra' => [new IsBoolean],
+            // deprecated
+            'source' => 'string|prohibits:search,name',
         ]);
 
         $query = Rate::query();
