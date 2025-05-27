@@ -132,6 +132,8 @@ class Rate extends Model
                 break;
             case 'random':
                 $rates = $query->clone()
+                    ->enabled()
+                    ->updated()
                     ->get(['id', 'rate_currency'])
                     ->groupBy('rate_currency')
                     ->map(function (Collection $rates) {
@@ -142,6 +144,8 @@ class Rate extends Model
                 break;
             case 'median':
                 $rates = $query->clone()
+                    ->enabled()
+                    ->updated()
                     ->get(['id', 'rate_currency', 'rate'])
                     ->groupBy('rate_currency')
                     ->map(function (Collection $rates) {
@@ -157,6 +161,8 @@ class Rate extends Model
                 break;
             case 'mode':
                 $rates = $query->clone()
+                    ->enabled()
+                    ->updated()
                     ->get(['id', 'rate_currency', 'rate'])
                     ->groupBy('rate_currency')
                     ->map(function (Collection $rates) {

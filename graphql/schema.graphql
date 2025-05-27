@@ -2,11 +2,11 @@
 type Query  {
 
     rate(
-        search: String @scope(name : "enabled") @scope(name : "updated") @scope(name: "search") @rules(apply: ["string"])
-        date: Int @scope(name : "enabled") @scope(name : "updated") @scope(name: "date") @rules(apply: ["numeric", "date_format:U", "before:now"])
-        currency: Currency @scope(name : "enabled") @scope(name : "updated") @scope(name: "currency") @rules(apply : ["string", "exists:rates,rate_currency"])
-        prefer: Prefer @scope(name : "enabled") @scope(name : "updated") @scope(name: "preferred") @rules(apply: ["string"])
-    ): [Rate!]! @all
+        search: String @scope(name: "search") @rules(apply: ["string"])
+        date: Int @scope(name: "date") @rules(apply: ["numeric", "date_format:U", "before:now"])
+        currency: Currency @scope(name: "currency") @rules(apply : ["string", "exists:rates,rate_currency"])
+        prefer: Prefer @scope(name: "preferred") @rules(apply: ["string"])
+    ): [Rate!]! @all(scopes : ["enabled", "updated"])
 
     info : String! @field(resolver: "App\\GraphQL\\Queries\\InfoQuery")
 }
