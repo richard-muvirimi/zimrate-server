@@ -224,9 +224,7 @@ class ApiVersion1Test extends TestCase
      */
     public function test_cors_headers_are_set(): void
     {
-        $query = [
-            'cors' => true,
-        ];
+        $query = [];
 
         $response = $this->getJson('api/v1?'.Arr::query($query));
 

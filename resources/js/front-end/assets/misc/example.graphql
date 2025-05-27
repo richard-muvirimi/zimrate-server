@@ -1,5 +1,5 @@
 query {
-    USD : rate ( prefer : RANDOM, cors: true ) {
+    USD : rate ( prefer : RANDOM) {
         currency
         last_checked
         last_updated

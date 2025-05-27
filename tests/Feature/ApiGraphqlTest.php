@@ -204,7 +204,7 @@ class ApiGraphqlTest extends TestCase
      */
     public function test_cors_headers_are_set(): void
     {
-        $response = $this->graphQl(/** @lang GraphQL */ 'query($cors : Boolean!) {USD : rate(cors : $cors) { currency last_checked last_updated name rate url }}', ['cors' => true]);
+        $response = $this->graphQl(/** @lang GraphQL */ 'query {USD : rate { currency last_checked last_updated name rate url }}', []);
 
         $response->assertStatus(200);
         $response->assertHeader('Access-Control-Allow-Origin', '*');

@@ -47,7 +47,7 @@ export class RatesService {
                     rate
                     currency
                 }
-                rates: rate(cors: true) {
+                rates: rate {
                     rate
                     last_rate
                     last_checked
@@ -66,7 +66,7 @@ export class RatesService {
     async getCurrencies(): Promise<{ rates: Currency[] }> {
         const query: TypedDocumentNode = gql`
             query {
-                rates: rate(cors: true, prefer: MIN) {
+                rates: rate(prefer: MIN) {
                     currency
                 }
             }
