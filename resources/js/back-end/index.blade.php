@@ -16,13 +16,15 @@
 
     <meta name="gtag-id" content="{{ config('analytics.measurement_id') }}"/>
 
-    <title>{{ $data['title'] }}</title>
-    <meta name="author" content="{{ $data['author']  }}"/>
-    <meta name="description" content="{{ $data['description'] }}"/>
-    <meta name="keywords" content="{{ $data['keywords'] }}">
+    <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
-    <meta property="og:title" content="{{ $data['title'] }}">
-    <meta property="og:description" content="{{ $data['description'] }}">
+    <meta name="author" content="{{ config('app.author', '') }}">
+    <meta name="description" content="{{ config('app.description', '') }}">
+    <meta name="keywords" content="{{ config('app.keywords', '') }}">
+    <meta name="version" content="{{ config('app.version', '') }}">
+
+    <meta property="og:title" content="{{ config('app.name') }}">
+    <meta property="og:description" content="{{ config('app.description', '') }}">
     <meta property="og:image" content="{{ url('build/back-end/assets/images/zimrate_screenshot.png') }}">
     <meta property="og:url" content="{{ url('') }}">
 
