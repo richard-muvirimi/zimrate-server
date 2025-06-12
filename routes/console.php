@@ -14,3 +14,8 @@ Schedule::command('app:scrape')->hourly()->timezone('Africa/Harare')->between('8
 Schedule::command('app:status')->daily()->timezone('Africa/Harare')->at('20:00');
 
 Schedule::command('queue:work --max-time=60')->everyMinute();
+
+// Run health checks every 5 minutes
+Schedule::command('health:check')
+    ->everyFiveMinutes()
+    ->appendOutputTo(storage_path('logs/health-check.log'));

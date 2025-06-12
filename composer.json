@@ -41,6 +41,7 @@
         "madorin/matex": "^1.0",
         "mll-lab/laravel-graphiql": "^3.2",
         "nuwave/lighthouse": "^6.47",
+        "spatie/laravel-health": "^1.34",
         "symfony/dom-crawler": "^6.4",
         "wapmorgan/time-parser": "^2.0"
     },

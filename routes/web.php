@@ -4,6 +4,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\RatesController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
+use Spatie\Health\Http\Controllers\HealthCheckJsonResultsController;
+use Spatie\Health\Http\Controllers\HealthCheckResultsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,6 +17,10 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+
+// Health check routes (publicly accessible)
+Route::get('/up', HealthCheckJsonResultsController::class)->name('health.json');
+Route::get('/health', HealthCheckResultsController::class)->name('health.results');
 
 Route::get('/documentation/back-end', function () {
     return view('documentation.back-end');
