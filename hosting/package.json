@@ -1,0 +1,73 @@
+{
+  "name": "zimrate",
+  "version": "1.0.1",
+  "description": "All Zimbabwean exchange rates from multiple sites in one RESTful / Graphql api. No need to scrounge the internet for the current days rate.",
+  "main": "src/main.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build --configuration production",
+    "dev": "ng build"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "^16.2.8",
+    "@angular/common": "^16.2.8",
+    "@angular/compiler": "^16.2.8",
+    "@angular/core": "^16.2.8",
+    "@angular/forms": "^16.2.8",
+    "@angular/platform-browser": "^16.2.8",
+    "@angular/platform-browser-dynamic": "^16.2.8",
+    "@angular/router": "^16.2.8",
+    "@apollo/client": "^3.13.8",
+    "@apollo/sandbox": "^2.7.1",
+    "animejs": "^3.2.2",
+    "apollo-angular": "^7.2.1",
+    "base-64": "^1.0.0",
+    "github-fork-ribbon-css": "^0.2.3",
+    "graphql": "^16.9.0",
+    "lodash": "^4.17.21",
+    "luxon": "^3.5.0",
+    "redoc": "^2.5.0",
+    "rxjs": "^7.8.1",
+    "safe-email": "^1.1.1",
+    "scrollreveal": "^4.0.9",
+    "sprintf-js": "^1.1.3",
+    "tslib": "^2.8.1",
+    "zone.js": "~0.13.3"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^16.2.5",
+    "@angular/cli": "~16.2.5",
+    "@angular/compiler-cli": "^16.2.8",
+    "@types/animejs": "^3.1.6",
+    "@types/base-64": "^1.0.0",
+    "@types/jasmine": "^5.1.4",
+    "@types/lodash": "^4.14.185",
+    "@types/luxon": "^3.0.1",
+    "@types/scrollreveal": "^0.0.11",
+    "@types/sprintf-js": "^1.1.2",
+    "jasmine-core": "^5.4.0",
+    "karma": "~6.4.0",
+    "karma-chrome-launcher": "^3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "^2.1.0",
+    "prettier": "^3.4.2",
+    "prettier-plugin-organize-imports": "^4.1.0",
+    "typescript": "~5.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/richard-muvirimi/Zimrate-Server.git"
+  },
+  "author": "Richard Muvirimi <richard@tyganeutronics.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/richard-muvirimi/Zimrate-Server/issues"
+  },
+  "homepage": "https//github.com/richard-muvirimi/Zimrate-Server#readme"
+}
