@@ -1,0 +1,757 @@
+/**
+ * API contract tests — mirrors the legacy PHP test suite (ApiVersion0Test, ApiVersion1Test, ApiGraphqlTest).
+ * Uses vitest + supertest against a real Express app with mocked Firebase services.
+ */
+import { vi, describe, it, expect, beforeAll } from 'vitest';
+import { DateTime } from 'luxon';
+import supertest from 'supertest';
+import express from 'express';
+import cors from 'cors';
+
+// ── Firebase mocks (hoisted before imports) ───────────────────────────────────
+vi.mock('firebase-admin/app', () => ({ initializeApp: vi.fn() }));
+vi.mock('firebase-admin/auth', () => ({
+    getAuth: vi.fn(() => ({
+        verifyIdToken: vi.fn(),
+        listUsers: vi.fn(),
+        createUser: vi.fn(),
+        updateUser: vi.fn(),
+        deleteUser: vi.fn(),
+        setCustomUserClaims: vi.fn()
+    }))
+}));
+vi.mock('firebase-admin/firestore', () => ({
+    getFirestore: vi.fn(),
+    Timestamp: {
+        now: vi.fn(() => ({ toDate: () => new Date(), toMillis: () => Date.now() })),
+        fromDate: vi.fn(d => ({ toDate: () => d, toMillis: () => (d?.getTime?.() ?? 0) })),
+        fromMillis: vi.fn(ms => ({ toDate: () => new Date(ms), toMillis: () => ms }))
+    }
+}));
+vi.mock('firebase-admin/database', () => {
+    const snapshot = {
+        exists: () => false,
+        child: () => ({ val: () => null }),
+        val: () => null,
+        forEach: () => {}
+    };
+    const ref = {
+        get: vi.fn(async () => snapshot),
+        set: vi.fn(async () => {}),
+        remove: vi.fn(async () => {}),
+        update: vi.fn(async () => {}),
+        orderByChild: vi.fn(function() { return this; }),
+        endAt: vi.fn(function() { return this; }),
+    };
+    return { getDatabase: vi.fn(() => ({ ref: vi.fn(() => ref) })) };
+});
+vi.mock('firebase-functions', () => ({
+    logger: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn(), warn: vi.fn() },
+    setGlobalOptions: vi.fn()
+}));
+
+import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
+import { getDatabase } from 'firebase-admin/database';
+import apiRoutes from '../routes/api.js';
+import { errorHandler } from '../middleware/error.js';
+
+// ── Test data ─────────────────────────────────────────────────────────────────
+
+const TEST_INFO = 'ZimRate API - Real-time Zimbabwe exchange rates';
+
+/**
+ * Three realistic rates:
+ *  - ZWG and ZAR from RBZ (same source)
+ *  - ZWG from a black market source
+ * All are enabled, status=true, updated within the last week.
+ */
+const TEST_RATES = [
+    {
+        id: 'rate1',
+        rate_currency: 'ZWG',
+        rate_name: 'RBZ - ZWG',
+        source_url: 'https://rbz.co.zw',
+        source_id: 'source1',
+        rate: 26.5,
+        last_rate: 26.0,
+        status: true,
+        enabled: true,
+        status_message: '',
+        updated_at: new Date('2026-04-14T10:00:00Z'),
+        rate_updated_at: new Date('2026-04-14T09:00:00Z'),
+        created_at: new Date('2026-01-01T00:00:00Z'),
+        javascript: false,
+        rate_selector: '',
+        rate_updated_at_selector: '',
+        transform: '',
+        source_timezone: 'UTC'
+    },
+    {
+        id: 'rate2',
+        rate_currency: 'ZAR',
+        rate_name: 'RBZ - ZAR',
+        source_url: 'https://rbz.co.zw',
+        source_id: 'source1',
+        rate: 18.5,
+        last_rate: 18.2,
+        status: true,
+        enabled: true,
+        status_message: '',
+        updated_at: new Date('2026-04-14T10:00:00Z'),
+        rate_updated_at: new Date('2026-04-14T09:00:00Z'),
+        created_at: new Date('2026-01-01T00:00:00Z'),
+        javascript: false,
+        rate_selector: '',
+        rate_updated_at_selector: '',
+        transform: '',
+        source_timezone: 'UTC'
+    },
+    {
+        id: 'rate3',
+        rate_currency: 'ZWG',
+        rate_name: 'Black Market - ZWG',
+        source_url: 'https://zimpricecheck.com',
+        source_id: 'source2',
+        rate: 28.0,
+        last_rate: 27.5,
+        status: true,
+        enabled: true,
+        status_message: '',
+        updated_at: new Date('2026-04-15T10:00:00Z'),
+        rate_updated_at: new Date('2026-04-15T08:00:00Z'),
+        created_at: new Date('2026-01-01T00:00:00Z'),
+        javascript: false,
+        rate_selector: '',
+        rate_updated_at_selector: '',
+        transform: '',
+        source_timezone: 'UTC'
+    }
+];
+
+const TEST_OPTIONS = [
+    { id: 'opt1', key: 'info', value: TEST_INFO }
+];
+
+// ── Mock helpers ──────────────────────────────────────────────────────────────
+
+function makeSnapshot(docs) {
+    return {
+        docs: docs.map(d => ({
+            id: d.id,
+            exists: true,
+            data: () => ({ ...d }),
+            ref: { id: d.id, update: vi.fn(), delete: vi.fn() }
+        })),
+        empty: docs.length === 0
+    };
+}
+
+/**
+ * Returns a chainable Firestore query mock.
+ * All filter/sort calls are ignored — the snapshot is always the full dataset.
+ * This replicates how Firestore deduplication in findAll() works (Map by doc.id).
+ */
+function makeChainableQuery(snapshot) {
+    const q = {
+        where: vi.fn(() => q),
+        orderBy: vi.fn(() => q),
+        limit: vi.fn(() => q),
+        select: vi.fn(() => q),
+        doc: vi.fn(id => ({
+            get: vi.fn().mockResolvedValue({
+                exists: snapshot.docs.some(d => d.id === id),
+                id,
+                data: () => snapshot.docs.find(d => d.id === id)?.data() ?? null,
+                ref: { id, update: vi.fn(), delete: vi.fn() }
+            })
+        })),
+        add: vi.fn().mockResolvedValue({ id: 'new-doc-id' }),
+        get: vi.fn().mockResolvedValue(snapshot)
+    };
+    return q;
+}
+
+// ── App factory ───────────────────────────────────────────────────────────────
+
+function createApp() {
+    const app = express();
+    app.use(cors());
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
+    app.use('/api', apiRoutes);
+    app.use(errorHandler);
+    return app;
+}
+
+// ── Global setup ──────────────────────────────────────────────────────────────
+
+let request;
+
+beforeAll(() => {
+    const ratesSnap = makeSnapshot(TEST_RATES);
+    const optionsSnap = makeSnapshot(TEST_OPTIONS);
+    const emptySnap = makeSnapshot([]);
+
+    const ratesQuery = makeChainableQuery(ratesSnap);
+    const optionsQuery = makeChainableQuery(optionsSnap);
+
+    vi.mocked(getFirestore).mockReturnValue({
+        collection: vi.fn(name => {
+            if (name === 'rates') return ratesQuery;
+            if (name === 'options') return optionsQuery;
+            return makeChainableQuery(emptySnap);
+        }),
+        batch: vi.fn(() => ({
+            set: vi.fn(),
+            update: vi.fn(),
+            delete: vi.fn(),
+            commit: vi.fn().mockResolvedValue(undefined)
+        }))
+    });
+
+    // RTDB mock for cache — always returns a cache miss
+    const mockRtdbRef = {
+        get: vi.fn().mockResolvedValue({ exists: () => false, child: () => ({ val: () => null }), val: () => null, forEach: () => {} }),
+        once: vi.fn().mockResolvedValue({ val: () => null, exists: () => false }),
+        set: vi.fn().mockResolvedValue(undefined),
+        remove: vi.fn().mockResolvedValue(undefined),
+        update: vi.fn().mockResolvedValue(undefined),
+        orderByChild: vi.fn(function() { return this; }),
+        endAt: vi.fn(function() { return this; }),
+    };
+    vi.mocked(getDatabase).mockReturnValue({ ref: vi.fn(() => mockRtdbRef) });
+
+    request = supertest(createApp());
+});
+
+// =============================================================================
+// API v0  (/api)
+// =============================================================================
+
+describe('API v0 (/api)', () => {
+
+    it('responds with an array of rates containing required fields', async () => {
+        const res = await request.get('/api');
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+        expect(res.body.length).toBeGreaterThan(0);
+
+        for (const item of res.body) {
+            expect(item).toHaveProperty('currency');
+            expect(item).toHaveProperty('last_checked');
+            expect(item).toHaveProperty('last_updated');
+            expect(item).toHaveProperty('name');
+            expect(item).toHaveProperty('rate');
+            expect(item).toHaveProperty('url');
+            // Field types
+            expect(typeof item.currency).toBe('string');
+            expect(typeof item.rate).toBe('number');
+            expect(typeof item.last_checked).toBe('number');
+            expect(typeof item.last_updated).toBe('number');
+        }
+
+        // Spot-check that our test data is represented
+        const currencies = res.body.map(r => r.currency);
+        expect(currencies).toContain('ZWG');
+        expect(currencies).toContain('ZAR');
+    });
+
+    const AGGREGATES = ['MIN', 'MAX', 'MEAN', 'MEDIAN', 'MODE', 'RANDOM'];
+
+    it.each(AGGREGATES)('prefer=%s returns one rate per currency with required fields', async (prefer) => {
+        const res = await request.get(`/api?prefer=${prefer}`);
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+
+        for (const item of res.body) {
+            expect(item).toHaveProperty('currency');
+            expect(item).toHaveProperty('last_checked');
+            expect(item).toHaveProperty('last_updated');
+            expect(item).toHaveProperty('rate');
+            expect(typeof item.rate).toBe('number');
+        }
+
+        // One result per unique currency
+        const currencies = res.body.map(r => r.currency);
+        const unique = new Set(currencies);
+        expect(currencies.length).toBe(unique.size);
+
+        if (prefer !== 'RANDOM') {
+            // Deterministic aggregates — verify known currencies appear
+            expect(currencies).toContain('ZWG');
+            expect(currencies).toContain('ZAR');
+        }
+    });
+
+    it('filters by currency', async () => {
+        const res = await request.get('/api?currency=ZWG');
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+        expect(res.body.length).toBeGreaterThan(0);
+
+        // Verify structure and that the requested currency is present
+        for (const item of res.body) {
+            expect(item).toHaveProperty('currency');
+            expect(item).toHaveProperty('name');
+            expect(item).toHaveProperty('url');
+            expect(item).toHaveProperty('rate');
+        }
+        const currencies = res.body.map(r => r.currency);
+        expect(currencies).toContain('ZWG');
+    });
+
+    it('filters by date (unix timestamp)', async () => {
+        // Use a timestamp from two days ago — all test rates were updated within the last week
+        const twoDaysAgo = DateTime.now().minus({ days: 2 }).toUnixInteger();
+        const res = await request.get(`/api?date=${twoDaysAgo}`);
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+
+        for (const item of res.body) {
+            expect(item).toHaveProperty('currency');
+            expect(item).toHaveProperty('last_checked');
+            expect(item).toHaveProperty('last_updated');
+            expect(item).toHaveProperty('name');
+            expect(item).toHaveProperty('rate');
+            expect(item).toHaveProperty('url');
+        }
+    });
+
+    it('returns CORS header', async () => {
+        const res = await request.get('/api');
+        expect(res.status).toBe(200);
+        expect(res.headers['access-control-allow-origin']).toBe('*');
+    });
+
+    it('rejects a future date', async () => {
+        const future = DateTime.now().plus({ days: 1 }).toUnixInteger();
+        const res = await request.get(`/api?date=${future}`);
+        expect(res.status).toBe(400);
+    });
+});
+
+// =============================================================================
+// API v1  (/api/v1)
+// =============================================================================
+
+describe('API v1 (/api/v1)', () => {
+
+    it('responds with USD wrapper containing required rate fields', async () => {
+        const res = await request.get('/api/v1');
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('USD');
+        expect(Array.isArray(res.body.USD)).toBe(true);
+        expect(res.body.USD.length).toBeGreaterThan(0);
+
+        for (const item of res.body.USD) {
+            expect(item).toHaveProperty('currency');
+            expect(item).toHaveProperty('last_checked');
+            expect(item).toHaveProperty('last_updated');
+            expect(item).toHaveProperty('name');
+            expect(item).toHaveProperty('rate');
+            expect(item).toHaveProperty('url');
+        }
+
+        const currencies = res.body.USD.map(r => r.currency);
+        expect(currencies).toContain('ZWG');
+        expect(currencies).toContain('ZAR');
+    });
+
+    it('includes info string by default', async () => {
+        const res = await request.get('/api/v1');
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('info');
+        expect(typeof res.body.info).toBe('string');
+        expect(res.body.info.length).toBeGreaterThan(0);
+    });
+
+    it('excludes info when info=false', async () => {
+        const res = await request.get('/api/v1?info=false');
+        expect(res.status).toBe(200);
+        expect(res.body).not.toHaveProperty('info');
+        expect(res.body).toHaveProperty('USD');
+    });
+
+    const AGGREGATES = ['MIN', 'MAX', 'MEAN', 'MEDIAN', 'MODE', 'RANDOM'];
+
+    it.each(AGGREGATES)('prefer=%s returns one rate per currency under USD key', async (prefer) => {
+        const res = await request.get(`/api/v1?prefer=${prefer}`);
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('USD');
+        expect(Array.isArray(res.body.USD)).toBe(true);
+
+        for (const item of res.body.USD) {
+            expect(item).toHaveProperty('currency');
+            expect(item).toHaveProperty('last_checked');
+            expect(item).toHaveProperty('last_updated');
+            expect(item).toHaveProperty('rate');
+        }
+
+        const currencies = res.body.USD.map(r => r.currency);
+        const unique = new Set(currencies);
+        expect(currencies.length).toBe(unique.size);
+    });
+
+    it('filters by currency', async () => {
+        const res = await request.get('/api/v1?currency=ZAR');
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body.USD)).toBe(true);
+        expect(res.body.USD.length).toBeGreaterThan(0);
+
+        for (const item of res.body.USD) {
+            expect(item).toHaveProperty('currency');
+            expect(item).toHaveProperty('name');
+            expect(item).toHaveProperty('url');
+            expect(item).toHaveProperty('rate');
+        }
+        const currencies = res.body.USD.map(r => r.currency);
+        expect(currencies).toContain('ZAR');
+    });
+
+    it('filters by date (unix timestamp)', async () => {
+        const twoDaysAgo = DateTime.now().minus({ days: 2 }).toUnixInteger();
+        const res = await request.get(`/api/v1?date=${twoDaysAgo}`);
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('USD');
+        expect(Array.isArray(res.body.USD)).toBe(true);
+    });
+
+    it('returns JSONP when callback param is provided', async () => {
+        const res = await request.get('/api/v1?callback=myCallback');
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toMatch(/javascript/);
+        expect(res.text).toMatch(/^myCallback\(/);
+    });
+
+    it('returns CORS header', async () => {
+        const res = await request.get('/api/v1');
+        expect(res.status).toBe(200);
+        expect(res.headers['access-control-allow-origin']).toBe('*');
+    });
+
+    it('accepts POST with form-encoded body (WordPress plugin compat)', async () => {
+        const res = await request.post('/api/v1')
+            .type('form')
+            .send({ prefer: 'mean' });
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('USD');
+        expect(Array.isArray(res.body.USD)).toBe(true);
+    });
+
+    it('rejects invalid prefer value sent via POST', async () => {
+        const res = await request.post('/api/v1')
+            .type('form')
+            .send({ prefer: 'invalid' });
+        expect(res.status).toBe(400);
+    });
+});
+
+// =============================================================================
+// GraphQL  (/api/graphql)
+// =============================================================================
+
+describe('GraphQL (/api/graphql)', () => {
+
+    const GQL = (query, variables = {}) =>
+        request.post('/api/graphql').send({ query, variables });
+
+    it('responds with rate data aliased as USD', async () => {
+        const res = await GQL('query { USD: rate { currency last_checked last_updated name rate url } }');
+        expect(res.status).toBe(200);
+        expect(res.body).not.toHaveProperty('errors');
+        expect(res.body).toHaveProperty('data');
+        expect(Array.isArray(res.body.data.USD)).toBe(true);
+
+        for (const item of res.body.data.USD) {
+            expect(item).toHaveProperty('currency');
+            expect(item).toHaveProperty('last_checked');
+            expect(item).toHaveProperty('last_updated');
+            expect(item).toHaveProperty('name');
+            expect(item).toHaveProperty('rate');
+            expect(item).toHaveProperty('url');
+            expect(typeof item.currency).toBe('string');
+            expect(typeof item.rate).toBe('number');
+            expect(typeof item.last_checked).toBe('number');
+            expect(typeof item.last_updated).toBe('number');
+        }
+
+        const currencies = res.body.data.USD.map(r => r.currency);
+        expect(currencies).toContain('ZWG');
+        expect(currencies).toContain('ZAR');
+    });
+
+const AGGREGATES = ['MIN', 'MAX', 'MEAN', 'MEDIAN', 'MODE', 'RANDOM'];
+
+    it.each(AGGREGATES)('prefer=%s returns one rate per currency', async (prefer) => {
+        const res = await GQL(
+            'query($prefer: Prefer!) { USD: rate(prefer: $prefer) { currency last_checked last_updated rate } }',
+            { prefer }
+        );
+        expect(res.status).toBe(200);
+        expect(res.body).not.toHaveProperty('errors');
+        expect(Array.isArray(res.body.data.USD)).toBe(true);
+
+        for (const item of res.body.data.USD) {
+            expect(item).toHaveProperty('currency');
+            expect(item).toHaveProperty('rate');
+            expect(typeof item.rate).toBe('number');
+        }
+
+        const currencies = res.body.data.USD.map(r => r.currency);
+        const unique = new Set(currencies);
+        expect(currencies.length).toBe(unique.size);
+
+        if (prefer !== 'RANDOM') {
+            expect(currencies).toContain('ZWG');
+            expect(currencies).toContain('ZAR');
+        }
+    });
+
+    it('filters by currency using Currency enum', async () => {
+        const res = await GQL(
+            'query($currency: Currency) { USD: rate(currency: $currency) { currency last_checked last_updated name rate url } }',
+            { currency: 'ZWG' }
+        );
+        expect(res.status).toBe(200);
+        expect(res.body).not.toHaveProperty('errors');
+        expect(Array.isArray(res.body.data.USD)).toBe(true);
+        expect(res.body.data.USD.length).toBeGreaterThan(0);
+
+        // Verify structure and the requested currency is represented
+        for (const item of res.body.data.USD) {
+            expect(item).toHaveProperty('currency');
+            expect(item).toHaveProperty('rate');
+        }
+        const currencies = res.body.data.USD.map(r => r.currency);
+        expect(currencies).toContain('ZWG');
+    });
+
+    it('filters by date', async () => {
+        const twoDaysAgo = DateTime.now().minus({ days: 2 }).toUnixInteger();
+        const res = await GQL(
+            'query($date: Int!) { USD: rate(date: $date) { currency last_checked last_updated name rate url } }',
+            { date: twoDaysAgo }
+        );
+        expect(res.status).toBe(200);
+        expect(res.body).not.toHaveProperty('errors');
+        expect(Array.isArray(res.body.data.USD)).toBe(true);
+    });
+
+    it('returns info string from the info query', async () => {
+        const res = await GQL('query { USD: rate { currency rate url }, info: info }');
+        expect(res.status).toBe(200);
+        expect(res.body).not.toHaveProperty('errors');
+        expect(res.body.data).toHaveProperty('info');
+        expect(typeof res.body.data.info).toBe('string');
+        expect(res.body.data.info.length).toBeGreaterThan(0);
+    });
+
+    it('returns CORS header', async () => {
+        const res = await GQL('query { USD: rate { currency rate } }');
+        expect(res.status).toBe(200);
+        expect(res.headers['access-control-allow-origin']).toBe('*');
+    });
+});
+
+// =============================================================================
+// Contact form  (/api/contact)
+// =============================================================================
+
+describe('Contact form', () => {
+    const VALID = {
+        name: 'Jane Tester',
+        email: 'jane@example.com',
+        subject: 'API question',
+        message: 'I have a question about the rates endpoint.'
+    };
+
+    it('reports disabled when no SMTP settings are stored', async () => {
+        const res = await request.get('/api/contact');
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ enabled: false });
+    });
+
+    it('rejects a submission with a missing field', async () => {
+        const res = await request.post('/api/contact').send({ ...VALID, email: undefined });
+        expect(res.status).toBe(400);
+        expect(res.body).toHaveProperty('error');
+    });
+
+    it('rejects a submission with an invalid email', async () => {
+        const res = await request.post('/api/contact').send({ ...VALID, email: 'not-an-email' });
+        expect(res.status).toBe(400);
+        expect(res.body).toHaveProperty('error');
+    });
+
+    it('rejects a message that is too short', async () => {
+        const res = await request.post('/api/contact').send({ ...VALID, message: 'hi' });
+        expect(res.status).toBe(400);
+    });
+
+    it('silently accepts and discards honeypot submissions', async () => {
+        const res = await request
+            .post('/api/contact')
+            .send({ ...VALID, website: 'http://spam.example' });
+        // Returns success so bots get no signal, but nothing is sent.
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ success: true });
+    });
+
+    it('returns 503 when the form is not enabled', async () => {
+        const res = await request.post('/api/contact').send(VALID);
+        expect(res.status).toBe(503);
+        expect(res.body).toHaveProperty('error');
+    });
+});
+
+// =============================================================================
+// Admin SMTP settings  (/api/admin/smtp)
+// =============================================================================
+
+describe('Admin SMTP settings', () => {
+    it('requires authentication to read settings', async () => {
+        const res = await request.get('/api/admin/smtp');
+        expect(res.status).toBe(401);
+    });
+
+    it('requires authentication to update settings', async () => {
+        const res = await request.put('/api/admin/smtp').send({ host: 'smtp.example.com' });
+        expect(res.status).toBe(401);
+    });
+
+    it('requires authentication to test the connection', async () => {
+        const res = await request.post('/api/admin/smtp/test').send({});
+        expect(res.status).toBe(401);
+    });
+});
+
+// =============================================================================
+// Branding  (/api/branding, /api/admin/branding)
+// =============================================================================
+
+describe('Branding', () => {
+    it('serves public branding with defaults when nothing is stored', async () => {
+        const res = await request.get('/api/branding');
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('app_name');
+        expect(res.body).toHaveProperty('icon_url');
+        expect(res.body).toHaveProperty('og_image_url');
+    });
+
+    it('returns asset URLs on a fixed path so they stay stable', async () => {
+        const res = await request.get('/api/branding');
+        // The path must not change between uploads — the og:image meta tag in
+        // index.html points at it statically.
+        expect(res.body.icon_url).toContain('/branding/app-icon.png');
+        expect(res.body.og_image_url).toContain('/branding/og-image.png');
+    });
+
+    it('carries a cache-busting version on asset URLs', async () => {
+        const res = await request.get('/api/branding');
+        expect(res.body.icon_url).toMatch(/\?v=\d+$/);
+    });
+
+    it('requires authentication to read admin branding', async () => {
+        const res = await request.get('/api/admin/branding');
+        expect(res.status).toBe(401);
+    });
+
+    it('requires authentication to update branding', async () => {
+        const res = await request.put('/api/admin/branding').send({ app_name: 'Nope' });
+        expect(res.status).toBe(401);
+    });
+});
+
+// =============================================================================
+// Account registration gate  (registration_enabled)
+// =============================================================================
+
+describe('Account registration gate', () => {
+    it('still requires admin auth to create a user', async () => {
+        const res = await request
+            .post('/api/admin/users')
+            .send({ email: 'new@example.com', password: 'secret123' });
+        // The gate sits behind auth — an anonymous caller never reaches it.
+        expect(res.status).toBe(401);
+    });
+
+    it('no longer exposes a rates list endpoint', async () => {
+        // Removed deliberately: the admin SPA reads rates from Firestore so it
+        // can use cursor pagination. Unauthenticated callers get the auth
+        // failure from the admin router, not a route handler.
+        const res = await request.get('/api/admin/rates');
+        expect(res.status).toBe(401);
+    });
+});
+
+// =============================================================================
+// The registration gate itself, with an authenticated admin
+// =============================================================================
+
+describe('registration_enabled enforcement', () => {
+    /** Stands in the whole Firestore mock for one call, then restores it. */
+    async function withRegistrationOption(value, fn) {
+        const original = vi.mocked(getFirestore).getMockImplementation();
+        const optionDocs = makeSnapshot([
+            { id: 'reg', key: 'registration_enabled', value }
+        ]);
+        vi.mocked(getFirestore).mockReturnValue({
+            collection: vi.fn(() => makeChainableQuery(optionDocs)),
+            batch: vi.fn(() => ({ commit: vi.fn().mockResolvedValue(undefined) }))
+        });
+        try {
+            return await fn();
+        } finally {
+            if (original) vi.mocked(getFirestore).mockImplementation(original);
+        }
+    }
+
+    /** An authenticated admin caller. */
+    function asAdmin() {
+        vi.mocked(getAuth).mockReturnValue({
+            verifyIdToken: vi.fn().mockResolvedValue({ uid: 'admin1', admin: true }),
+            createUser: vi.fn().mockResolvedValue({
+                uid: 'new1', email: 'new@example.com', displayName: null
+            })
+        });
+    }
+
+    it('refuses to create a user when registration is disabled', async () => {
+        asAdmin();
+        const res = await withRegistrationOption('false', () =>
+            request
+                .post('/api/admin/users')
+                .set('Authorization', 'Bearer test-token')
+                .send({ email: 'new@example.com', password: 'secret123' })
+        );
+
+        expect(res.status).toBe(403);
+        expect(res.body.error).toMatch(/registration is disabled/i);
+    });
+
+    it('allows creation when registration is enabled', async () => {
+        asAdmin();
+        const res = await withRegistrationOption('true', () =>
+            request
+                .post('/api/admin/users')
+                .set('Authorization', 'Bearer test-token')
+                .send({ email: 'new@example.com', password: 'secret123' })
+        );
+
+        expect(res.status).toBe(201);
+        expect(res.body).toHaveProperty('uid');
+    });
+});
+
+describe('Branding contact fields', () => {
+    it('exposes author contact details publicly', async () => {
+        const res = await request.get('/api/branding');
+        expect(res.status).toBe(200);
+        // The footer, FAQ and privacy pages read these; they used to be
+        // hardcoded in four separate files.
+        expect(res.body).toHaveProperty('author_name');
+        expect(res.body).toHaveProperty('author_email');
+        expect(res.body).toHaveProperty('author_url');
+    });
+});

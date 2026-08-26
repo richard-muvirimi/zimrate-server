@@ -1,0 +1,33 @@
+{
+  "actorSpecification": 1,
+  "name": "zimrate-page-fetcher",
+  "title": "ZimRate Page Fetcher",
+  "description": "Fetches web page text content for ZimRate currency rate extraction. Supports both static (Cheerio) and JavaScript-rendered (Playwright) pages.",
+  "version": "0.1",
+  "defaultRunOptions": {
+    "build": "latest",
+    "timeoutSecs": 60,
+    "memoryMbytes": 512
+  },
+  "input": {
+    "title": "ZimRate Page Fetcher Input",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+      "url": {
+        "title": "URL",
+        "description": "The URL of the page to fetch.",
+        "type": "string",
+        "editor": "textfield"
+      },
+      "javascript": {
+        "title": "Requires JavaScript",
+        "description": "If true, uses Playwright (Chrome) to render the page. If false, uses fast Cheerio fetcher.",
+        "type": "boolean",
+        "default": false,
+        "editor": "checkbox"
+      }
+    },
+    "required": ["url"]
+  }
+}

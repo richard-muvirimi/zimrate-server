@@ -1,0 +1,55 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: caller is an authenticated admin (custom claim)
+    function isAdmin() {
+      return request.auth != null
+          && request.auth.token.admin == true;
+    }
+
+    // Admin only. Public consumers read rates through /api and /api/graphql,
+    // which run server-side with the Admin SDK and bypass these rules — so the
+    // only client-side reader is the admin SPA. A public read grant here would
+    // just let anyone with the (public) web config bypass the API entirely.
+    match /rates/{rateId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /options/{optionId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Sources: admin only (not exposed publicly — accessed only through backend API)
+    match /sources/{sourceId} {
+      allow read, write: if isAdmin();
+    }
+
+    // SMTP credentials and branding. Denied to every client, including admins:
+    // reachable only via the Admin SDK behind /api/admin/**, so the SMTP
+    // password can never be read out of Firestore by a browser.
+    match /settings/{settingId} {
+      allow read, write: if false;
+    }
+
+    // Per-user preferences (currently just the chosen theme preset).
+    //
+    // Deliberately NOT gated on the admin claim — a user sets their own
+    // preference. The deny-all catch-all below does not block this: Firestore
+    // grants access if ANY matching rule allows it.
+    match /user_prefs/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.resource.data.keys().hasOnly(['theme_preset'])
+                   && request.resource.data.theme_preset is string
+                   && request.resource.data.theme_preset.size() < 32;
+    }
+
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

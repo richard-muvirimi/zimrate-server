@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <!-- Custom icon entry points at the fixed Storage path; the bundled SVG is
+         the fallback until one is uploaded. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <style>
+      /* Paints the correct canvas before the CSS bundle lands. */
+      html { background: #0B1017; }
+      html[data-mui-color-scheme='light'] { background: #F5F8FC; }
+    </style>
+    <meta name="author" content="Richard Muvirimi" />
+    <meta
+      name="description"
+      content="All Zimbabwean exchange rates from multiple sites in one RESTful / GraphQL API. No need to scrounge the internet for the current day&apos;s rate."
+    />
+    <meta
+      name="keywords"
+      content="ZimRate, Exchange Rate, Zimbabwe, Rate, ZWG, ZAR, USD, Currency, Exchange, MarketWatch, RBZ"
+    />
+    <meta property="og:title" content="ZimRate" />
+    <meta
+      property="og:description"
+      content="All Zimbabwean exchange rates from multiple sites in one RESTful / GraphQL API. No need to scrounge the internet for the current day&apos;s rate."
+    />
+    <!--
+      Points at a fixed Storage path that the admin Branding screen overwrites
+      in place, so the URL never changes. This must stay static: social crawlers
+      do not run JavaScript, so a runtime swap would never be seen. Upload a
+      social image once from Admin > Branding or this will 404.
+    -->
+    <meta
+      property="og:image"
+      content="https://storage.googleapis.com/my-rate-calculator.firebasestorage.app/branding/og-image.png"
+    />
+    <meta property="og:url" content="https://zimrate.tyganeutronics.com" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ZimRate" />
+    <meta
+      name="twitter:description"
+      content="All Zimbabwean exchange rates from multiple sites in one RESTful / GraphQL API. No need to scrounge the internet for the current day&apos;s rate."
+    />
+    <meta
+      name="twitter:image"
+      content="https://storage.googleapis.com/my-rate-calculator.firebasestorage.app/branding/og-image.png"
+    />
+    <title>ZimRate</title>
+  </head>
+  <body>
+    <script>
+      // Blocking, before first paint. There is no SSR here, so MUI's
+      // InitColorSchemeScript would run after hydration — i.e. after the flash.
+      // Keys must match the ThemeProvider props in src/main.tsx.
+      (function () {
+        try {
+          var mode = localStorage.getItem('zimrate-mode') || 'dark';
+          if (mode === 'system') {
+            mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          if (mode !== 'light' && mode !== 'dark') mode = 'dark';
+          document.documentElement.setAttribute('data-mui-color-scheme', mode);
+        } catch (e) {
+          document.documentElement.setAttribute('data-mui-color-scheme', 'dark');
+        }
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

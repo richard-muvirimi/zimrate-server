@@ -1,0 +1,21 @@
+{
+  "title": "ZimRate Page Fetcher Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "url": {
+      "title": "URL",
+      "description": "The URL of the page to fetch.",
+      "type": "string",
+      "editor": "textfield"
+    },
+    "javascript": {
+      "title": "Requires JavaScript",
+      "description": "If true, uses Playwright (Chrome) to render the page. If false, uses fast Cheerio fetcher.",
+      "type": "boolean",
+      "default": false,
+      "editor": "checkbox"
+    }
+  },
+  "required": ["url"]
+}

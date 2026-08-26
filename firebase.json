@@ -6,12 +6,15 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "predeploy": [
+      "npm --prefix hosting run lint",
+      "npm --prefix hosting run build"
+    ],
     "rewrites": [
       {
         "source": "/api/**",
         "function": {
-          "functionId": "zimrate_app",
-          "region": "us-central1"
+          "functionId": "zimrate_app"
         }
       },
       {
@@ -24,6 +27,10 @@
     {
       "source": "functions",
       "codebase": "default",
+      "predeploy": [
+        "npm --prefix functions run lint",
+        "npm --prefix functions test"
+      ],
       "ignore": [
         "node_modules",
         ".git",
@@ -32,5 +39,17 @@
         "*.local"
       ]
     }
-  ]
+  ],
+  "firestore": {
+    "database": "(default)",
+    "location": "us-central1",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "database": {
+    "rules": "database.rules.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
 }

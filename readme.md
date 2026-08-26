@@ -1,133 +1,228 @@
-# Zimrate
+# ZimRate
 
-All Zimbabwean exchange rates from multiple sites in one RESTful / GraphQL API. No need to scrounge the internet for the
-current day's rate.
+All Zimbabwean exchange rates from multiple sites in one RESTful / GraphQL API. No need to
+scrounge the internet for the current day's rate.
 
-![Screenshot1](resources/js/front-end/assets/images/zimrate_screenshot.png)
+Rates are scraped hourly from public sources, normalised, and served free with no API key and
+no rate limits. All rates are quoted as **units of foreign currency per 1 USD**.
 
-## Features
+- Live site: <https://zimrate.tyganeutronics.com>
+- Android app: [My Rate Calculator](https://play.google.com/store/apps/details?id=com.tyganeutronics.myratecalculator)
+- WordPress plugin: <https://wordpress.org/plugins/zimrate>
 
-1. Scrapes specified websites using [Scrappy](https://scrappy.tyganeutronics.com) for currency rates and provides an API
-   that users can use to access exchange rates.
-2. If a scan fails, the site is flagged as failed and will not affect API queries.
+---
 
-### Installation (Setting Up)
+## Architecture
 
-#### Standard Setup
+| Piece | Stack | Location |
+| --- | --- | --- |
+| Public site + admin SPA | React 19, Vite 8, MUI 7, Apollo Client | `hosting/` |
+| API + scheduled scraper | Node 22, Cloud Functions v2, Express, Apollo Server 4 | `functions/` |
+| Page fetcher | Apify actor (Playwright / Cheerio) | `apify-actor/` |
+| Rates, sources, options | Firestore | — |
+| Cache + scrape lock | Realtime Database | — |
+| Previous Angular UI | Angular 16 (retired, kept for reference) | `hosting-legacy/` |
 
-1. Clone the repository: `git clone https://github.com/richard-muvirimi/zimrate-server.git`
-2. Run `composer install` to install required dependencies
-3. Run `npm install` to install frontend dependencies
-4. Run `npm run build` to build the frontend assets
-5. Set up your `.env` file by copying from `.env.example` and generate an application key:
+Two Cloud Functions are deployed, both in `us-central1`:
 
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
+- `zimrate_app` — the whole Express app, reached via the hosting rewrite `/api/**`
+- `zimrate_scrape` — Cloud Scheduler tick (see [Scraping](#scraping))
 
-6. Configure your database connection in the `.env` file and run the application setup command:
+The browser only ever talks to `/api/**` on the same origin; Firebase Hosting rewrites that to
+`zimrate_app`.
 
-   ```bash
-   php artisan app:setup
-   ```
+---
 
-   This command will:
-   - Create a storage link
-   - Clear and optimize cache
-   - Run database migrations
-   - Prepare the application for use
+## API
 
-#### Docker Setup
+No authentication. `/api`, `/api/v1` and `/api/v2` support JSONP via `?callback=` and accept
+both GET and form-encoded POST.
 
-1. Clone the repository: `git clone https://github.com/richard-muvirimi/zimrate-server.git`
-2. Set up your `.env` file by copying from `.env.example`:
+| Endpoint | Purpose |
+| --- | --- |
+| `ALL /api` | v0, legacy shape |
+| `ALL /api/v1` | main endpoint — `search`, `name`, `currency`, `date`, `prefer`, `extra`, `info` |
+| `ALL /api/v2` | cross rates — requires `base` |
+| `POST /api/graphql` | GraphQL, introspection on |
+| `GET/POST /api/contact` | contact form (see [Contact form](#contact-form)) |
+| `/api/admin/**` | admin only — Firebase ID token + `admin` claim + App Check |
 
-   ```bash
-   cp .env.example .env
-   ```
+`prefer` accepts `min`, `max`, `mean`, `median`, `mode`, `random`.
 
-3. Modify the `.env` file to use the Docker database configuration:
+```bash
+curl -X POST https://zimrate.tyganeutronics.com/api/v1 -d 'prefer=mean'
+```
 
-   ```bash
-   DB_CONNECTION=mysql
-   DB_HOST=db
-   DB_PORT=3306
-   DB_DATABASE=zimrate
-   DB_USERNAME=zimrate
-   DB_PASSWORD=zimrate_password
-   ```
+The OpenAPI spec is at `hosting/public/docs/documentation.yaml` and is rendered on `/developers`.
 
-4. Build and start the Docker containers:
+---
 
-   ```bash
-   docker compose up --build -d
-   ```
+## Setup
 
-   The Dockerfile's CMD will automatically handle application setup, including key generation and migrations.
+### Prerequisites
 
-See [README.Docker.md](README.Docker.md) for more Docker-specific instructions.
+- Node 22 (matches the Cloud Functions runtime)
+- `npm i -g firebase-tools`, then `firebase login`
+- A Firebase project on the Blaze plan (Cloud Functions require it)
 
-### Adding Sites to Scan
+### Install
 
-When adding sites to scan, the following fields will be used:
+```bash
+git clone https://github.com/richard-muvirimi/zimrate-server.git
+cd zimrate
+npm --prefix functions install
+npm --prefix hosting install
+```
 
-| Field | Description | Default Value |
-|-------|-------------|--------------|
-| `id` | Unique site identifier | Auto-increment |
-| `status` | Last scan state (0 = false, 1 = true) | 1 |
-| `enabled` | Whether the site is enabled for scanning (0 = false, 1 = true) | 1 |
-| `javascript` | Whether the site needs client-side rendering (0 = false, 1 = true) | 0 |
-| `rate_name` | Name of site, used for filtering based on source | Required |
-| `rate_currency` | Name of currency (e.g., USD, ZAR) | Required |
-| `rate_currency_base` | Base currency of rate (e.g., USD, ZAR), included in extra parameters | Required |
-| `source_url` | URL of the site to be scanned | Required |
-| `rate_selector` | CSS selector for the currency field | Required |
-| `rate` | Rate from site | 1 |
-| `last_rate` | Previously set rate, used for change calculations | 1 |
-| `transform` | Formula to apply on the rate for correct USD relative value | `1 * x` |
-| `rate_updated_at` | Timestamp when scan was last performed | 0 |
-| `rate_updated_at_selector` | CSS selector for the date field | Optional |
-| `updated_at` | Timestamp when site was last updated (depends on site timezone) | Current time |
-| `source_timezone` | Timezone of the site | Required |
-| `created_at` | Timestamp when site was added | Current time |
-| `status_message` | Last scrape status message (blank if no errors) | Empty string |
+Point at your own Firebase project:
 
-#### Notes on Selectors
+```bash
+firebase use --add          # writes .firebaserc
+```
 
-- **For `rate_selector` and `rate_updated_at_selector`**:
-  - Best obtained by right-clicking in a browser, using inspect element, then copying the selector
-  - Be very specific as pages may have multiple elements with the same IDs or classes
-  - For rate selectors, the system discards all non-numeric values and takes the highest numeric value
-  - For date selectors, the system first tries to parse the date directly, and if it fails, it removes non-date words and tries parsing again
+### Configure
 
-### Usage Instructions
+**`functions/.env`** — server-side secrets. Copy from `functions/.env.example`. Never commit
+this file; it is gitignored.
 
-1. Add sites you want scanned manually into the database (there is no interface for this as it would require additional security considerations)
+| Variable | Purpose |
+| --- | --- |
+| `APIFY_TOKEN` | Apify API token for the page fetcher |
+| `APIFY_ACTOR_ID` | actor id, e.g. `tyganeutronics~zimrate-page-fetcher` |
+| `DEEPSEEK_API_KEY` | API key for the extraction model |
+| `DEEPSEEK_API_URL` | chat-completions endpoint; defaults to DeepSeek |
+| `DEEPSEEK_MODEL` | model name; defaults to `deepseek-chat` |
+| `APPCHECK_ENFORCE` | `true` to enforce App Check on `/api/admin/**`. Leave unset while rolling out |
 
-2. Once done, go to `your-site/crawl` and the app will scan rates from the specified sites. You can also set up a cron job to do this automatically using Laravel's `schedule:run` command:
+### Swapping the LLM provider
 
-   ```bash
-   php artisan schedule:run
-   ```
+Rate extraction uses the official `openai` SDK against an OpenAI-format endpoint, so switching
+provider is only those three variables. `DEEPSEEK_API_URL` accepts either the base URL or the
+full chat-completions path. Gemini exposes an OpenAI-compatible
+endpoint, so it drops straight in:
 
-3. Set up a cron job pointing to the crawler:
-   - URL Method: `your-site/crawl` (not recommended for production)
-   - CLI Method (recommended): Add this to your server's crontab:
+```bash
+DEEPSEEK_API_KEY=<google-ai-studio-key>
+DEEPSEEK_API_URL=https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
+DEEPSEEK_MODEL=gemini-2.0-flash
+```
 
-     ```bash
-     * * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
-     ```
+The replacement must support **tool calling** (`tools` + `tool_choice`) and
+**`response_format: { type: 'json_object' }`** — the extractor runs an agentic loop that calls
+`convert_cross_rate_to_usd` for cross-rate pages, then asks for strict JSON. Providers that only
+implement basic completions will not work. Verify with a manual scrape after switching.
 
-   - Docker Method: See [README.Docker.md](README.Docker.md) for instructions on setting up a cron job with Docker.
+**`hosting/.env.production`** — client config. Everything here ships in the browser bundle, so
+it must contain **no secrets**. The Firebase web config and reCAPTCHA site key are public by
+design.
 
-4. Visit `your-site/api` or `your-site/api/v1` to access the API
+| Variable | Purpose |
+| --- | --- |
+| `VITE_FIREBASE_*` | web config; falls back to the literals in `hosting/src/config.ts` |
+| `VITE_PUBLIC_API_ORIGIN` | origin shown in copyable API examples |
+| `VITE_RECAPTCHA_SITE_KEY` | reCAPTCHA v3 site key; empty disables App Check |
+| `VITE_API_BASE_URL` | prefix for API calls; empty means same origin |
 
-### Tests
+### Run locally
 
-1. Make sure the server is running: `php artisan serve`
-2. Run the tests: `php artisan test`
+```bash
+npm --prefix hosting run dev
+```
 
-### Contributions and Issues
+The dev server proxies `/api` to the deployed API, so you develop against real data. Override
+with `VITE_DEV_API_TARGET` if you want to point somewhere else — for example a local functions
+emulator (`firebase emulators:start --only functions`, then set it to
+`http://localhost:5001/<project-id>/us-central1/zimrate_app`).
 
-Contributions are more than welcome, as well as issue reports.
+### Deploy
+
+```bash
+firebase deploy
+```
+
+Predeploy hooks run automatically and will abort the deploy on failure:
+
+- functions: `npm run lint` then `npm test`
+- hosting: `npm run lint` then `npm run build`
+
+---
+
+## First admin
+
+Admin access is Firebase Auth plus an `admin` custom claim. `POST /api/admin/users/:uid/claims`
+grants it, but that endpoint itself requires an admin — so the **first** admin must be granted
+out of band with the Admin SDK:
+
+```js
+// bootstrap-admin.js — run once with GOOGLE_APPLICATION_CREDENTIALS set
+import { initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+
+initializeApp();
+const user = await getAuth().getUserByEmail('you@example.com');
+await getAuth().setCustomUserClaims(user.uid, { admin: true });
+console.log('granted admin to', user.uid);
+```
+
+Sign out and back in afterwards so the new claim lands in a fresh ID token.
+
+Accounts must also have a **verified email** — the admin UI redirects unverified users to the
+verification screen and blocks access until they confirm.
+
+---
+
+## Contact form
+
+Disabled until SMTP is configured. In the admin dashboard go to **Email / SMTP** and set host,
+port, TLS mode, username, password, from name/address and the delivery recipient, then use
+**Test connection** to verify before enabling.
+
+Credentials are stored at `settings/smtp` in Firestore, which `firestore.rules` denies to every
+client including admins. They are readable only by the Admin SDK behind `/api/admin/smtp`, and
+the API never returns the password — only whether one is set.
+
+---
+
+## Scraping
+
+`zimrate_scrape` is scheduled `* * * * *`, but the work is throttled by a `scrape_lock` key in
+the Realtime Database that is held until the top of the next hour. So scraping runs **hourly**;
+the minute tick exists so the admin "trigger scrape" action takes effect within a minute rather
+than waiting up to an hour.
+
+Set the `scraping_enabled` option to `false` to pause scraping without redeploying.
+
+### Adding a source
+
+Add a document to the `sources` collection, or use **Sources** in the admin dashboard.
+
+| Field | Meaning |
+| --- | --- |
+| `name` | display name |
+| `url` | page to scrape |
+| `enabled` | include in scheduled runs |
+| `javascript` | render with a real browser before extracting |
+
+The scraper fetches the page through Apify, strips chrome, and asks DeepSeek to extract the
+rates, so no CSS selectors are needed — unlike the older selector-based setup.
+
+---
+
+## Tests and linting
+
+```bash
+npm --prefix functions test     # vitest, API contract tests
+npm --prefix functions run lint
+npm --prefix hosting run lint
+npm --prefix hosting run build  # tsc -b && vite build
+```
+
+---
+
+## Contributing
+
+Contributions and issue reports are welcome:
+<https://github.com/richard-muvirimi/zimrate-server/issues>
+
+Forking is fine. Note that a fork is only useful with your own Firebase project, Apify token and
+DeepSeek key — none of which are in this repository.

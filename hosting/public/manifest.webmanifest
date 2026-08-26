@@ -1,0 +1,23 @@
+{
+  "name": "ZimRate",
+  "short_name": "ZimRate",
+  "description": "All Zimbabwean exchange rates from multiple sites in one RESTful / GraphQL API.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B1017",
+  "theme_color": "#0B1017",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "https://storage.googleapis.com/my-rate-calculator.firebasestorage.app/branding/app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

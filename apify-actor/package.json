@@ -1,0 +1,21 @@
+{
+  "name": "zimrate-page-fetcher",
+  "version": "0.1.0",
+  "description": "Apify actor that fetches web page content for ZimRate currency scraping",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "apify": "^3.2.6",
+    "crawlee": "^3.10.0",
+    "playwright": "^1.50.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "apify-cli": "^1.4.1"
+  }
+}

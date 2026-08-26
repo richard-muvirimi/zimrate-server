@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Caller is an authenticated admin (same custom claim as firestore.rules).
+    function isAdmin() {
+      return request.auth != null
+          && request.auth.token.admin == true;
+    }
+
+    // Uploads come straight from a browser, so constrain what can land here.
+    function isImageUnder(maxBytes) {
+      return request.resource.size < maxBytes
+          && request.resource.contentType.matches('image/.*');
+    }
+
+    // Branding assets: app icon, social preview image.
+    //
+    // Public read is required rather than incidental — browsers fetch the
+    // favicon and social crawlers fetch og:image with no credentials, and
+    // crawlers do not run JavaScript, so the URL has to be openly reachable.
+    //
+    // Paths are fixed and overwritten in place so the public URL never changes.
+    match /branding/{file} {
+      allow read: if true;
+      allow write: if isAdmin() && isImageUnder(2 * 1024 * 1024);
+    }
+
+    // User avatars, keyed by uid. Public read for the same reason: they render
+    // as plain <img> tags. Only admins write, matching the admin users API.
+    match /avatars/{file} {
+      allow read: if true;
+      allow write: if isAdmin() && isImageUnder(2 * 1024 * 1024);
+    }
+
+    // Deny everything else. No catch-all grant — the scaffolded rule this
+    // replaced allowed the whole bucket to be read, written and deleted by
+    // anyone until a hardcoded expiry date.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
