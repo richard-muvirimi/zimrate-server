@@ -13,7 +13,7 @@ export const firebaseConfig = {
   storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET ?? 'my-rate-calculator.firebasestorage.app',
   messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '517253029311',
   appId: env.VITE_FIREBASE_APP_ID ?? '1:517253029311:web:92941d0dc3e05d8ce0550a',
-  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID ?? 'G-EEX8605DQG',
+  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID ?? 'G-CQDXLMXM5Y',
 };
 
 /** Prefix for fetch calls. Empty = same origin, via the hosting rewrite or the dev proxy. */

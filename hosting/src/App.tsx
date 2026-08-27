@@ -5,6 +5,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import RouteFallback from './components/RouteFallback';
 import ScrollToHash from './components/ScrollToHash';
 import { useBranding } from './useBranding';
+import { trackPageView } from './analytics';
 
 // HomePage stays eager: it is the entry route, and keeping it (with SiteLayout,
 // Header and Footer) in the entry chunk avoids a second waterfall before first
@@ -68,6 +69,14 @@ function PageTitleManager() {
     // the real one has arrived, so a blank never reaches the tab.
     document.title = branding.app_name ? title.replace(/ZimRate/g, branding.app_name) : title;
   }, [location.pathname, branding.app_name]);
+
+  // Declared after the title effect so it runs second in the same commit and
+  // reports the resolved title. Keyed on the path alone: including the query
+  // string would fire a hit on every admin filter change, and including
+  // branding would double-count the first route when it arrives.
+  useEffect(() => {
+    trackPageView(document.title);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!branding.icon_url) return;

@@ -53,6 +53,22 @@
       content="https://storage.googleapis.com/my-rate-calculator.firebasestorage.app/branding/og-image.png"
     />
     <title>ZimRate</title>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-CQDXLMXM5Y"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag('js', new Date());
+      // send_page_view is off because this is a single-page app. Left on, the
+      // tag would report exactly one hit — the initial load, carrying whatever
+      // title was in the document before the router resolved the route — and
+      // nothing at all for subsequent navigation. src/analytics.ts sends one
+      // page_view per route change instead.
+      gtag('config', 'G-CQDXLMXM5Y', { send_page_view: false });
+    </script>
   </head>
   <body>
     <script>

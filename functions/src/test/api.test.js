@@ -2,7 +2,7 @@
  * API contract tests — mirrors the legacy PHP test suite (ApiVersion0Test, ApiVersion1Test, ApiGraphqlTest).
  * Uses vitest + supertest against a real Express app with mocked Firebase services.
  */
-import { vi, describe, it, expect, beforeAll } from 'vitest';
+import { vi, describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { DateTime } from 'luxon';
 import supertest from 'supertest';
 import express from 'express';
@@ -761,5 +761,119 @@ describe('Branding contact fields', () => {
         expect(res.body).toHaveProperty('author_name');
         expect(res.body).toHaveProperty('author_email');
         expect(res.body).toHaveProperty('author_url');
+    });
+});
+
+// =============================================================================
+// Analytics middleware  (GA4 Measurement Protocol)
+// =============================================================================
+
+describe('Analytics middleware', () => {
+    const IP = '203.0.113.9';
+    const UA = 'curl/8.4.0';
+
+    // The salt is read once at module load, so each case needs a fresh copy.
+    async function load(env) {
+        vi.resetModules();
+        Object.entries(env).forEach(([k, v]) => vi.stubEnv(k, v));
+        return (await import('../middleware/analytics.js')).logAnalytics;
+    }
+
+    // req.path is mount-relative inside the middleware: the app mounts the API
+    // router at '/api', so a call to /api/v1 arrives here as '/v1'.
+    const fakeReq = (ip = IP, path = '/v1') => ({
+        ip,
+        method: 'GET',
+        headers: { 'user-agent': UA },
+        path,
+        acceptsLanguages: () => ['en'],
+    });
+
+    /** Runs the middleware and returns whatever it tried to POST to GA4. */
+    function capture(logAnalytics, req) {
+        const sent = [];
+        const spy = vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
+            sent.push(JSON.parse(init.body));
+            return Promise.resolve({ ok: true });
+        });
+        const next = vi.fn();
+        logAnalytics(req, {}, next);
+        expect(next).toHaveBeenCalledOnce();
+        spy.mockRestore();
+        return sent;
+    }
+
+    const CONFIGURED = {
+        MEASUREMENT_ID: 'G-TEST123456',
+        MEASUREMENT_PROTOCOL_API_SECRET: 'test-secret',
+        ANALYTICS_SALT: 'fixed-test-salt',
+    };
+
+    afterEach(() => {
+        vi.unstubAllEnvs();
+    });
+
+    it('never sends the caller IP to Google', async () => {
+        const mw = await load(CONFIGURED);
+        const [body] = capture(mw, fakeReq());
+        // Google's Measurement Protocol policy forbids uploading PII, and an IP
+        // is personal data under GDPR.
+        expect(JSON.stringify(body)).not.toContain(IP);
+    });
+
+    it('does not report anonymous callers as identified users', async () => {
+        const mw = await load(CONFIGURED);
+        const [body] = capture(mw, fakeReq());
+        // user_id means a known, signed-in person; this API has no accounts.
+        expect(body.user_id).toBeUndefined();
+    });
+
+    it('derives a client_id that is stable per caller and differs across callers', async () => {
+        const mw = await load(CONFIGURED);
+        const [first] = capture(mw, fakeReq());
+        const [again] = capture(mw, fakeReq());
+        const [other] = capture(mw, fakeReq('198.51.100.4'));
+
+        expect(first.client_id).toMatch(/^[0-9a-f]{32}$/);
+        expect(again.client_id).toBe(first.client_id);
+        expect(other.client_id).not.toBe(first.client_id);
+    });
+
+    it('tags every event with a session so GA4 keeps them in session reports', async () => {
+        const mw = await load(CONFIGURED);
+        const [body] = capture(mw, fakeReq());
+        expect(body.events.length).toBeGreaterThan(0);
+        for (const event of body.events) {
+            expect(event.params.session_id).toBeTruthy();
+        }
+    });
+
+    it('reports an API call as an event, never as a page view', async () => {
+        const mw = await load(CONFIGURED);
+        const [body] = capture(mw, fakeReq());
+        // A page_view would drop REST endpoints into the Pages reports and
+        // inflate pageview counts alongside real site pages.
+        expect(body.events.map((e) => e.name)).toEqual(['api_request']);
+        expect(body.events[0].params.endpoint).toBe('/api/v1');
+        expect(body.events[0].params.method).toBe('GET');
+    });
+
+    it('collapses document ids so the endpoint dimension stays bounded', async () => {
+        const mw = await load(CONFIGURED);
+        const endpoint = (path) => capture(mw, fakeReq(IP, path))[0].events[0].params.endpoint;
+
+        // Two different documents must land on one dimension value, or GA4
+        // buckets everything into "(other)" past 500 distinct values a day.
+        expect(endpoint('/admin/users/x7Kd2aQ')).toBe('/api/admin/users/{id}');
+        expect(endpoint('/admin/users/zzz999')).toBe('/api/admin/users/{id}');
+        expect(endpoint('/admin/users/x7Kd2aQ/claims')).toBe('/api/admin/users/{id}/claims');
+        // Scanner traffic collapses too, rather than each probe earning a row.
+        expect(endpoint('/wp-login.php')).toBe('/api/{id}');
+        expect(endpoint('/')).toBe('/api');
+    });
+
+    it('stays a no-op when analytics is not configured', async () => {
+        const mw = await load({ MEASUREMENT_ID: '', MEASUREMENT_PROTOCOL_API_SECRET: '' });
+        expect(capture(mw, fakeReq())).toHaveLength(0);
     });
 });
