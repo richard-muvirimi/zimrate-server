@@ -19,6 +19,8 @@ const DEFAULTS = {
     author_name: 'Richard Muvirimi',
     author_email: 'richard@tyganeutronics.com',
     author_url: 'https://richard.co.zw',
+    // Drives both the footer link and the 'Fork me on GitHub' ribbon.
+    repo_url: 'https://github.com/richard-muvirimi/zimrate-server',
     /** Bumped on every upload so cached images are re-fetched. */
     icon_version: 0,
     og_version: 0,
@@ -43,6 +45,7 @@ export async function saveBranding(input) {
         author_name: input.author_name ?? current.author_name,
         author_email: input.author_email ?? current.author_email,
         author_url: input.author_url ?? current.author_url,
+        repo_url: input.repo_url ?? current.repo_url,
         icon_version: input.icon_version ?? current.icon_version,
         og_version: input.og_version ?? current.og_version,
         updated_at: new Date(),
@@ -65,6 +68,7 @@ export function publicBranding(branding, bucket) {
         author_name: branding.author_name,
         author_email: branding.author_email,
         author_url: branding.author_url,
+        repo_url: branding.repo_url,
         icon_url: `${base}/branding/app-icon.png?v=${branding.icon_version}`,
         og_image_url: `${base}/branding/og-image.png?v=${branding.og_version}`,
     };

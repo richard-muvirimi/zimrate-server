@@ -652,6 +652,14 @@ describe('Branding', () => {
         expect(res.body.icon_url).toMatch(/\?v=\d+$/);
     });
 
+    it('exposes repo_url publicly so the fork ribbon and footer link can render', async () => {
+        const res = await request.get('/api/branding');
+        // The client holds no fallback for this — a missing field hides both
+        // the ribbon and the footer GitHub link rather than showing a stale URL.
+        expect(res.body).toHaveProperty('repo_url');
+        expect(res.body.repo_url).toMatch(/^https?:\/\//);
+    });
+
     it('requires authentication to read admin branding', async () => {
         const res = await request.get('/api/admin/branding');
         expect(res.status).toBe(401);

@@ -16,6 +16,7 @@ interface BrandingConfig {
   author_name: string;
   author_email: string;
   author_url: string;
+  repo_url: string;
   icon_version: number;
   og_version: number;
   bucket: string;
@@ -27,6 +28,7 @@ const EMPTY: BrandingConfig = {
   author_name: '',
   author_email: '',
   author_url: '',
+  repo_url: '',
   icon_version: 0,
   og_version: 0,
   bucket: '',
@@ -80,6 +82,7 @@ export default function BrandingPage() {
           author_name: config.author_name,
           author_email: config.author_email,
           author_url: config.author_url,
+          repo_url: config.repo_url,
         }),
       });
       setConfig({ ...EMPTY, ...updated });
@@ -181,6 +184,15 @@ export default function BrandingPage() {
               helperText="Must start with http:// or https://"
             />
           </Stack>
+
+          <TextField
+            label="Source repository"
+            type="url"
+            value={config.repo_url}
+            onChange={(e) => setConfig((c) => ({ ...c, repo_url: e.target.value }))}
+            fullWidth
+            helperText="Shown in the footer and as the “Fork me on GitHub” ribbon. Leave blank to hide both."
+          />
 
           <Box>
             <Button

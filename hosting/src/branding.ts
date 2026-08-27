@@ -14,6 +14,8 @@ export interface Branding {
   author_name: string;
   author_email: string;
   author_url: string;
+  /** Public source repository; drives the footer link and the fork ribbon. */
+  repo_url: string;
   icon_url: string;
   og_image_url: string;
 }
@@ -34,6 +36,7 @@ export const DEFAULT_BRANDING: Branding = {
   author_name: '',
   author_email: '',
   author_url: '',
+  repo_url: '',
   icon_url: '',
   og_image_url: '',
 };
