@@ -6,7 +6,7 @@ import {
   Alert, Divider, Tooltip,
 } from '@mui/material';
 import {
-  collection, getCountFromServer, query, orderBy, limit, getDocs, where,
+  collection, getCountFromServer, query, orderBy, limit, getDocs,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange';
@@ -25,10 +25,23 @@ interface RateRow {
   rate_name?: string;
   rate_currency?: string;
   rate?: number;
-  status?: boolean;
   enabled?: boolean;
-  status_message?: string;
   updated_at?: { toDate?: () => Date };
+}
+
+/**
+ * Health lives on the source, not the rate. A rate the scraper cannot read is
+ * deleted rather than flagged, so there is no such thing as a failing rate —
+ * only a source whose last pass failed.
+ */
+interface SourceRow {
+  id: string;
+  name?: string;
+  url?: string;
+  enabled?: boolean;
+  status?: boolean;
+  status_message?: string;
+  last_scraped?: { toDate?: () => Date };
 }
 
 interface Stat {
@@ -48,7 +61,7 @@ export default function DashboardPage() {
   const [error, setError] = useState('');
   const [stats, setStats] = useState<Stat[]>([]);
   const [recent, setRecent] = useState<RateRow[]>([]);
-  const [failing, setFailing] = useState<RateRow[]>([]);
+  const [failing, setFailing] = useState<SourceRow[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [scrapingEnabled, setScrapingEnabled] = useState<boolean | null>(null);
 
@@ -71,16 +84,15 @@ export default function DashboardPage() {
           .find((o) => o.key === 'scraping_enabled');
         setScrapingEnabled(scraping ? scraping.value !== 'false' : true);
 
-        // Rates the scraper could not read on its last pass.
-        let failingRows: RateRow[] = [];
-        try {
-          const failingSnap = await getDocs(
-            query(collection(db, 'rates'), where('status', '==', false), limit(5)),
-          );
-          failingRows = failingSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as RateRow);
-        } catch {
-          // Composite index may not exist for this filter — not fatal.
-        }
+        // Sources whose last scrape failed. Read whole and filtered here rather
+        // than queried: there are only tens of sources, and a `status == false`
+        // query would also match every source that has simply never been
+        // scraped yet — those start false and are not a fault.
+        const sourcesSnap = await getDocs(collection(db, 'sources'));
+        const failingRows = sourcesSnap.docs
+          .map((d) => ({ id: d.id, ...d.data() }) as SourceRow)
+          .filter((s) => s.enabled !== false && s.status === false && s.last_scraped)
+          .slice(0, 5);
         setFailing(failingRows);
 
         const currencies = new Set(
@@ -106,7 +118,7 @@ export default function DashboardPage() {
             icon: <PublicIcon sx={{ color: 'primary.main', fontSize: 30 }} />,
           },
           {
-            label: 'Failing rates',
+            label: 'Failing sources',
             value: failingRows.length,
             icon: (
               <WarningAmberIcon
@@ -114,7 +126,7 @@ export default function DashboardPage() {
               />
             ),
             tone: failingRows.length ? 'warning' : 'default',
-            to: '/admin/rates',
+            to: '/admin/sources',
           },
         ]);
       } catch (e) {
@@ -286,19 +298,19 @@ export default function DashboardPage() {
               <Divider />
               <Box sx={{ p: 2 }}>
                 <Stack spacing={2}>
-                  {failing.map((r) => (
-                    <Box key={r.id}>
+                  {failing.map((s) => (
+                    <Box key={s.id}>
                       <Typography variant="body2" fontWeight={600}>
-                        {r.rate_currency ?? '—'} · {r.rate_name ?? 'Unnamed'}
+                        {s.name || s.url || 'Unnamed source'}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {r.status_message || 'Last scrape did not return a usable rate.'}
+                        {s.status_message || 'Last scrape did not return any rates.'}
                       </Typography>
                     </Box>
                   ))}
                 </Stack>
-                <Button component={RouterLink} to="/admin/rates" size="small" sx={{ mt: 2 }}>
-                  Review rates
+                <Button component={RouterLink} to="/admin/sources" size="small" sx={{ mt: 2 }}>
+                  Review sources
                 </Button>
               </Box>
             </Paper>

@@ -70,15 +70,13 @@ export default function RateFormPage() {
       };
 
       if (isNew) {
-        // status and enabled must be set explicitly. Rate.findAll filters on
-        // `status == true` and getUniqueCurrencies on `enabled == true`, so a
-        // rate created without them shows in this admin list but never reaches
-        // the public API until a scrape happens to overwrite it.
+        // enabled must be set explicitly: getUniqueCurrencies and the public
+        // "updated" scope both filter on `enabled == true`, so a rate created
+        // without it shows in this admin list but never reaches the public API
+        // until a scrape happens to overwrite it.
         await addDoc(collection(db, 'rates'), {
           ...payload,
-          status: true,
           enabled: true,
-          status_message: '',
           rate_updated_at: serverTimestamp(),
           created_at: serverTimestamp(),
         });

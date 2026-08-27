@@ -26,20 +26,42 @@ interface Rate {
   rate_name: string;
   rate: number;
   enabled?: boolean;
-  status?: boolean;
   updated_at?: { toDate: () => Date };
   source_url?: string;
 }
 
-type StateFilter = 'any' | 'enabled' | 'disabled' | 'ok' | 'failing';
+type StateFilter = 'any' | 'enabled' | 'disabled';
 
 const STATE_OPTIONS: { value: StateFilter; label: string }[] = [
   { value: 'any', label: 'Any state' },
   { value: 'enabled', label: 'Enabled' },
   { value: 'disabled', label: 'Disabled' },
-  { value: 'ok', label: 'Scrape OK' },
-  { value: 'failing', label: 'Scrape failing' },
 ];
+
+/**
+ * Scraping runs hourly, so a rate untouched for six hours has missed several
+ * passes. Six matches the threshold the legacy status report used.
+ */
+const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * Derived from the clock on every render rather than stored on the document:
+ * freshness changes with the passage of time, so a persisted flag would be
+ * wrong the moment nothing wrote to it — which is exactly how the old `status`
+ * field ended up permanently reading "OK".
+ *
+ * Display only. It is not offered as a filter because filtering would need a
+ * range on updated_at, and Firestore requires the first orderBy to be the
+ * inequality field — that would break the fixed rate_currency sort the
+ * pagination cursors depend on.
+ */
+function freshness(rate: Rate): { label: string; color: 'success' | 'warning' | 'default' } {
+  const updated = rate.updated_at?.toDate?.();
+  if (!updated) return { label: 'Unknown', color: 'default' };
+  return Date.now() - updated.getTime() > STALE_AFTER_MS
+    ? { label: 'Stale', color: 'warning' }
+    : { label: 'Fresh', color: 'success' };
+}
 
 function mapRate(d: QueryDocumentSnapshot<DocumentData>): Rate {
   return { id: d.id, ...d.data() } as Rate;
@@ -61,8 +83,6 @@ export default function RatesPage() {
 
     if (state === 'enabled') parts.push(where('enabled', '==', true));
     else if (state === 'disabled') parts.push(where('enabled', '==', false));
-    else if (state === 'ok') parts.push(where('status', '==', true));
-    else if (state === 'failing') parts.push(where('status', '==', false));
 
     if (debouncedCurrency) {
       parts.push(where('rate_currency', '>=', debouncedCurrency));
@@ -155,11 +175,12 @@ export default function RatesPage() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: '14%' }}>Currency</TableCell>
-              <TableCell sx={{ width: '38%' }}>Name / Source</TableCell>
-              <TableCell align="right" sx={{ width: '14%' }}>Rate</TableCell>
-              <TableCell align="center" sx={{ width: '12%' }}>State</TableCell>
-              <TableCell align="right" sx={{ width: '16%', display: { xs: 'none', md: 'table-cell' } }}>
+              <TableCell sx={{ width: '12%' }}>Currency</TableCell>
+              <TableCell sx={{ width: '32%' }}>Name / Source</TableCell>
+              <TableCell align="right" sx={{ width: '13%' }}>Rate</TableCell>
+              <TableCell align="center" sx={{ width: '11%' }}>State</TableCell>
+              <TableCell align="center" sx={{ width: '11%' }}>Freshness</TableCell>
+              <TableCell align="right" sx={{ width: '15%', display: { xs: 'none', md: 'table-cell' } }}>
                 Updated
               </TableCell>
               <TableCell align="right" sx={{ width: '1%', whiteSpace: 'nowrap' }}>Actions</TableCell>
@@ -168,7 +189,7 @@ export default function RatesPage() {
           <TableBody>
             {pager.loading && pager.rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                     <CircularProgress />
                   </Box>
@@ -204,9 +225,21 @@ export default function RatesPage() {
                   <Chip
                     size="small"
                     variant="outlined"
-                    label={rate.enabled === false ? 'Disabled' : rate.status ? 'OK' : 'Failing'}
-                    color={rate.enabled === false ? 'default' : rate.status ? 'success' : 'warning'}
+                    label={rate.enabled === false ? 'Disabled' : 'Enabled'}
+                    color={rate.enabled === false ? 'default' : 'success'}
                   />
+                </TableCell>
+                <TableCell align="center">
+                  {(() => {
+                    const { label, color } = freshness(rate);
+                    return (
+                      <Tooltip title={`Scraper last wrote this rate ${
+                        rate.updated_at?.toDate?.()?.toLocaleString() ?? 'never'
+                      }`}>
+                        <Chip size="small" variant="outlined" label={label} color={color} />
+                      </Tooltip>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' }, whiteSpace: 'nowrap' }}>
                   <Typography variant="caption" color="text.secondary">
@@ -230,7 +263,7 @@ export default function RatesPage() {
 
             {!pager.loading && pager.rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   <Typography color="text.secondary" py={3}>No rates found</Typography>
                 </TableCell>
               </TableRow>

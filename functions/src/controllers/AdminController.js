@@ -239,7 +239,7 @@ export class AdminController {
             const rate = Rate.fromFirestore(snapshot);
             const allowedFields = [
                 'rate_name', 'rate_currency',
-                'rate', 'last_rate', 'enabled', 'status', 'status_message'
+                'rate', 'last_rate', 'enabled'
             ];
 
             allowedFields.forEach(field => {

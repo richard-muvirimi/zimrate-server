@@ -64,7 +64,7 @@ const TEST_INFO = 'ZimRate API - Real-time Zimbabwe exchange rates';
  * Three realistic rates:
  *  - ZWG and ZAR from RBZ (same source)
  *  - ZWG from a black market source
- * All are enabled, status=true, updated within the last week.
+ * All are enabled and updated within the last week.
  */
 const TEST_RATES = [
     {
@@ -75,9 +75,7 @@ const TEST_RATES = [
         source_id: 'source1',
         rate: 26.5,
         last_rate: 26.0,
-        status: true,
         enabled: true,
-        status_message: '',
         updated_at: new Date('2026-04-14T10:00:00Z'),
         rate_updated_at: new Date('2026-04-14T09:00:00Z'),
         created_at: new Date('2026-01-01T00:00:00Z'),
@@ -95,9 +93,7 @@ const TEST_RATES = [
         source_id: 'source1',
         rate: 18.5,
         last_rate: 18.2,
-        status: true,
         enabled: true,
-        status_message: '',
         updated_at: new Date('2026-04-14T10:00:00Z'),
         rate_updated_at: new Date('2026-04-14T09:00:00Z'),
         created_at: new Date('2026-01-01T00:00:00Z'),
@@ -115,9 +111,7 @@ const TEST_RATES = [
         source_id: 'source2',
         rate: 28.0,
         last_rate: 27.5,
-        status: true,
         enabled: true,
-        status_message: '',
         updated_at: new Date('2026-04-15T10:00:00Z'),
         rate_updated_at: new Date('2026-04-15T08:00:00Z'),
         created_at: new Date('2026-01-01T00:00:00Z'),

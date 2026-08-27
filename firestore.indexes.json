@@ -9,24 +9,6 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "updated_at",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "rates",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "enabled",
-          "order": "ASCENDING"
-        },
-        {
           "fieldPath": "updated_at",
           "order": "ASCENDING"
         }
@@ -70,10 +52,6 @@
         },
         {
           "fieldPath": "rate_currency",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
           "order": "ASCENDING"
         },
         {
@@ -116,20 +94,6 @@
       "fields": [
         {
           "fieldPath": "enabled",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "rate_currency",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "rates",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "status",
           "order": "ASCENDING"
         },
         {

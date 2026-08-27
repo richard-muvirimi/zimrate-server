@@ -5,7 +5,6 @@ import _ from 'lodash';
 class Rate {
     constructor(data = {}) {
         this.id = data.id || null;
-        this.status = data.status || false;
         this.enabled = data.enabled || false;
         this.rate_name = data.rate_name || '';
         this.rate_currency = data.rate_currency || '';
@@ -14,7 +13,6 @@ class Rate {
         this.rate = data.rate || 0;
         this.last_rate = data.last_rate || 0;
         this.rate_updated_at = data.rate_updated_at || null;
-        this.status_message = data.status_message || '';
         this.created_at = data.created_at || null;
         this.updated_at = data.updated_at || null;
 
@@ -117,50 +115,28 @@ class Rate {
             baseFilters.dateAfter = Timestamp.fromDate(date);
         }
 
-        // Apply "updated" scope with separate queries (status = true OR updated within last week)
+        // The "updated" scope keeps stale rates out of the public API.
+        //
+        // This used to be a union of two queries: `status == true` OR updated in
+        // the last week. Because every scraped rate was written with
+        // status = true and nothing ever set it to false, the first query matched
+        // the entire collection and the week window never excluded anything.
+        // With the status field gone, the window is the whole scope.
+        let query = Rate.getCollection();
+        Object.entries(baseFilters).forEach(([key, value]) => {
+            if (key === 'dateAfter') {
+                query = query.where('rate_updated_at', '>', value);
+            } else {
+                query = query.where(key, '==', value);
+            }
+        });
+
         if (filters.applyUpdatedScope !== false) { // default to true unless explicitly disabled
             const oneWeekAgo = DateTime.now().minus({ weeks: 1 }).toJSDate();
-
-            // Query 1: Records with status = true
-            let activeQuery = Rate.getCollection();
-            Object.entries(baseFilters).forEach(([key, value]) => {
-                if (key === 'dateAfter') {
-                    activeQuery = activeQuery.where('rate_updated_at', '>', value);
-                } else {
-                    activeQuery = activeQuery.where(key, '==', value);
-                }
-            });
-            activeQuery = activeQuery.where('status', '==', true);
-            queries.push(activeQuery);
-
-            // Query 2: Records updated within last week (regardless of status)
-            let recentQuery = Rate.getCollection();
-            Object.entries(baseFilters).forEach(([key, value]) => {
-                if (key === 'dateAfter') {
-                    recentQuery = recentQuery.where('rate_updated_at', '>', value);
-                } else {
-                    recentQuery = recentQuery.where(key, '==', value);
-                }
-            });
-            recentQuery = recentQuery.where('updated_at', '>', Timestamp.fromDate(oneWeekAgo));
-            queries.push(recentQuery);
-        } else {
-            // Single query without updated scope
-            let query = Rate.getCollection();
-            Object.entries(baseFilters).forEach(([key, value]) => {
-                if (key === 'dateAfter') {
-                    query = query.where('rate_updated_at', '>', value);
-                } else {
-                    query = query.where(key, '==', value);
-                }
-            });
-
-            if (filters.status !== undefined) {
-                query = query.where('status', '==', filters.status);
-            }
-
-            queries.push(query);
+            query = query.where('updated_at', '>', Timestamp.fromDate(oneWeekAgo));
         }
+
+        queries.push(query);
 
         // Execute all queries and combine results
         const allRates = new Map(); // Use Map to deduplicate by ID
@@ -266,24 +242,19 @@ class Rate {
         return result;
     }
 
-    // Get unique currencies from the database
+    // Get unique currencies from the database.
+    // Matches the "updated" scope in findAll — see the note there on why the
+    // former `status == true` half of this union was doing nothing.
     static async getUniqueCurrencies() {
         const oneWeekAgo = DateTime.now().minus({ weeks: 1 }).toJSDate();
 
-        const [activeSnapshot, recentSnapshot] = await Promise.all([
-            Rate.getCollection()
-                .where('enabled', '==', true)
-                .where('status', '==', true)
-                .select('rate_currency')
-                .get(),
-            Rate.getCollection()
-                .where('enabled', '==', true)
-                .where('updated_at', '>', Timestamp.fromDate(oneWeekAgo))
-                .select('rate_currency')
-                .get()
-        ]);
+        const snapshot = await Rate.getCollection()
+            .where('enabled', '==', true)
+            .where('updated_at', '>', Timestamp.fromDate(oneWeekAgo))
+            .select('rate_currency')
+            .get();
 
-        return _.chain([...activeSnapshot.docs, ...recentSnapshot.docs])
+        return _.chain(snapshot.docs)
             .map(doc => doc.data().rate_currency)
             .compact()
             .map(c => c.toUpperCase())
@@ -348,9 +319,7 @@ class Rate {
                         rate: parseFloat(extracted.rate),
                         last_rate: parseFloat(extracted.rate), // no previous on first scrape
                         rate_updated_at: rateUpdatedAt.toDate(),
-                        status: true,
                         enabled: true,
-                        status_message: '',
                         created_at: now.toDate(),
                         updated_at: now.toDate()
                     });
@@ -366,8 +335,6 @@ class Rate {
                         last_rate: oldRate,
                         rate: parseFloat(extracted.rate),
                         rate_updated_at: rateUpdatedAt,
-                        status: true,
-                        status_message: '',
                         updated_at: now
                     });
                     results.push({ action: 'updated', currency });
