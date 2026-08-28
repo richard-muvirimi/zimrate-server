@@ -69,10 +69,9 @@ paths:
                 - Rate
             summary: Get All Rates.
             description: >-
-                Get all rates in the system, expressed per 1 USD. Fields are trimmed to
-                the request: name and url are returned only when prefer is absent, and
-                last_rate only with extra. Version 2 is also available, and both
-                versions are fully supported.
+                Get all rates in the system, returned against the US dollar. Version 2
+                is also available and lets you choose the base currency. Both versions
+                are fully supported.
             parameters:
                 - in: query
                   name: search
@@ -187,10 +186,9 @@ paths:
                 - Rate
             summary: Get All Rates.
             description: >-
-                Get all rates in the system, expressed per 1 USD. Fields are trimmed to
-                the request: name and url are returned only when prefer is absent, and
-                last_rate only with extra. Version 2 is also available, and both
-                versions are fully supported.
+                Get all rates in the system, returned against the US dollar. Version 2
+                is also available and lets you choose the base currency. Both versions
+                are fully supported.
             requestBody:
                 required: true
                 content:
@@ -289,30 +287,31 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
-    /v2:
+    /v2/{base}:
         get:
             tags:
                 - Rate
             summary: Get All Rates.
             description: >-
-                Get all rates in the system. Version 2 takes the same filters as version
-                1, returns the complete record for every rate with no fields trimmed,
-                and applies no staleness window — where version 1 leaves out any rate
-                that has not been updated in over a week. Both versions are fully
+                Get all rates in the system, returned against a base currency of your
+                choosing. Every rate carries its full detail. Both versions are fully
                 supported.
 
 
-                All rates are expressed per 1 USD. Version 2 returns them against
-                whichever currency you name in base, which is required. Passing
-                base=USD returns the rates as stored. Where several sources quote the
-                base currency their mean is used, and the base currency is not included
-                in the results, as its rate against itself is always 1.
+                The base currency goes in the url, for example /v2/ZAR, and is case
+                insensitive. Use /v2/USD for rates against the US dollar. Where several
+                sources quote the base currency their mean is used, and the base
+                currency is not included in the results, as its rate against itself is
+                always 1.
             parameters:
-                - in: query
+                - in: path
                   name: base
                   required: true
                   example: ZAR
-                  description: Currency code to express all rates against. Must have at least one rate in the system.
+                  description: >-
+                      Currency code every rate is returned against, as a path segment.
+                      Case insensitive, so /v2/zar and /v2/ZAR are equivalent. Must have
+                      at least one rate in the system.
                   schema:
                       type: string
                 - in: query
@@ -419,20 +418,27 @@ paths:
             tags:
                 - Rate
             summary: Get All Rates.
-            description: Same as the GET form; parameters are sent as a form body.
+            description: >-
+                Same as the GET form; base stays in the path and the remaining
+                parameters are sent as a form body.
+            parameters:
+                - in: path
+                  name: base
+                  required: true
+                  example: ZAR
+                  description: >-
+                      Currency code every rate is returned against, as a path segment.
+                      Case insensitive, so /v2/zar and /v2/ZAR are equivalent. Must have
+                      at least one rate in the system.
+                  schema:
+                      type: string
             requestBody:
                 required: true
                 content:
                     application/x-www-form-urlencoded:
                         schema:
                             type: object
-                            required:
-                                - base
                             properties:
-                                base:
-                                    type: string
-                                    example: ZAR
-                                    description: Currency code to express all rates against. Must have at least one rate in the system.
                                 currency:
                                     type: string
                                     example: ZWG

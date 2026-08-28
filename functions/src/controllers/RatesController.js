@@ -84,7 +84,13 @@ export class RatesController {
      */
     static async version2(req, res) {
         try {
-            const { error, value } = v2QuerySchema.validate({ ...req.query, ...req.body });
+            // base comes from the path (/api/v2/ZAR), never the query string.
+            // Joi uppercases it, so the url segment is case insensitive.
+            const { error, value } = v2QuerySchema.validate({
+                ...req.query,
+                ...req.body,
+                base: req.params.base,
+            });
             if (error) {
                 return res.status(StatusCodes.BAD_REQUEST).json({
                     status: false,

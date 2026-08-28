@@ -43,9 +43,14 @@ export default function SpecPanel({
   // paths it is given, so the unused ones cost nothing.
   const versionSpec = useMemo(() => {
     if (!spec) return null;
-    const path = `/${version}`;
     const paths = (spec.paths ?? {}) as Record<string, unknown>;
-    if (!paths[path]) return null;
+    // Matched rather than constructed: v2's key carries a templated segment
+    // (/v2/{base}), so building `/${version}` finds nothing and the panel would
+    // silently sit on its spinner.
+    const path = Object.keys(paths).find(
+      (candidate) => candidate === `/${version}` || candidate.startsWith(`/${version}/`),
+    );
+    if (!path) return null;
 
     // Redoc prints "title (info.version)". Unfiltered that is the specification
     // document's own version, which reads as an api version and contradicts the

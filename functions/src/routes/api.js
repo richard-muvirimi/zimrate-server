@@ -12,6 +12,9 @@ const router = express.Router();
 // ── Public API endpoints ──────────────────────────────────────────────────────
 router.all('/', RatesController.version0);
 router.all('/v1', RatesController.version1);
+// base is a path segment on v2: /api/v2/ZAR. The bare /v2 form is kept so it
+// answers with a 400 explaining the shape rather than a bare "route not found".
+router.all('/v2/:base', RatesController.version2);
 router.all('/v2', RatesController.version2);
 
 // Branding — public. The landing bundle is deliberately Firebase-free, so the

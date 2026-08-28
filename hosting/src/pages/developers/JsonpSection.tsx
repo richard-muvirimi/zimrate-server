@@ -74,20 +74,17 @@ export default function JsonpSection({
             calls version 1 — it is hosted externally, so it does not follow the tabs.
             The snippet above does.
           </Typography>
-          <Stack spacing={3}>
-            <CodeBlock language="javascript" code={example} />
-            <Paper sx={{ p: 1.5, borderRadius: 3 }}>
-              <Box
-                component="iframe"
-                title="ZimRate JSONP CodePen"
-                src="https://codepen.io/tygalive/embed/ZEVWOqm?default-tab=js%2Cresult&editable=true"
-                sx={{ width: '100%', minHeight: 520, border: 0, borderRadius: 2 }}
-                loading="lazy"
-                allow="clipboard-write"
-                allowFullScreen
-              />
-            </Paper>
-          </Stack>
+          <Paper sx={{ p: 1.5, borderRadius: 3 }}>
+            <Box
+              component="iframe"
+              title="ZimRate JSONP CodePen"
+              src="https://codepen.io/tygalive/embed/ZEVWOqm?default-tab=js%2Cresult&editable=true"
+              sx={{ width: '100%', minHeight: 520, border: 0, borderRadius: 2 }}
+              loading="lazy"
+              allow="clipboard-write"
+              allowFullScreen
+            />
+          </Paper>
         </AccordionDetails>
       </Accordion>
     </Box>

@@ -93,14 +93,11 @@ export default function GraphqlSection({
         </AccordionSummary>
         <AccordionDetails>
           <Typography color="text.secondary" sx={{ mb: 2.5 }}>
-            You may use the preloaded example below as a starting point.
+            The query above is preloaded here as a starting point.
           </Typography>
-          <Stack spacing={2}>
-            <CodeBlock language="graphql" code={GRAPHQL_QUERY} />
-            <Paper sx={{ p: 2, borderRadius: 3 }}>
-              <Box id={sandboxId} sx={{ height: 760, borderRadius: 2, overflow: 'hidden' }} />
-            </Paper>
-          </Stack>
+          <Paper sx={{ p: 2, borderRadius: 3 }}>
+            <Box id={sandboxId} sx={{ height: 760, borderRadius: 2, overflow: 'hidden' }} />
+          </Paper>
         </AccordionDetails>
       </Accordion>
     </Box>

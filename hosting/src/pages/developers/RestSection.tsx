@@ -1,9 +1,7 @@
 import { Box, Typography } from '@mui/material';
 import CodeBlock from './CodeBlock';
-import ParamList from './ParamList';
 import SpecPanel from './SpecPanel';
 import VersionTabs from './VersionTabs';
-import { V1_PARAMS, V2_PARAMS } from './params';
 import { REST_RESPONSE, REST_V2_RESPONSE, restRequest, restV2Request } from './examples';
 import type { RestVersion } from './types';
 
@@ -13,16 +11,16 @@ export default function RestSection({
   restUrl,
   restV2Url,
   openApiUrl,
-  paramDocs,
 }: {
   version: RestVersion;
   onVersionChange: (next: RestVersion) => void;
   restUrl: string;
   restV2Url: string;
   openApiUrl: string;
-  paramDocs: Record<string, string>;
 }) {
-  const versionUrl = version === 'v2' ? restV2Url : restUrl;
+  // A real, clickable url rather than a /{base} template — v2 needs a currency
+  // in the path to respond at all.
+  const versionUrl = version === 'v2' ? `${restV2Url}/ZAR` : restUrl;
 
   return (
     <Box>
@@ -38,24 +36,12 @@ export default function RestSection({
 
       {version === 'v2' && (
         <Box role="tabpanel" id="rest-panel-v2" aria-labelledby="rest-tab-v2">
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
-            Version 2 is a full rates endpoint in its own right, not a variant of version
-            1. It takes the same filters, returns the complete record for every rate with
-            no fields trimmed, and applies no staleness window — where version 1 leaves
-            out any rate that has not been updated in over a week.
-          </Typography>
           <Typography color="text.secondary" sx={{ mb: 3 }}>
-            All rates are expressed per 1 USD. Version 2 returns them as{' '}
-            <code>{'{ base, rates, info }'}</code>, converted to whichever currency you
-            name in <code>base</code> — pass <code>base=USD</code> to get them as stored.
-            The base currency is left out of the results, as its rate against itself is
-            always 1.
+            Pick any currency as your base and every rate comes back converted to it.
+            Put it in the url, like <code>/api/v2/ZAR</code> — upper or lower case, it
+            does not matter. Each rate arrives with its full detail, and the base
+            currency itself is left out, since against itself it would always be 1.
           </Typography>
-
-          <Typography variant="h6" gutterBottom>Parameters</Typography>
-          <Box sx={{ mb: 3 }}>
-            <ParamList names={V2_PARAMS} docs={paramDocs} required={['base']} />
-          </Box>
 
           <Typography variant="h6" gutterBottom>Request</Typography>
           <Box sx={{ mb: 3 }}>
@@ -69,22 +55,11 @@ export default function RestSection({
 
       {version === 'v1' && (
         <Box role="tabpanel" id="rest-panel-v1" aria-labelledby="rest-tab-v1">
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
-            All rates are expressed per 1 USD. Version 1 returns them as{' '}
-            <code>{'{ USD, info }'}</code>, and leaves out any rate that has not been
-            updated in over a week.
-          </Typography>
           <Typography color="text.secondary" sx={{ mb: 3 }}>
-            Fields are trimmed to what the request asks for: <code>name</code> and{' '}
-            <code>url</code> are returned only when <code>prefer</code> is absent, and{' '}
-            <code>last_rate</code> only with <code>extra</code>. Version 2 always returns
-            all of them.
+            The original endpoint. Every rate comes back against the US dollar, and you
+            get only the fields your request asks for. It is unchanged and fully
+            supported — if it already works for you, there is no reason to move.
           </Typography>
-
-          <Typography variant="h6" gutterBottom>Parameters</Typography>
-          <Box sx={{ mb: 3 }}>
-            <ParamList names={V1_PARAMS} docs={paramDocs} />
-          </Box>
 
           <Typography variant="h6" gutterBottom>Request</Typography>
           <Box sx={{ mb: 3 }}>
@@ -92,10 +67,6 @@ export default function RestSection({
           </Box>
 
           <Typography variant="h6" gutterBottom>Response</Typography>
-          <Typography color="text.secondary" variant="body2" sx={{ mb: 1.5 }}>
-            This request sets <code>prefer</code>, so <code>name</code> and{' '}
-            <code>url</code> are not included.
-          </Typography>
           <CodeBlock language="json" code={REST_RESPONSE} />
         </Box>
       )}

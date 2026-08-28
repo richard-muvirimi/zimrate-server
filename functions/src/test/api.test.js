@@ -885,7 +885,7 @@ describe('API v2', () => {
     const ZAR_PER_USD = 18.5;
 
     it('returns the { base, rates, info } envelope', async () => {
-        const res = await request.get('/api/v2?base=USD');
+        const res = await request.get('/api/v2/USD');
         expect(res.status).toBe(200);
         expect(res.body.base).toBe('USD');
         expect(Array.isArray(res.body.rates)).toBe(true);
@@ -893,14 +893,14 @@ describe('API v2', () => {
     });
 
     it('returns stored rates unchanged when the base is USD', async () => {
-        const res = await request.get('/api/v2?base=USD');
+        const res = await request.get('/api/v2/USD');
         const zar = res.body.rates.find(r => r.currency === 'ZAR');
         // USD is the native base, so no conversion should happen.
         expect(zar.rate).toBe(ZAR_PER_USD);
     });
 
     it('cross-multiplies through the base currency and excludes the base itself', async () => {
-        const res = await request.get('/api/v2?base=ZAR');
+        const res = await request.get('/api/v2/ZAR');
         expect(res.status).toBe(200);
 
         // Two ZWG rates exist (RBZ 26.5, Black Market 28.0), so assert by name
@@ -921,7 +921,7 @@ describe('API v2', () => {
         // would be gone and the divisor with them. Asserting on the constraints
         // that were issued is the only way to catch it in this harness.
         ratesQuery.where.mockClear();
-        const res = await request.get('/api/v2?base=ZAR&currency=ZWG');
+        const res = await request.get('/api/v2/ZAR?currency=ZWG');
         expect(res.status).toBe(200);
 
         const fields = ratesQuery.where.mock.calls.map(c => c[0]);
@@ -930,7 +930,7 @@ describe('API v2', () => {
     });
 
     it('filters by currency without starving the cross-rate divisor', async () => {
-        const res = await request.get('/api/v2?base=ZAR&currency=ZWG');
+        const res = await request.get('/api/v2/ZAR?currency=ZWG');
         expect(res.status).toBe(200);
         expect(res.body.rates.length).toBeGreaterThan(0);
         expect(res.body.rates.every(r => r.currency === 'ZWG')).toBe(true);
@@ -940,50 +940,67 @@ describe('API v2', () => {
 
     it('applies the currency filter on the USD short-circuit too', async () => {
         // base=USD returns early, so it needs the filters applied separately.
-        const res = await request.get('/api/v2?base=USD&currency=ZAR');
+        const res = await request.get('/api/v2/USD?currency=ZAR');
         expect(res.status).toBe(200);
         expect(res.body.rates.every(r => r.currency === 'ZAR')).toBe(true);
     });
 
     it('narrows by rate name via search', async () => {
-        const res = await request.get('/api/v2?base=USD&search=black');
+        const res = await request.get('/api/v2/USD?search=black');
         expect(res.status).toBe(200);
         expect(res.body.rates.length).toBeGreaterThan(0);
         expect(res.body.rates.every(r => /black/i.test(r.name))).toBe(true);
     });
 
     it('rejects search and name together', async () => {
-        const res = await request.get('/api/v2?base=USD&search=rbz&name=rbz');
+        const res = await request.get('/api/v2/USD?search=rbz&name=rbz');
         expect(res.status).toBe(400);
     });
 
     it('excludes rates older than the date parameter', async () => {
         // Fixture rate_updated_at values are in Apr 2026; ask for anything newer.
         const future = DateTime.fromISO('2026-04-16T00:00:00Z').toUnixInteger();
-        const res = await request.get(`/api/v2?base=USD&date=${future}`);
+        const res = await request.get(`/api/v2/USD?date=${future}`);
         expect(res.status).toBe(200);
         expect(res.body.rates).toHaveLength(0);
     });
 
-    it('requires a base currency', async () => {
+    it('treats the base path segment as case insensitive', async () => {
+        // It is a url, so lowercase must work; Joi uppercases before matching.
+        const lower = await request.get('/api/v2/zar');
+        const upper = await request.get('/api/v2/ZAR');
+        expect(lower.status).toBe(200);
+        expect(lower.body.base).toBe('ZAR');
+        expect(lower.body.rates).toEqual(upper.body.rates);
+    });
+
+    it('rejects the bare /v2 form with guidance towards the path', async () => {
         const res = await request.get('/api/v2');
+        expect(res.status).toBe(400);
+        expect(res.body.message).toContain('/api/v2/ZAR');
+    });
+
+    it('no longer accepts base as a query parameter', async () => {
+        // base moved into the path; the old query form must fail loudly rather
+        // than silently returning USD-based rates.
+        const res = await request.get('/api/v2?base=ZAR');
         expect(res.status).toBe(400);
     });
 
     it('404s for a base currency with no rates', async () => {
-        const res = await request.get('/api/v2?base=JPY');
+        const res = await request.get('/api/v2/JPY');
         expect(res.status).toBe(404);
     });
 
     it('serves JSONP when a callback is given', async () => {
-        const res = await request.get('/api/v2?base=USD&callback=myFunction');
+        const res = await request.get('/api/v2/USD?callback=myFunction');
         expect(res.status).toBe(200);
         expect(res.headers['content-type']).toContain('application/javascript');
         expect(res.text).toMatch(/^myFunction\(/);
     });
 
     it('omits the notice when info=false', async () => {
-        const res = await request.get('/api/v2?base=USD&info=false');
+        const res = await request.get('/api/v2/USD?info=false');
         expect(res.status).toBe(200);
         expect(res.body.info).toBeUndefined();
     });

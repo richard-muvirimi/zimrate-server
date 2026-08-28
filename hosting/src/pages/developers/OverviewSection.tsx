@@ -16,7 +16,7 @@ export default function OverviewSection({
   loading: boolean;
 }) {
   return (
-    <Grid container spacing={3} sx={{ mb: 4 }}>
+    <Grid container spacing={3} sx={{ mb: 8 }}>
       <Grid size={{ xs: 12, lg: 8 }}>
         <Paper sx={{ p: 3, borderRadius: 3, height: '100%' }}>
           <Typography variant="h4" gutterBottom>
@@ -43,11 +43,11 @@ export default function OverviewSection({
           <Typography color="text.secondary" sx={{ mb: 3 }}>
             Every api accepts query parameters to narrow what comes back. Each one takes a
             different set, so they are listed with the api that accepts them — the REST
-            parameters are under each version below, and the Graphql ones under Graphql.
+            ones in the specification below, and the Graphql ones under Graphql.
           </Typography>
           <Typography color="text.secondary">
-            Apart from <code>base</code> on version 2 of the REST api, they are all optional
-            and are there only as a convenience to get the specific data that you need.
+            They are all optional and are there only as a convenience to get the specific
+            data that you need.
           </Typography>
         </Paper>
       </Grid>

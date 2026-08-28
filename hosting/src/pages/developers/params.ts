@@ -1,24 +1,16 @@
 /**
- * Query parameter reference for every api on the Developers page.
+ * Query parameter reference for the Graphql section.
  *
- * The descriptions live here once and each section renders the subset its
- * endpoint accepts. Three copies of this prose is how the v1, v2 and Graphql
- * lists would quietly drift apart.
+ * The REST parameters are not listed here: the rendered specification sits
+ * directly below the REST examples and documents them in full, so a second
+ * hand-maintained list would only be one more thing to keep in step. Graphql
+ * has no such panel, which is why it keeps one.
  *
- * These lists mirror the Joi schemas in functions/src/validation/schemas.js —
- * `rateQuerySchema`, `v2QuerySchema` and `graphqlRateQuerySchema` respectively.
- * If a parameter is added there, add it here.
+ * GRAPHQL_PARAMS mirrors `graphqlRateQuerySchema` in
+ * functions/src/validation/schemas.js.
  */
 
 export const PREFER_VALUES = ['MIN', 'MAX', 'MEAN', 'MEDIAN', 'RANDOM', 'MODE'];
-
-export const V1_PARAMS = [
-  'search', 'name', 'source', 'currency', 'date', 'prefer', 'callback', 'extra', 'info',
-];
-
-export const V2_PARAMS = [
-  'base', 'search', 'name', 'currency', 'date', 'prefer', 'callback', 'info',
-];
 
 export const GRAPHQL_PARAMS = ['search', 'currency', 'date', 'prefer'];
 

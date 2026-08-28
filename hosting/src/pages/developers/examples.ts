@@ -30,7 +30,8 @@ export const REST_RESPONSE = [
   '}',
 ].join('\n');
 
-export const restV2Request = (restV2Url: string) => `curl '${restV2Url}?base=ZAR'`;
+/** base is a path segment on v2, and the url is case insensitive. */
+export const restV2Request = (restV2Url: string) => `curl '${restV2Url}/ZAR'`;
 
 /** v2 does not trim fields, so every rate carries the full record. */
 export const REST_V2_RESPONSE = [
@@ -52,11 +53,11 @@ export const REST_V2_RESPONSE = [
 ].join('\n');
 
 export function jsonpRequest(versionUrl: string, version: RestVersion) {
-  // base is required on v2, so a v2 example without it would return a 400.
-  const query = version === 'v2' ? '?base=ZAR&callback=myFunction' : '?callback=myFunction';
+  // v2 carries its base currency in the path, so the url gains a segment.
+  const url = version === 'v2' ? `${versionUrl}/ZAR?callback=myFunction` : `${versionUrl}?callback=myFunction`;
   return [
     'var s = document.createElement("script");',
-    `s.src = "${versionUrl}${query}";`,
+    `s.src = "${url}";`,
     'document.body.appendChild(s);',
     '',
     'function myFunction(rates) {',

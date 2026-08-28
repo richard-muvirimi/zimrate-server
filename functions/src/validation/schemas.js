@@ -43,7 +43,12 @@ export const graphqlRateQuerySchema = Joi.object({
 });
 
 export const v2QuerySchema = Joi.object({
-    base: Joi.string().uppercase().required(),
+    // Supplied as a path segment, not a query parameter. uppercase() is what
+    // makes /api/v2/zar and /api/v2/ZAR equivalent.
+    base: Joi.string().uppercase().required().messages({
+        'any.required': 'base must be given as a path segment, for example /api/v2/ZAR',
+        'string.empty': 'base must be given as a path segment, for example /api/v2/ZAR',
+    }),
     prefer: Joi.string().valid('min', 'max', 'mean', 'median', 'random', 'mode', 'MIN', 'MAX', 'MEAN', 'MEDIAN', 'RANDOM', 'MODE').optional(),
     currency: Joi.string().uppercase().optional(),
     search: Joi.string().optional(),

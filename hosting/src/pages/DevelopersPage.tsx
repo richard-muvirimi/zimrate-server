@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Box, Button, Paper, Stack, Typography } from '@mui/material';
+import { Box, Button, Divider, Paper, Stack, Typography } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useQuery } from '@apollo/client/react';
 import PageHero from '../components/PageHero';
@@ -73,14 +73,16 @@ export default function DevelopersPage() {
         <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
           <OverviewSection openApiUrl={openApiUrl} loading={loading} />
 
-          <Stack spacing={3}>
+          {/* Each api is long enough to fill a screen on its own, so the gap
+              between them is deliberately much larger than any gap inside one,
+              with a rule to make the boundary unmistakable. */}
+          <Stack spacing={8} divider={<Divider />}>
             <RestSection
               version={restVersion}
               onVersionChange={setRestVersion}
               restUrl={restUrl}
               restV2Url={restV2Url}
               openApiUrl={openApiUrl}
-              paramDocs={paramDocs}
             />
 
             <JsonpSection
@@ -102,7 +104,7 @@ export default function DevelopersPage() {
             />
           </Stack>
 
-          <Paper sx={{ mt: 4, p: 3, borderRadius: 3 }}>
+          <Paper sx={{ mt: 8, p: 3, borderRadius: 3 }}>
             <Typography variant="h5" gutterBottom>
               ...
             </Typography>
