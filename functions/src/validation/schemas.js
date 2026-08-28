@@ -46,8 +46,21 @@ export const v2QuerySchema = Joi.object({
     base: Joi.string().uppercase().required(),
     prefer: Joi.string().valid('min', 'max', 'mean', 'median', 'random', 'mode', 'MIN', 'MAX', 'MEAN', 'MEDIAN', 'RANDOM', 'MODE').optional(),
     currency: Joi.string().uppercase().optional(),
+    search: Joi.string().optional(),
+    name: Joi.string().optional(),
+    date: Joi.number().integer().max(DateTime.now().toUnixInteger()).optional(),
     callback: Joi.string().optional(),
     info: isBoolean.optional()
+}).custom((value, helpers) => {
+    // Same rule as rateQuerySchema, minus the deprecated `source` alias, which
+    // a new endpoint has no reason to carry.
+    const exclusiveFields = ['search', 'name'].filter(field => value[field] !== undefined);
+    if (exclusiveFields.length > 1) {
+        return helpers.error('object.conflict', {
+            message: 'search and name fields are mutually exclusive'
+        });
+    }
+    return value;
 });
 
 // ── Contact form + SMTP settings ──────────────────────────────────────────────

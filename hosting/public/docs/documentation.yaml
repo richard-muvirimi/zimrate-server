@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
     title: ZimRate Rest Api Documentation
     description: Documentation for the ZimRate Rest Api.
-    version: 1.0.0
+    version: 1.1.0
 servers:
     - url: https://zimrate.tyganeutronics.com/api
       description: Production Server.
@@ -33,6 +33,34 @@ components:
                 last_updated:
                     type: number
                     description: The date the rate was last updated.
+        V2Response:
+            type: object
+            properties:
+                base:
+                    type: string
+                    example: ZAR
+                    description: The base currency every rate in this response is expressed against.
+                rates:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Rate'
+                    description: >-
+                        Rates expressed per 1 unit of the base currency. The base
+                        currency itself is not included, as its rate against itself is
+                        always 1.
+                info:
+                    type: string
+                    description: System notice message. Omitted when the info parameter is false.
+        Error:
+            type: object
+            properties:
+                status:
+                    type: boolean
+                    example: false
+                    description: Always false on an error response.
+                message:
+                    type: string
+                    description: Human readable description of what went wrong.
 
 paths:
     /v1:
@@ -40,7 +68,11 @@ paths:
             tags:
                 - Rate
             summary: Get All Rates.
-            description: Get all rates in the system.
+            description: >-
+                Get all rates in the system, expressed per 1 USD. Fields are trimmed to
+                the request: name and url are returned only when prefer is absent, and
+                last_rate only with extra. Version 2 is also available, and both
+                versions are fully supported.
             parameters:
                 - in: query
                   name: search
@@ -114,8 +146,8 @@ paths:
                                       description: 'Content-Type: application/json'
                                       example: application/json
                                     - type: string
-                                      description: 'Content-Type: text/javascript'
-                                      example: text/javascript
+                                      description: 'Content-Type: application/javascript'
+                                      example: application/javascript
                         Access-Control-Allow-Origin:
                             schema:
                                 type: string
@@ -133,16 +165,32 @@ paths:
                                         type: array
                                         items:
                                             $ref: '#/components/schemas/Rate'
-                        text/plain:
+                        application/javascript:
                             schema:
                                 type: string
                                 example: 'callback({...});'
                                 description: 'callback({...});'
+                '400':
+                    description: A parameter failed validation - for example passing 'search' together with 'name'.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
         post:
             tags:
                 - Rate
             summary: Get All Rates.
-            description: Get all rates in the system.
+            description: >-
+                Get all rates in the system, expressed per 1 USD. Fields are trimmed to
+                the request: name and url are returned only when prefer is absent, and
+                last_rate only with extra. Version 2 is also available, and both
+                versions are fully supported.
             requestBody:
                 required: true
                 content:
@@ -205,8 +253,8 @@ paths:
                                       description: 'Content-Type: application/json'
                                       example: application/json
                                     - type: string
-                                      description: 'Content-Type: text/javascript'
-                                      example: text/javascript
+                                      description: 'Content-Type: application/javascript'
+                                      example: application/javascript
                         Access-Control-Allow-Origin:
                             schema:
                                 type: string
@@ -224,8 +272,234 @@ paths:
                                         type: array
                                         items:
                                             $ref: '#/components/schemas/Rate'
-                        text/javascript:
+                        application/javascript:
                             schema:
                                 type: string
                                 example: 'callback({...});'
                                 description: 'callback({...});'
+                '400':
+                    description: A parameter failed validation - for example passing 'search' together with 'name'.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+    /v2:
+        get:
+            tags:
+                - Rate
+            summary: Get All Rates.
+            description: >-
+                Get all rates in the system. Version 2 takes the same filters as version
+                1, returns the complete record for every rate with no fields trimmed,
+                and applies no staleness window — where version 1 leaves out any rate
+                that has not been updated in over a week. Both versions are fully
+                supported.
+
+
+                All rates are expressed per 1 USD. Version 2 returns them against
+                whichever currency you name in base, which is required. Passing
+                base=USD returns the rates as stored. Where several sources quote the
+                base currency their mean is used, and the base currency is not included
+                in the results, as its rate against itself is always 1.
+            parameters:
+                - in: query
+                  name: base
+                  required: true
+                  example: ZAR
+                  description: Currency code to express all rates against. Must have at least one rate in the system.
+                  schema:
+                      type: string
+                - in: query
+                  name: currency
+                  example: ZWG
+                  description: Return only this currency. Must exist in the system.
+                  schema:
+                      type: string
+                - in: query
+                  name: search
+                  example: RBZ
+                  description: Filter rates by name, matching any part of it. Cannot be used with 'name'.
+                  schema:
+                      type: string
+                - in: query
+                  name: name
+                  example: RBZ
+                  description: Alias of 'search'. Cannot be used with 'search'.
+                  schema:
+                      type: string
+                - in: query
+                  name: date
+                  description: Return rates last updated after this specific date. Uses Unix timestamp format.
+                  schema:
+                      type: number
+                - in: query
+                  name: prefer
+                  example: MIN
+                  description: Aggregate rates by currency before converting.
+                  schema:
+                      type: string
+                      enum:
+                          - MIN
+                          - MAX
+                          - MEAN
+                          - MEDIAN
+                          - MODE
+                          - RANDOM
+                - in: query
+                  name: callback
+                  example: callback
+                  description: JSONP callback function name. When provided, response will be in JSONP format.
+                  schema:
+                      type: string
+                - in: query
+                  name: info
+                  example: true
+                  description: Whether to include system notice information in the response.
+                  schema:
+                      type: boolean
+            responses:
+                '200':
+                    description: An object with the base currency, the converted rates and a notice message.
+                    headers:
+                        Content-Type:
+                            schema:
+                                type: string
+                                oneOf:
+                                    - type: string
+                                      description: 'Content-Type: application/json'
+                                      example: application/json
+                                    - type: string
+                                      description: 'Content-Type: application/javascript'
+                                      example: application/javascript
+                        Access-Control-Allow-Origin:
+                            schema:
+                                type: string
+                                example: '*'
+                                description: 'Access-Control-Allow-Origin: *'
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/V2Response'
+                        application/javascript:
+                            schema:
+                                type: string
+                                example: 'callback({...});'
+                                description: 'callback({...});'
+                '400':
+                    description: The base parameter was missing, or a parameter failed validation - for example passing both 'search' and 'name'.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: No rates exist for the requested base currency.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '422':
+                    description: The base currency exists but its rate is zero or unavailable, so no conversion can be performed.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+        post:
+            tags:
+                - Rate
+            summary: Get All Rates.
+            description: Same as the GET form; parameters are sent as a form body.
+            requestBody:
+                required: true
+                content:
+                    application/x-www-form-urlencoded:
+                        schema:
+                            type: object
+                            required:
+                                - base
+                            properties:
+                                base:
+                                    type: string
+                                    example: ZAR
+                                    description: Currency code to express all rates against. Must have at least one rate in the system.
+                                currency:
+                                    type: string
+                                    example: ZWG
+                                    description: Return only this currency. Must exist in the system.
+                                search:
+                                    type: string
+                                    example: RBZ
+                                    description: Filter rates by name, matching any part of it. Cannot be used with 'name'.
+                                name:
+                                    type: string
+                                    example: RBZ
+                                    description: Alias of 'search'. Cannot be used with 'search'.
+                                date:
+                                    type: number
+                                    description: Return rates last updated after this specific date. Uses Unix timestamp format.
+                                prefer:
+                                    type: string
+                                    example: MIN
+                                    description: Aggregate rates by currency before converting.
+                                    enum:
+                                        - MIN
+                                        - MAX
+                                        - MEAN
+                                        - MEDIAN
+                                        - MODE
+                                        - RANDOM
+                                callback:
+                                    type: string
+                                    example: callback
+                                    description: JSONP callback function name. When provided, response will be in JSONP format.
+                                info:
+                                    type: boolean
+                                    example: true
+                                    description: Whether to include system notice information in the response.
+            responses:
+                '200':
+                    description: An object with the base currency, the converted rates and a notice message.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/V2Response'
+                        application/javascript:
+                            schema:
+                                type: string
+                                example: 'callback({...});'
+                                description: 'callback({...});'
+                '400':
+                    description: The base parameter was missing, or a parameter failed validation.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: No rates exist for the requested base currency.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '422':
+                    description: The base currency exists but its rate is zero or unavailable.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'

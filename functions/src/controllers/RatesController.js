@@ -4,6 +4,7 @@ import { RateService } from '../services/RateService.js';
 import { rateQuerySchema, v2QuerySchema } from '../validation/schemas.js';
 import Option from '../models/Option.js';
 import Rate from '../models/Rate.js';
+import { DateTime } from 'luxon';
 import _ from 'lodash';
 
 export class RatesController {
@@ -91,11 +92,15 @@ export class RatesController {
                 });
             }
 
-            const { base, prefer, currency, callback, info: includeInfo } = value;
+            const { base, prefer, currency, search, name, date, callback, info: includeInfo } = value;
 
             // Fetch all enabled rates (no updated scope so we have a full picture for cross-rates)
+            //
+            // Deliberately unfiltered. User filters are applied to the OUTPUT below,
+            // never here: narrowing the query first can remove the base currency's
+            // own rates, which is what the divisor is computed from — that made
+            // `currency` 404 for every non-USD base.
             const filters = { enabled: true, applyUpdatedScope: false };
-            if (currency) filters.currency = currency;
 
             let allRates;
             if (prefer) {
@@ -106,7 +111,8 @@ export class RatesController {
 
             // Short-circuit: if base is USD, return rates as-is (USD is the native base)
             if (base === 'USD') {
-                const rates = allRates.map(r => r.toAPI());
+                const rates = RatesController._applyV2Filters(allRates, { currency, search, name, date })
+                    .map(r => r.toAPI());
 
                 const response = { base: 'USD', rates };
                 if (includeInfo !== false) {
@@ -136,8 +142,11 @@ export class RatesController {
                 });
             }
 
-            // Cross-multiply all rates (exclude the base currency itself from results)
-            const rates = allRates
+            // Cross-multiply all rates (exclude the base currency itself from results).
+            // Filters run after the divisor is known, so narrowing the output can
+            // never starve the cross-rate maths.
+            const rates = RatesController
+                ._applyV2Filters(allRates, { currency, search, name, date })
                 .filter(r => r.rate_currency !== base)
                 .map(r => {
                     if (!r.rate || r.rate === 0) return null;
@@ -166,6 +175,38 @@ export class RatesController {
                 message: error.message
             });
         }
+    }
+
+    /**
+     * v2 output filters, applied in memory on Rate models before toAPI().
+     *
+     * In memory rather than in the Firestore query because v2 needs the base
+     * currency's rates to compute its divisor — filtering at query time can
+     * remove them and turn a valid request into a 404.
+     *
+     * Runs before toAPI() so rate_updated_at is still a Date rather than the
+     * unix integer toAPI() converts it to.
+     */
+    static _applyV2Filters(rates, { currency, search, name, date }) {
+        let result = rates;
+
+        if (currency) {
+            result = result.filter(r => r.rate_currency === currency);
+        }
+
+        // search and name are aliases, and validation rejects passing both.
+        const term = search || name;
+        if (term) {
+            const needle = term.toLowerCase();
+            result = result.filter(r => (r.rate_name || '').toLowerCase().includes(needle));
+        }
+
+        if (date) {
+            const after = DateTime.fromSeconds(date).toJSDate();
+            result = result.filter(r => r.rate_updated_at && r.rate_updated_at > after);
+        }
+
+        return result;
     }
 
     static _sendV2Response(res, response, callback) {

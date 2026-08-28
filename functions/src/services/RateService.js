@@ -14,8 +14,7 @@ export class RateService {
         } = params;
 
         const filters = {
-            enabled: true,
-            status: true
+            enabled: true
         };
 
         // Apply search filters
