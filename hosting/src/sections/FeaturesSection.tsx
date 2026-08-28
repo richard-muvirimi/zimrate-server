@@ -5,7 +5,7 @@ import MoneyOffIcon from '@mui/icons-material/MoneyOff';
 import UpdateIcon from '@mui/icons-material/Update';
 import CodeIcon from '@mui/icons-material/Code';
 import BarChartIcon from '@mui/icons-material/BarChart';
-import HistoryIcon from '@mui/icons-material/History';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 const features = [
@@ -30,9 +30,9 @@ const features = [
     description: 'Get the MIN, MAX, MEAN, MEDIAN, or MODE across all sources. Choose the aggregation method that fits your use case.',
   },
   {
-    icon: <HistoryIcon sx={{ fontSize: 32, color: 'primary.main' }} />,
-    title: 'Historical Rates',
-    description: 'Query rates at a specific date by passing a UNIX timestamp. Track how exchange rates have changed over time.',
+    icon: <TrendingUpIcon sx={{ fontSize: 32, color: 'primary.main' }} />,
+    title: 'Change Tracking',
+    description: 'Pass a UNIX timestamp to get only the rates that have moved since then, and read each rate alongside its previous value.',
   },
   {
     icon: <OpenInNewIcon sx={{ fontSize: 32, color: 'primary.main' }} />,
