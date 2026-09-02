@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "build:dev": "tsc -b && vite build --mode development",
+    "dev:calculator": "vite --config vite.calculator.config.ts",
+    "build": "tsc -b && vite build && vite build --config vite.calculator.config.ts",
+    "build:dev": "tsc -b && vite build --mode development && vite build --config vite.calculator.config.ts --mode development",
+    "icons": "node scripts/generate-icons.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -19,6 +21,7 @@
     "@mui/icons-material": "^7.3.10",
     "@mui/material": "^7.3.10",
     "firebase": "^12.12.0",
+    "flag-icons": "^7.5.0",
     "graphql": "^16.13.2",
     "prop-types": "^15.8.1",
     "react": "^19.2.4",
@@ -26,10 +29,12 @@
     "react-obfuscate": "^3.7.0",
     "react-router-dom": "^7.14.1",
     "redoc": "^2.5.2",
+    "vite-plugin-pwa": "^1.3.0",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

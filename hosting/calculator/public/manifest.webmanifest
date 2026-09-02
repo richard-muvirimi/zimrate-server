@@ -1,0 +1,30 @@
+{
+  "name": "ZimRate Calculator",
+  "short_name": "ZimRate Calc",
+  "description": "Convert between Zimbabwean exchange rates using the rates last saved on your device — works offline.",
+  "start_url": "/calculator/",
+  "scope": "/calculator/",
+  "display": "standalone",
+  "background_color": "#0B1017",
+  "theme_color": "#0B1017",
+  "icons": [
+    {
+      "src": "/calculator/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/calculator/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/calculator/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

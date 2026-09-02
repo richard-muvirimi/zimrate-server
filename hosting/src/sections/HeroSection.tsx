@@ -1,5 +1,6 @@
 import { Box, Typography, Button, Stack, Chip, Fade, Grow } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
+import CalculateOutlinedIcon from '@mui/icons-material/CalculateOutlined';
 import CalculatorWidget from '../components/CalculatorWidget';
 import { useMotionTimeout } from '../hooks/useReducedMotion';
 
@@ -103,6 +104,18 @@ export default function HeroSection() {
         <Grow in timeout={timeout} style={{ transitionDelay: '150ms' }}>
           <Box sx={{ flexShrink: 0, width: { xs: '100%', md: 'auto' } }}>
             <CalculatorWidget />
+
+            {/* A plain anchor, not a RouterLink: /calculator/ is a separate app
+                with its own bundle and service worker, not a route in this one. */}
+            <Button
+              component="a"
+              href="/calculator/"
+              startIcon={<CalculateOutlinedIcon />}
+              size="small"
+              sx={{ mt: 1.5 }}
+            >
+              Advanced calculator
+            </Button>
           </Box>
         </Grow>
       </Box>

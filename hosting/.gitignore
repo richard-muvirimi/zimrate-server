@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Copied from flag-icons by scripts/copy-flags.mjs on every build.
+calculator/public/flags/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

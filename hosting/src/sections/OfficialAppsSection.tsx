@@ -1,5 +1,6 @@
 import { Box, Typography, Stack, Paper, SvgIcon, Button, Grow } from '@mui/material';
 import type { SvgIconProps } from '@mui/material';
+import CalculateOutlinedIcon from '@mui/icons-material/CalculateOutlined';
 import { useInView } from '../hooks/useInView';
 import { useMotionTimeout } from '../hooks/useReducedMotion';
 
@@ -28,6 +29,18 @@ const apps = [
     href: 'https://play.google.com/store/apps/details?id=com.tyganeutronics.myratecalculator&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1',
     cta: 'Get it on Google Play',
     Icon: GooglePlayIcon,
+    external: true,
+  },
+  {
+    name: 'ZimRate Calculator',
+    platform: 'Web app · installable, works offline',
+    description:
+      'Convert between every currency at once, against rates kept on your device. Add it to your home screen and it keeps working with no signal.',
+    href: '/calculator/',
+    cta: 'Open the calculator',
+    Icon: CalculateOutlinedIcon,
+    // Ours, and same-origin — it opens in place rather than a new tab.
+    external: false,
   },
   {
     name: 'ZimRate for WordPress',
@@ -37,6 +50,7 @@ const apps = [
     href: 'https://wordpress.org/plugins/zimrate',
     cta: 'View on WordPress.org',
     Icon: WordPressIcon,
+    external: true,
   },
 ];
 
@@ -73,7 +87,7 @@ export default function OfficialAppsSection() {
           justifyContent="center"
           ref={ref}
         >
-          {apps.map(({ name, platform, description, href, cta, Icon }, i) => (
+          {apps.map(({ name, platform, description, href, cta, Icon, external }, i) => (
             <Grow key={name} in={inView} timeout={timeout} style={{ transitionDelay: `${i * 100}ms` }}>
               <Paper
                 sx={{
@@ -102,8 +116,8 @@ export default function OfficialAppsSection() {
                 <Button
                   variant="outlined"
                   href={href}
-                  target="_blank"
-                  rel="noopener"
+                  target={external ? '_blank' : undefined}
+                  rel={external ? 'noopener' : undefined}
                   startIcon={<Icon />}
                   sx={{ alignSelf: 'flex-start', mt: 1 }}
                 >

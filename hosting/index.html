@@ -10,7 +10,10 @@
     <!-- Custom icon entry points at the fixed Storage path; the bundled SVG is
          the fallback until one is uploaded. -->
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <!-- Must be a PNG: Safari does not accept SVG here and ignores the
+         manifest's icons entirely, so an SVG left an iOS Home Screen install
+         showing a screenshot of the page. Regenerate with `npm run icons`. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <style>
       /* Paints the correct canvas before the CSS bundle lands. */
       html { background: #0B1017; }

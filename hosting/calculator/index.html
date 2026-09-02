@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- viewport-fit=cover so the standalone window can paint under the iOS
+         home indicator; the layout pads itself with env(safe-area-inset-*). -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0B1017" />
+
+    <link rel="manifest" href="/calculator/manifest.webmanifest" />
+    <!-- Safari ignores the manifest's icons array and will not accept an SVG
+         here, so this PNG is the only thing standing between an install and a
+         screenshot of the page as the Home Screen icon. -->
+    <link rel="apple-touch-icon" href="/calculator/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="ZimRate Calc" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <style>
+      /* Paints the correct canvas before the CSS bundle lands. */
+      html { background: #0B1017; }
+      html[data-mui-color-scheme='light'] { background: #F5F8FC; }
+    </style>
+
+    <meta
+      name="description"
+      content="Convert between Zimbabwean exchange rates using the rates last saved on your device. Works offline."
+    />
+    <title>ZimRate Calculator</title>
+  </head>
+  <body>
+    <script>
+      // Blocking, before first paint — same keys as the main site so a visitor
+      // who set a theme there gets it here too. See hosting/index.html.
+      (function () {
+        try {
+          var mode = localStorage.getItem('zimrate-mode') || 'dark';
+          if (mode === 'system') {
+            mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          if (mode !== 'light' && mode !== 'dark') mode = 'dark';
+          document.documentElement.setAttribute('data-mui-color-scheme', mode);
+        } catch (e) {
+          document.documentElement.setAttribute('data-mui-color-scheme', 'dark');
+        }
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>
