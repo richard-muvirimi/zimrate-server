@@ -392,7 +392,9 @@ export class AdminController {
 
                 return {
                     id: null, // MySQL ID not preserved — signals new insert on re-import
-                    status: r.status ? 1 : 0,
+                    // status and status_message live on the source, not the rate, and
+                    // that is where importData reads them back into — same as javascript.
+                    status: source.status ? 1 : 0,
                     enabled: r.enabled ? 1 : 0,
                     javascript: source.javascript ? 1 : 0,
                     rate_name: r.rate_name,
@@ -403,10 +405,9 @@ export class AdminController {
                     rate_updated_at_selector: '',
                     rate: r.rate,
                     last_rate: r.last_rate,
-                    transform: '',
                     source_timezone: 'UTC',
                     rate_updated_at: toMysqlDatetime(r.rate_updated_at),
-                    status_message: r.status_message || '',
+                    status_message: source.status_message || '',
                     updated_at: toMysqlDatetime(r.updated_at),
                     created_at: toMysqlDatetime(r.created_at)
                 };

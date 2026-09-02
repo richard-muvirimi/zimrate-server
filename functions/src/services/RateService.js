@@ -1,7 +1,24 @@
 import Rate from '../models/Rate.js';
+import { getCache, setCache } from '../utils/cache.js';
+import { DateTime } from 'luxon';
 import _ from 'lodash';
 
 export class RateService {
+    /**
+     * The currency codes the API currently serves, cached for five minutes.
+     *
+     * Shared by the REST currency check and the GraphQL Currency enum so the two
+     * agree on what exists and read it through one cache entry.
+     */
+    static async getKnownCurrencies() {
+        const cached = await getCache('currencies');
+        if (cached) return cached;
+
+        const currencies = await Rate.getUniqueCurrencies();
+        await setCache('currencies', currencies, DateTime.now().plus({ minutes: 5 }));
+        return currencies;
+    }
+
     static async getRates(params = {}) {
         const {
             search,

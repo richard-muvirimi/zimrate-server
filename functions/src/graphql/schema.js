@@ -1,15 +1,4 @@
-import Rate from '../models/Rate.js';
-import { getCache, setCache } from '../utils/cache.js';
-import { DateTime } from 'luxon';
-
-async function getUniqueCurrencies() {
-  const cached = await getCache('currencies');
-  if (cached) return cached;
-
-  const currencies = await Rate.getUniqueCurrencies();
-  await setCache('currencies', currencies, DateTime.now().plus({ minutes: 5 }));
-  return currencies;
-}
+import { RateService } from '../services/RateService.js';
 
 // GraphQL enums must declare at least one value, so an empty rates collection
 // would otherwise generate `enum Currency {}` and fail schema parsing. This
@@ -18,7 +7,7 @@ async function getUniqueCurrencies() {
 const NO_CURRENCIES = 'NONE';
 
 export async function createTypeDefs() {
-  const currencies = await getUniqueCurrencies();
+  const currencies = await RateService.getKnownCurrencies();
 
   // Create enum values from currencies
   const currencyEnumValues = currencies.length > 0
@@ -32,17 +21,17 @@ export async function createTypeDefs() {
         date: Int
         currency: Currency
         prefer: Prefer
-      ): [Rate!]
-      info: String
+      ): [Rate!]!
+      info: String!
     }
 
     type Rate {
-      currency: String
-      last_checked: Int
-      last_updated: Int
+      currency: String!
+      last_checked: Int!
+      last_updated: Int!
       name: String
-      rate: Float
-      last_rate: Float
+      rate: Float!
+      last_rate: Float!
       url: String
     }
 

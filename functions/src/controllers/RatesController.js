@@ -18,6 +18,8 @@ export class RatesController {
                 });
             }
 
+            if (await RatesController._rejectUnknownCurrency(value.currency, res)) return;
+
             const rates = await RateService.getRates(value);
             return res.status(StatusCodes.OK).json(rates);
 
@@ -39,6 +41,8 @@ export class RatesController {
                     message: error.details.map(d => d.message).join(', ')
                 });
             }
+
+            if (await RatesController._rejectUnknownCurrency(value.currency, res)) return;
 
             const response = {};
             response.USD = await RateService.getRates(value);
@@ -181,6 +185,28 @@ export class RatesController {
                 message: error.message
             });
         }
+    }
+
+    /**
+     * Answers an unrecognised `currency` with a 422, as Laravel's
+     * `exists:rates,rate_currency` rule did. An empty 200 left a client no way to
+     * tell a typo from a currency that genuinely has no rates at the moment.
+     *
+     * Joi has already uppercased the value by the time this runs.
+     *
+     * @returns {Promise<boolean>} true when a response has been sent
+     */
+    static async _rejectUnknownCurrency(currency, res) {
+        if (!currency) return false;
+
+        const known = await RateService.getKnownCurrencies();
+        if (known.includes(currency)) return false;
+
+        res.status(StatusCodes.UNPROCESSABLE_ENTITY).json({
+            status: false,
+            message: 'The selected currency is invalid.'
+        });
+        return true;
     }
 
     /**

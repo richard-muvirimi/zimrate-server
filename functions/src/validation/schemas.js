@@ -14,11 +14,19 @@ const isBoolean = Joi.alternatives().try(
     booleanString
 );
 
+// Laravel validated `before:now` per request. A plain .max(DateTime.now()) freezes
+// the ceiling at module load, so a warm instance rejects timestamps that are
+// genuinely in the past — and which instance you land on decides whether your
+// request works.
+const pastUnixTimestamp = Joi.number().integer().custom((value, helpers) =>
+    value > DateTime.now().toUnixInteger() ? helpers.error('number.max', { limit: 'now' }) : value
+);
+
 export const rateQuerySchema = Joi.object({
     search: Joi.string().optional(),
     name: Joi.string().optional(),
     source: Joi.string().optional(), // deprecated
-    date: Joi.number().integer().max(DateTime.now().toUnixInteger()).optional(),
+    date: pastUnixTimestamp.optional(),
     currency: Joi.string().uppercase().optional(),
     prefer: Joi.string().valid('min', 'max', 'mean', 'median', 'random', 'mode', 'MIN', 'MAX', 'MEAN', 'MEDIAN', 'RANDOM', 'MODE').optional(),
     callback: Joi.string().optional(),
@@ -37,7 +45,7 @@ export const rateQuerySchema = Joi.object({
 
 export const graphqlRateQuerySchema = Joi.object({
     search: Joi.string().optional(),
-    date: Joi.number().integer().max(DateTime.now().toUnixInteger()).optional(),
+    date: pastUnixTimestamp.optional(),
     currency: Joi.string().uppercase().optional(),
     prefer: Joi.string().valid('min', 'max', 'mean', 'median', 'random', 'mode').optional()
 });
@@ -53,7 +61,7 @@ export const v2QuerySchema = Joi.object({
     currency: Joi.string().uppercase().optional(),
     search: Joi.string().optional(),
     name: Joi.string().optional(),
-    date: Joi.number().integer().max(DateTime.now().toUnixInteger()).optional(),
+    date: pastUnixTimestamp.optional(),
     callback: Joi.string().optional(),
     info: isBoolean.optional()
 }).custom((value, helpers) => {

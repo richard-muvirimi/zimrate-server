@@ -17,7 +17,6 @@ export const resolvers = {
 
       const filters = {
         enabled: true,
-        status: true,
         ...value
       };
 

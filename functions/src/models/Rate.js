@@ -1,6 +1,22 @@
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { logger } from 'firebase-functions';
 import { DateTime } from 'luxon';
 import _ from 'lodash';
+
+/**
+ * The middle value, averaging the two middle ones on an even-sized set — what the
+ * Laravel `preferred('median')` scope did by feeding an even split back through
+ * its MEAN aggregate. Taking the upper-middle value instead skews every even
+ * group upward.
+ */
+function median(values) {
+    const sorted = _.sortBy(values);
+    const middle = Math.floor(sorted.length / 2);
+
+    return sorted.length % 2 === 0
+        ? (sorted[middle - 1] + sorted[middle]) / 2
+        : sorted[middle];
+}
 
 class Rate {
     constructor(data = {}) {
@@ -20,7 +36,6 @@ class Rate {
         this.javascript = data.javascript || false;
         this.rate_selector = data.rate_selector || '';
         this.rate_updated_at_selector = data.rate_updated_at_selector || '';
-        this.transform = data.transform || '';
         this.source_timezone = data.source_timezone || 'UTC';
     }
 
@@ -62,14 +77,30 @@ class Rate {
     }
 
     // API representation
+    //
+    // The GraphQL schema declares currency, last_checked, last_updated, rate and
+    // last_rate non-null — as the Laravel backend's columns were — so none of them
+    // may be null here: a null under a non-null field blanks out the whole rate
+    // list. Timestamps fall back to the record's other timestamps, and last_rate
+    // falls back to the current rate, which is what a first scrape stores when
+    // there is no previous reading; it leaves deltas at zero rather than dividing
+    // by nothing.
     toAPI() {
+        // An Invalid Date (the legacy MySQL import can produce one from an
+        // unparseable timestamp) yields NaN, which Int! refuses to serialise —
+        // and a refusal here takes the whole rate list down, not just one field.
+        const toUnix = (date) => {
+            const seconds = date ? DateTime.fromJSDate(date).toUnixInteger() : 0;
+            return Number.isFinite(seconds) ? seconds : 0;
+        };
+
         return {
             currency: this.rate_currency,
             name: this.rate_name,
-            last_checked: this.updated_at ? DateTime.fromJSDate(this.updated_at).toUnixInteger() : null,
-            last_updated: this.rate_updated_at ? DateTime.fromJSDate(this.rate_updated_at).toUnixInteger() : null,
+            last_checked: toUnix(this.updated_at || this.rate_updated_at || this.created_at),
+            last_updated: toUnix(this.rate_updated_at || this.updated_at || this.created_at),
             rate: this.rate,
-            last_rate: this.last_rate,
+            last_rate: this.last_rate || this.rate,
             url: this.source_url,
         };
     }
@@ -207,10 +238,8 @@ class Rate {
                 }
 
                 case 'median': {
-                    const rateValues = _.map(currencyRates, 'rate');
-                    const lastRateValues = _.map(currencyRates, 'last_rate');
-                    const medianRate = _.sortBy(rateValues)[Math.floor(rateValues.length / 2)];
-                    const medianLastRate = _.sortBy(lastRateValues)[Math.floor(lastRateValues.length / 2)];
+                    const medianRate = median(_.map(currencyRates, 'rate'));
+                    const medianLastRate = median(_.map(currencyRates, 'last_rate'));
 
                     aggregatedRate = _.minBy(currencyRates, rate => Math.abs(rate.rate - medianRate));
                     aggregatedRate = new Rate({
@@ -264,9 +293,48 @@ class Rate {
     }
 
     /**
+     * The plausible range of each currency, keyed by code: the lowest and highest
+     * rate the API is currently serving for it.
+     *
+     * findAll's default week window is the same "enabled and updated" set the
+     * Laravel scraper measured a fresh reading against.
+     */
+    static async currencyBands() {
+        const rates = await Rate.findAll({ enabled: true });
+
+        return _.mapValues(
+            _.groupBy(rates, 'rate_currency'),
+            group => ({ min: _.minBy(group, 'rate').rate, max: _.maxBy(group, 'rate').rate })
+        );
+    }
+
+    /**
+     * Screen a freshly scraped value against what is already being served for that
+     * currency, as the Laravel scraper's cleanRate did.
+     *
+     * Outside 0.7×min … 1.3×max the value is retried divided by 100, which catches
+     * a figure published in cents; if that still misses the band the reading is
+     * refused rather than published. A currency with nothing to compare against is
+     * taken at face value.
+     *
+     * @returns {number|null} the value to store, or null to refuse it
+     */
+    static screenRate(value, band) {
+        if (!band || !band.min || !band.max) return value;
+
+        const inBand = (candidate) => candidate >= band.min * 0.7 && candidate <= band.max * 1.3;
+
+        if (inBand(value)) return value;
+
+        const corrected = value / 100;
+        return inBand(corrected) ? corrected : null;
+    }
+
+    /**
      * Upsert rates returned by the AI scraper for a given source.
      * For each extracted rate: find existing (source_id + rate_currency) or create new.
-     * Shifts current rate → last_rate and saves new rate value.
+     * Saves the new rate value, shifting the current rate → last_rate only when the
+     * two differ, so last_rate stays the previous *different* reading.
      *
      * @param {Source} source - The source document
      * @param {Array<{currency, rate, name, updated_at}>} extractedRates
@@ -286,6 +354,10 @@ class Rate {
             _.keyBy(extractedRates, r => `${r.currency.toUpperCase()}::${(r.name || '').toLowerCase()}`)
         );
 
+        // Read once per source rather than per rate — every value in this scrape is
+        // screened against the same picture of what the API currently serves.
+        const bands = await Rate.currencyBands();
+
         // Process in batches of 499 to respect Firestore limits
         const batchSize = 499;
         for (let i = 0; i < deduped.length; i += batchSize) {
@@ -297,6 +369,21 @@ class Rate {
                 const rateName = extracted.name
                     ? `${source.name} - ${extracted.name}`
                     : `${source.name} - ${currency}`;
+
+                // A reading the band refuses is dropped, never written: the stored
+                // record keeps the last value we trusted rather than publishing a
+                // misread. Its key stays in scrapedKeys below, so the sweep at the
+                // end does not mistake the refusal for a rate the page stopped listing.
+                const scraped = Rate.screenRate(parseFloat(extracted.rate), bands[currency]);
+
+                if (scraped === null) {
+                    logger.warn(
+                        `[Rate] Refused implausible ${currency} rate ${extracted.rate} from ${source.url} ` +
+                        `(band ${bands[currency].min}–${bands[currency].max})`
+                    );
+                    results.push({ action: 'rejected', currency });
+                    continue;
+                }
 
                 // Find existing rate for this source + currency + name
                 const existing = await Rate.getCollection()
@@ -316,8 +403,8 @@ class Rate {
                         rate_currency: currency,
                         source_url: source.url,
                         source_id: source.id,
-                        rate: parseFloat(extracted.rate),
-                        last_rate: parseFloat(extracted.rate), // no previous on first scrape
+                        rate: scraped,
+                        last_rate: scraped, // no previous on first scrape
                         rate_updated_at: rateUpdatedAt.toDate(),
                         enabled: true,
                         created_at: now.toDate(),
@@ -330,13 +417,24 @@ class Rate {
                 } else {
                     const docRef = existing.docs[0].ref;
                     const oldRate = existing.docs[0].data().rate || 0;
+                    const newRate = scraped;
 
-                    batch.update(docRef, {
-                        last_rate: oldRate,
-                        rate: parseFloat(extracted.rate),
+                    const changes = {
+                        rate: newRate,
                         rate_updated_at: rateUpdatedAt,
                         updated_at: now
-                    });
+                    };
+
+                    // last_rate holds the previous *different* reading, as it did in the
+                    // Laravel scraper. Shifting on every scrape would overwrite the real
+                    // previous value with the current one on the next hourly run, so a
+                    // rate that holds steady for a day — most of them, most days — would
+                    // show a zero delta instead of its last actual move.
+                    if (newRate !== oldRate) {
+                        changes.last_rate = oldRate;
+                    }
+
+                    batch.update(docRef, changes);
                     results.push({ action: 'updated', currency });
                 }
             }

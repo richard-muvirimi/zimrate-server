@@ -54,6 +54,8 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { getDatabase } from 'firebase-admin/database';
 import apiRoutes from '../routes/api.js';
+import Rate from '../models/Rate.js';
+import { rateQuerySchema } from '../validation/schemas.js';
 import { errorHandler } from '../middleware/error.js';
 
 // ── Test data ─────────────────────────────────────────────────────────────────
@@ -82,7 +84,6 @@ const TEST_RATES = [
         javascript: false,
         rate_selector: '',
         rate_updated_at_selector: '',
-        transform: '',
         source_timezone: 'UTC'
     },
     {
@@ -100,7 +101,6 @@ const TEST_RATES = [
         javascript: false,
         rate_selector: '',
         rate_updated_at_selector: '',
-        transform: '',
         source_timezone: 'UTC'
     },
     {
@@ -118,7 +118,6 @@ const TEST_RATES = [
         javascript: false,
         rate_selector: '',
         rate_updated_at_selector: '',
-        transform: '',
         source_timezone: 'UTC'
     }
 ];
@@ -185,6 +184,9 @@ let request;
 // ignores filters when producing results, so *what* was queried is the only
 // observable difference between filtering in the query and filtering in memory.
 let ratesQuery;
+// The shared Firestore stub, kept so a test that swaps in its own store can put
+// this one back afterwards.
+let firestore;
 
 beforeAll(() => {
     const ratesSnap = makeSnapshot(TEST_RATES);
@@ -194,7 +196,7 @@ beforeAll(() => {
     ratesQuery = makeChainableQuery(ratesSnap);
     const optionsQuery = makeChainableQuery(optionsSnap);
 
-    vi.mocked(getFirestore).mockReturnValue({
+    firestore = {
         collection: vi.fn(name => {
             if (name === 'rates') return ratesQuery;
             if (name === 'options') return optionsQuery;
@@ -206,7 +208,9 @@ beforeAll(() => {
             delete: vi.fn(),
             commit: vi.fn().mockResolvedValue(undefined)
         }))
-    });
+    };
+
+    vi.mocked(getFirestore).mockReturnValue(firestore);
 
     // RTDB mock for cache — always returns a cache miss
     const mockRtdbRef = {
@@ -316,6 +320,12 @@ describe('API v0 (/api)', () => {
         }
     });
 
+    it('rejects a currency it does not serve', async () => {
+        const res = await request.get('/api?currency=JPY');
+        expect(res.status).toBe(422);
+        expect(res.body.status).toBe(false);
+    });
+
     it('returns CORS header', async () => {
         const res = await request.get('/api');
         expect(res.status).toBe(200);
@@ -407,6 +417,13 @@ describe('API v1 (/api/v1)', () => {
         expect(currencies).toContain('ZAR');
     });
 
+    it('rejects a currency it does not serve', async () => {
+        const res = await request.get('/api/v1?currency=JPY');
+        expect(res.status).toBe(422);
+        expect(res.body.status).toBe(false);
+        expect(res.body.message).toMatch(/currency/i);
+    });
+
     it('filters by date (unix timestamp)', async () => {
         const twoDaysAgo = DateTime.now().minus({ days: 2 }).toUnixInteger();
         const res = await request.get(`/api/v1?date=${twoDaysAgo}`);
@@ -455,7 +472,7 @@ describe('GraphQL (/api/graphql)', () => {
         request.post('/api/graphql').send({ query, variables });
 
     it('responds with rate data aliased as USD', async () => {
-        const res = await GQL('query { USD: rate { currency last_checked last_updated name rate url } }');
+        const res = await GQL('query { USD: rate { currency last_checked last_updated name rate last_rate url } }');
         expect(res.status).toBe(200);
         expect(res.body).not.toHaveProperty('errors');
         expect(res.body).toHaveProperty('data');
@@ -470,6 +487,7 @@ describe('GraphQL (/api/graphql)', () => {
             expect(item).toHaveProperty('url');
             expect(typeof item.currency).toBe('string');
             expect(typeof item.rate).toBe('number');
+            expect(typeof item.last_rate).toBe('number');
             expect(typeof item.last_checked).toBe('number');
             expect(typeof item.last_updated).toBe('number');
         }
@@ -549,6 +567,127 @@ const AGGREGATES = ['MIN', 'MAX', 'MEAN', 'MEDIAN', 'MODE', 'RANDOM'];
         const res = await GQL('query { USD: rate { currency rate } }');
         expect(res.status).toBe(200);
         expect(res.headers['access-control-allow-origin']).toBe('*');
+    });
+});
+
+// =============================================================================
+// Request validation
+// =============================================================================
+
+describe('date validation', () => {
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('judges the date against the time of the request, not the time of module load', () => {
+        // The schema was built when this file was imported. Age the clock past that
+        // point the way a warm function instance does, then send a timestamp that is
+        // in the past *now* — a ceiling frozen at module load would reject it.
+        const loadedAt = DateTime.now();
+        vi.useFakeTimers();
+        vi.setSystemTime(loadedAt.plus({ hours: 2 }).toJSDate());
+
+        const { error } = rateQuerySchema.validate({ date: loadedAt.plus({ hours: 1 }).toUnixInteger() });
+        expect(error).toBeUndefined();
+    });
+
+    it('still rejects a timestamp in the future', () => {
+        const { error } = rateQuerySchema.validate({ date: DateTime.now().plus({ days: 1 }).toUnixInteger() });
+        expect(error).toBeDefined();
+    });
+});
+
+// =============================================================================
+// Rate.toAPI() — the non-null half of the GraphQL contract
+// =============================================================================
+
+describe('Rate.toAPI()', () => {
+
+    it('returns numbers, never null, for a record missing its timestamps and last_rate', () => {
+        const created = new Date('2026-01-01T00:00:00Z');
+        const api = new Rate({
+            rate_currency: 'ZWG',
+            rate_name: 'RBZ - ZWG',
+            source_url: 'https://rbz.co.zw',
+            rate: 26.5,
+            created_at: created
+        }).toAPI();
+
+        const createdUnix = DateTime.fromJSDate(created).toUnixInteger();
+        expect(api.last_checked).toBe(createdUnix);
+        expect(api.last_updated).toBe(createdUnix);
+        expect(api.last_rate).toBe(26.5);
+    });
+
+    it('returns numbers, never NaN, for a record carrying an Invalid Date', () => {
+        const api = new Rate({
+            rate_currency: 'ZWG',
+            rate: 26.5,
+            updated_at: new Date('not a date'),
+            rate_updated_at: new Date('not a date')
+        }).toAPI();
+
+        expect(api.last_checked).toBe(0);
+        expect(api.last_updated).toBe(0);
+    });
+});
+
+// =============================================================================
+// Rate.upsertFromScrape() — last_rate is the previous *different* reading
+// =============================================================================
+
+describe('Rate.upsertFromScrape()', () => {
+
+    const SOURCE = { id: 'source1', name: 'RBZ', url: 'https://rbz.co.zw' };
+    const STORED = { rate_currency: 'ZWG', rate_name: 'RBZ - ZWG', rate: 26.5, last_rate: 24.0 };
+
+    /**
+     * Points getFirestore() at a store holding the one rate above, and returns the
+     * updates the scrape batched. Every query resolves to that single document, which
+     * is what upsertFromScrape's "find existing" lookup and its stale-record sweep
+     * both read.
+     */
+    function captureScrape() {
+        const updates = [];
+        const doc = { id: 'rate1', exists: true, data: () => ({ ...STORED }), ref: { id: 'rate1' } };
+        const query = makeChainableQuery({ docs: [doc], empty: false });
+
+        vi.mocked(getFirestore).mockReturnValue({
+            collection: vi.fn(() => query),
+            batch: vi.fn(() => ({
+                set: vi.fn(),
+                update: vi.fn((_ref, data) => updates.push(data)),
+                delete: vi.fn(),
+                commit: vi.fn().mockResolvedValue(undefined)
+            }))
+        });
+
+        return updates;
+    }
+
+    afterEach(() => {
+        vi.mocked(getFirestore).mockReturnValue(firestore);
+    });
+
+    it('leaves last_rate untouched when the scraped value has not moved', async () => {
+        const updates = captureScrape();
+
+        await Rate.upsertFromScrape(SOURCE, [{ currency: 'ZWG', rate: 26.5 }]);
+
+        expect(updates).toHaveLength(1);
+        expect(updates[0].rate).toBe(26.5);
+        expect(updates[0]).not.toHaveProperty('last_rate');
+    });
+
+    it('shifts the stored rate into last_rate when the value moves', async () => {
+        const updates = captureScrape();
+
+        await Rate.upsertFromScrape(SOURCE, [{ currency: 'ZWG', rate: 27.25 }]);
+
+        expect(updates).toHaveLength(1);
+        expect(updates[0].rate).toBe(27.25);
+        expect(updates[0].last_rate).toBe(26.5);
     });
 });
 
