@@ -9,7 +9,7 @@ vi.mock('firebase-functions', () => ({
     logger: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn(), warn: vi.fn() }
 }));
 
-import { normaliseCurrency, tidyLabel } from '../services/ScrapingService.js';
+import { normaliseCurrency, tidyLabel, restorePrecision } from '../services/ScrapingService.js';
 
 describe('normaliseCurrency', () => {
 
@@ -45,5 +45,31 @@ describe('tidyLabel', () => {
     it('keeps the original when stripping would leave nothing', () => {
         // Better a redundant name than an empty one.
         expect(tidyLabel('1 ZiG to USD')).toBe('1 ZiG to USD');
+    });
+});
+
+describe('restorePrecision', () => {
+
+    it('restores the value the converter computed when the model rounds it', () => {
+        // What the live API was serving: a rate stored three decimals short of the
+        // figure the tool handed the model, so every scrape looked like a move.
+        expect(restorePrecision(17.585, [17.585089])).toBe(17.585089);
+        expect(restorePrecision(2636.5, [2636.544554])).toBe(2636.5445540);
+    });
+
+    it('leaves a value the model read off the page untouched', () => {
+        // 26.5 is not any computed value rounded — it is the page's own figure.
+        expect(restorePrecision(26.5, [17.585089])).toBe(26.5);
+        expect(restorePrecision(17.58, [17.585089])).toBe(17.58);
+        // A whole number is not surrendered to a conversion it only rounds to.
+        expect(restorePrecision(27, [26.5089])).toBe(27);
+    });
+
+    it('is a no-op when the model quoted the computed value in full', () => {
+        expect(restorePrecision(17.585089, [17.585089])).toBe(17.585089);
+    });
+
+    it('leaves everything alone when no conversion was computed', () => {
+        expect(restorePrecision(17.585, [])).toBe(17.585);
     });
 });

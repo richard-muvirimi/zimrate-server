@@ -53,6 +53,30 @@ export const tidyLabel = (label) => {
 };
 
 /**
+ * The model re-types the converter tool's answer into its final JSON and rounds
+ * it on the way: a computed 17.585089 comes back as 17.585. Stored, that reads
+ * as a rate that drifted a thousandth of a percent, and the site then compares a
+ * rounded current against a full-precision previous. Where a returned value is
+ * exactly one of the computed values rounded to the decimals it carries, the
+ * computed value is restored; anything else is the model's own reading of the
+ * page and is left alone.
+ *
+ * The 0.01% guard keeps a coarsely rounded figure from being claimed by a
+ * conversion it only happens to match: a page's own "27" must not become a
+ * computed 26.5089. Inside the guard the two are the same rate either way.
+ */
+export const restorePrecision = (rate, computed) => {
+    const text = String(rate);
+    if (/e/i.test(text)) return rate;
+    const dot = text.indexOf('.');
+    const decimals = dot === -1 ? 0 : text.length - dot - 1;
+    const match = computed.find(value =>
+        Number(value.toFixed(decimals)) === rate && Math.abs(value - rate) / rate < 1e-4
+    );
+    return match ?? rate;
+};
+
+/**
  * ScrapingService
  *
  * Orchestrates web scraping using Apify (page fetching) and DeepSeek AI (rate extraction).
@@ -333,6 +357,10 @@ ${truncatedContent}`;
             { role: 'user', content: userPrompt }
         ];
 
+        // Every value the converter tool computed, at full precision, so the
+        // rounding the model applies when quoting them back can be undone.
+        const computedRates = [];
+
         const maxRounds = 25; // safety cap — worst case: model calls one tool per round
 
         for (let round = 0; round < maxRounds; round++) {
@@ -374,12 +402,14 @@ ${truncatedContent}`;
                             content = JSON.stringify({ error: 'zwg_per_usd must be a positive number' });
                         } else if (zwg_per_foreign !== undefined && zwg_per_foreign > 0) {
                             // "1 FOREIGN = zwg_per_foreign ZWG"  →  foreign per USD = zwg_per_usd / zwg_per_foreign
-                            const usd_rate = zwg_per_usd / zwg_per_foreign;
-                            content = JSON.stringify({ usd_rate: parseFloat(usd_rate.toFixed(6)) });
+                            const usd_rate = parseFloat((zwg_per_usd / zwg_per_foreign).toFixed(6));
+                            computedRates.push(usd_rate);
+                            content = JSON.stringify({ usd_rate });
                         } else if (foreign_per_zwg !== undefined && foreign_per_zwg > 0) {
                             // "1 ZWG = foreign_per_zwg FOREIGN"  →  foreign per USD = zwg_per_usd * foreign_per_zwg
-                            const usd_rate = zwg_per_usd * foreign_per_zwg;
-                            content = JSON.stringify({ usd_rate: parseFloat(usd_rate.toFixed(6)) });
+                            const usd_rate = parseFloat((zwg_per_usd * foreign_per_zwg).toFixed(6));
+                            computedRates.push(usd_rate);
+                            content = JSON.stringify({ usd_rate });
                         } else {
                             content = JSON.stringify({ error: 'Provide either zwg_per_foreign or foreign_per_zwg' });
                         }
@@ -436,7 +466,7 @@ ${truncatedContent}`;
             )
             .map(r => ({
                 currency: normaliseCurrency(r.currency.toUpperCase()),
-                rate: parseFloat(r.rate),
+                rate: restorePrecision(parseFloat(r.rate), computedRates),
                 name: typeof r.name === 'string' && r.name.trim() ? tidyLabel(r.name.trim()) : null,
                 updated_at: r.updated_at || null
             }));
