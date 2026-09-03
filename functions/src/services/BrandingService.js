@@ -1,4 +1,5 @@
 import { getFirestore } from 'firebase-admin/firestore';
+import { DateTime } from 'luxon';
 
 /**
  * Branding lives in Firestore at settings/branding, which firestore.rules
@@ -48,7 +49,7 @@ export async function saveBranding(input) {
         repo_url: input.repo_url ?? current.repo_url,
         icon_version: input.icon_version ?? current.icon_version,
         og_version: input.og_version ?? current.og_version,
-        updated_at: new Date(),
+        updated_at: DateTime.now().toJSDate(),
     };
 
     await docRef().set(next, { merge: true });

@@ -2,6 +2,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import nodemailer from 'nodemailer';
 import { logger } from 'firebase-functions';
 import { getBranding } from './BrandingService.js';
+import { DateTime } from 'luxon';
 
 /**
  * SMTP configuration lives in Firestore at settings/smtp.
@@ -61,7 +62,7 @@ export async function saveSmtpConfig(input) {
         from_email: input.from_email ?? current.from_email,
         recipient: input.recipient ?? current.recipient,
         enabled: input.enabled ?? current.enabled,
-        updated_at: new Date(),
+        updated_at: DateTime.now().toJSDate(),
     };
 
     await docRef().set(next, { merge: true });
