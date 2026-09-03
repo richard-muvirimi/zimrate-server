@@ -61,6 +61,28 @@ export const KNOWN_OPTIONS: OptionDef[] = [
     fallback: 'ZWG',
   },
   {
+    key: 'rate_freshness_months',
+    label: 'Serve rates for (months)',
+    description:
+      'How long a rate keeps being returned by the API after the last scrape that found it on its '
+      + 'source page. A rate missing from one scrape is not dropped — it simply stops being '
+      + 'refreshed, and consumers can see how old it is from last_updated until this window ends.',
+    group: 'Scraping',
+    type: 'number',
+    fallback: '3',
+  },
+  {
+    key: 'rate_retention_months',
+    label: 'Delete rates after (months)',
+    description:
+      'How long a rate is kept in the database after it stops being seen. Deleting destroys its '
+      + 'change history, so keep this comfortably longer than the serving window — a value shorter '
+      + 'than that one is ignored rather than allowed to delete rates still being served.',
+    group: 'Scraping',
+    type: 'number',
+    fallback: '12',
+  },
+  {
     key: REGISTRATION_KEY,
     label: 'Account registration',
     description:

@@ -66,8 +66,13 @@ const TEST_INFO = 'ZimRate API - Real-time Zimbabwe exchange rates';
  * Three realistic rates:
  *  - ZWG and ZAR from RBZ (same source)
  *  - ZWG from a black market source
- * All are enabled and updated within the last week.
+ * All are enabled and freshly scraped.
+ *
+ * Timestamps are relative to now, not absolute: written as fixed dates they aged
+ * past the freshness window as the calendar moved, and every rate quietly became
+ * one the API would refuse to serve.
  */
+const ago = (opts) => DateTime.now().minus(opts).toJSDate();
 const TEST_RATES = [
     {
         id: 'rate1',
@@ -78,8 +83,8 @@ const TEST_RATES = [
         rate: 26.5,
         last_rate: 26.0,
         enabled: true,
-        updated_at: new Date('2026-04-14T10:00:00Z'),
-        rate_updated_at: new Date('2026-04-14T09:00:00Z'),
+        updated_at: ago({ hours: 25 }),
+        rate_updated_at: ago({ hours: 26 }),
         created_at: new Date('2026-01-01T00:00:00Z'),
         javascript: false,
         rate_selector: '',
@@ -95,8 +100,8 @@ const TEST_RATES = [
         rate: 18.5,
         last_rate: 18.2,
         enabled: true,
-        updated_at: new Date('2026-04-14T10:00:00Z'),
-        rate_updated_at: new Date('2026-04-14T09:00:00Z'),
+        updated_at: ago({ hours: 25 }),
+        rate_updated_at: ago({ hours: 26 }),
         created_at: new Date('2026-01-01T00:00:00Z'),
         javascript: false,
         rate_selector: '',
@@ -112,8 +117,8 @@ const TEST_RATES = [
         rate: 28.0,
         last_rate: 27.5,
         enabled: true,
-        updated_at: new Date('2026-04-15T10:00:00Z'),
-        rate_updated_at: new Date('2026-04-15T08:00:00Z'),
+        updated_at: ago({ hours: 1 }),
+        rate_updated_at: ago({ hours: 3 }),
         created_at: new Date('2026-01-01T00:00:00Z'),
         javascript: false,
         rate_selector: '',
@@ -304,7 +309,7 @@ describe('API v0 (/api)', () => {
     });
 
     it('filters by date (unix timestamp)', async () => {
-        // Use a timestamp from two days ago — all test rates were updated within the last week
+        // Use a timestamp from two days ago — every test rate is newer than that
         const twoDaysAgo = DateTime.now().minus({ days: 2 }).toUnixInteger();
         const res = await request.get(`/api?date=${twoDaysAgo}`);
         expect(res.status).toBe(200);
@@ -1147,9 +1152,9 @@ describe('API v2', () => {
     });
 
     it('excludes rates older than the date parameter', async () => {
-        // Fixture rate_updated_at values are in Apr 2026; ask for anything newer.
-        const future = DateTime.fromISO('2026-04-16T00:00:00Z').toUnixInteger();
-        const res = await request.get(`/api/v2/USD?date=${future}`);
+        // Every fixture last moved hours ago, so a cutoff of a minute ago clears them.
+        const justNow = DateTime.now().minus({ minutes: 1 }).toUnixInteger();
+        const res = await request.get(`/api/v2/USD?date=${justNow}`);
         expect(res.status).toBe(200);
         expect(res.body.rates).toHaveLength(0);
     });

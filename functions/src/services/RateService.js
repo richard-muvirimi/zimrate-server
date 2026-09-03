@@ -26,8 +26,12 @@ export class BaseRateError extends Error {
  * Runs before toAPI() so rate_updated_at is still a Date rather than the unix
  * integer toAPI() converts it to.
  */
-function applyFilters(rates, { currency, search, name, date }) {
-    let result = rates;
+function applyFilters(rates, { currency, search, name, date, freshnessCutoff }) {
+    // The unscoped read below is for the divisor's benefit, not the caller's: a
+    // rate too stale for v1 to serve must not reach a v2 response either, or the
+    // same rate would be live on one endpoint and gone from the other. Rates kept
+    // past their freshness window for their history are dropped here.
+    let result = rates.filter(r => r.updated_at && r.updated_at > freshnessCutoff);
 
     if (currency) {
         result = result.filter(r => r.rate_currency === currency);
@@ -146,9 +150,13 @@ export class RateService {
             ? await Rate.getAggregatedRates(prefer, filters)
             : await Rate.findAll(filters);
 
+        // Read once and shared by both exits below, so every row in one response
+        // is judged against the same instant.
+        const freshnessCutoff = await Rate.freshnessCutoff();
+
         // USD is the native base, so its rates need no conversion.
         if (base === 'USD') {
-            return applyFilters(allRates, { currency, search, name, date }).map(r => r.toAPI());
+            return applyFilters(allRates, { currency, search, name, date, freshnessCutoff }).map(r => r.toAPI());
         }
 
         const baseRates = allRates.filter(r => r.rate_currency === base);
@@ -165,7 +173,7 @@ export class RateService {
         // Filters run after the divisor is known, so narrowing the output can
         // never starve the cross-rate maths. The base currency is dropped from
         // the results: expressed against itself it is always 1.
-        return applyFilters(allRates, { currency, search, name, date })
+        return applyFilters(allRates, { currency, search, name, date, freshnessCutoff })
             .filter(r => r.rate_currency !== base)
             .map(r => {
                 if (!r.rate) return null;

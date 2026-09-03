@@ -21,6 +21,38 @@ function resolveBaseUrl() {
 }
 
 /**
+ * Pages write the local currency as "ZiG" and give its ISO code as ZWG in the
+ * same breath. Every measured run answered ZWG, but the prompt is the only thing
+ * holding that: one slip would file the same currency under a second code,
+ * splitting its history in two and publishing both.
+ */
+const CURRENCY_ALIASES = { ZIG: 'ZWG' };
+
+export const normaliseCurrency = (code) => CURRENCY_ALIASES[code] ?? code;
+
+/**
+ * Page rows are labelled "1 USD to ZiG (Official)" or "1 USD to ZiG cash rate".
+ * The model is asked for that label verbatim because paraphrasing it renamed
+ * rates between runs, and the name is half of a rate's identity — a reworded
+ * label reads as a different rate, so the old one looked delisted. The pair is
+ * already carried by `currency`, so the boilerplate is dropped here instead, by
+ * rule rather than by judgement, leaving the part that says which rate this is.
+ *
+ * Best effort on someone else's text: these labels are written by the source
+ * site's editors and can be reworded at any time. A label this does not
+ * recognise is passed through untouched, and a genuine rewording is matched back
+ * to its stored record by Rate.reconcileRenames rather than by this.
+ */
+export const tidyLabel = (label) => {
+    const stripped = label
+        .replace(/^\s*1\s+\S+\s+(?:to|in)\s+\S+/i, '')
+        .replace(/^[\s–—\-:,]+/, '')
+        .trim();
+    const unwrapped = /^\(.*\)$/.test(stripped) ? stripped.slice(1, -1).trim() : stripped;
+    return unwrapped || label;
+};
+
+/**
  * ScrapingService
  *
  * Orchestrates web scraping using Apify (page fetching) and DeepSeek AI (rate extraction).
@@ -258,6 +290,7 @@ export class ScrapingService {
 
 Zimbabwe context:
 - Current local currency: ${localCurrency} (Zimbabwe Gold / ZiG). ZiG and ${localCurrency} are the same thing.
+  Always report it with the ISO code ${localCurrency}. Never "ZiG", "ZIG" or the $ symbol.
 - ZWL and ZWD are DEMONETIZED — skip any rate involving them.
 - Pages may show: official RBZ rates, interbank rates, black market / parallel market rates, and retail business rates.
 - Pages often show rates in TWO ways: USD-based ("1 USD = 26.5 ${localCurrency}") AND ${localCurrency}-based cross-rates ("1 EUR = 29.77 ${localCurrency}").
@@ -265,6 +298,9 @@ Zimbabwe context:
 Goal: return ALL rates expressed as how many units of each currency you get for 1 USD.
 
 Step 1 — identify the USD/${localCurrency} rate on this page (e.g. the official or most representative "1 USD = X ${localCurrency}" figure). You will need it for conversions.
+  These are rates in their own right, not just a divisor: return EVERY "1 USD = X ${localCurrency}" figure the page
+  shows as its own ${localCurrency} entry — official, interbank, informal/black market, cash, and each named
+  business or retail rate. A result with no ${localCurrency} entry at all is wrong whenever the page shows one.
 
 Step 2 — call convert_cross_rate_to_usd for ALL ${localCurrency}-based cross-rates IN A SINGLE RESPONSE
   (include every cross-rate as a separate tool call in the same message — do not call one at a time).
@@ -273,11 +309,15 @@ Step 2 — call convert_cross_rate_to_usd for ALL ${localCurrency}-based cross-r
      include it as a tool call in the batch.
   c. Skip rates that involve neither USD nor ${localCurrency}.
   d. Skip ZWL, ZWD, and zero/negative rates.
+  e. Skip inverse quotes. A row saying how much USD one ${localCurrency} buys ("1 ${localCurrency} to USD = US$0.0376")
+     is the USD/${localCurrency} rate upside down, not a separate rate — every entry you return must be units per 1 USD.
 
 Step 3 — once all conversions are done, return {"rates": [...]} where each element has:
-- "currency": 3-letter ISO code (USD is never included — it is always the implied base)
+- "currency": 3-letter ISO code (USD is never included — it is always the implied base; the local currency is ${localCurrency})
 - "rate": how many units of that currency per 1 USD
-- "name": descriptive label (Official, Interbank, Black Market, Black Market (Harare), OK Supermarket, Cash Rate, etc.)
+- "name": the page's own label for that row, copied verbatim and trimmed (Official, Cash Rate, OK Supermarket, etc.).
+  Do not paraphrase, expand or re-word it: the same row must produce the same label on every run, because the label
+  is part of how a rate is identified between scrapes.
 - "updated_at": ISO 8601 datetime if visible, else null
 
 Each (currency, name) pair from the same page must be unique.
@@ -391,13 +431,13 @@ ${truncatedContent}`;
             .filter(r =>
                 typeof r.currency === 'string' && r.currency.length === 3 &&
                 typeof r.rate === 'number' && r.rate > 0 &&
-                r.currency.toUpperCase() !== 'USD' &&
-                !demonetized.has(r.currency.toUpperCase())
+                normaliseCurrency(r.currency.toUpperCase()) !== 'USD' &&
+                !demonetized.has(normaliseCurrency(r.currency.toUpperCase()))
             )
             .map(r => ({
-                currency: r.currency.toUpperCase(),
+                currency: normaliseCurrency(r.currency.toUpperCase()),
                 rate: parseFloat(r.rate),
-                name: typeof r.name === 'string' && r.name.trim() ? r.name.trim() : null,
+                name: typeof r.name === 'string' && r.name.trim() ? tidyLabel(r.name.trim()) : null,
                 updated_at: r.updated_at || null
             }));
     }

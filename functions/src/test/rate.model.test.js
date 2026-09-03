@@ -9,17 +9,33 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { DateTime } from 'luxon';
 
-vi.mock('firebase-admin/firestore', () => ({
-    getFirestore: vi.fn(),
-    Timestamp: {
-        now: vi.fn(() => ({ toDate: () => new Date(), toMillis: () => Date.now() })),
-        fromDate: vi.fn(d => ({ toDate: () => d, toMillis: () => (d?.getTime?.() ?? 0) })),
-        fromMillis: vi.fn(ms => ({ toDate: () => new Date(ms), toMillis: () => ms }))
+// A class rather than an object of factories: toFirestore() branches on
+// `instanceof Timestamp`, which throws outright on a plain object, so writing a
+// new rate was untestable here.
+vi.mock('firebase-admin/firestore', () => {
+    class Timestamp {
+        constructor(date) { this.date = date; }
+        toDate() { return this.date; }
+        toMillis() { return this.date?.getTime?.() ?? 0; }
+        static now() { return new Timestamp(new Date()); }
+        static fromDate(d) { return new Timestamp(d); }
+        static fromMillis(ms) { return new Timestamp(new Date(ms)); }
     }
-}));
+    return { getFirestore: vi.fn(), Timestamp };
+});
 vi.mock('firebase-functions', () => ({
     logger: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn(), warn: vi.fn() }
 }));
+// The window settings are read through the options collection and cached in the
+// RTDB. Both stubs miss, so every test here runs on the built-in defaults.
+vi.mock('firebase-admin/database', () => {
+    const ref = {
+        get: vi.fn(async () => ({ exists: () => false, child: () => ({ val: () => null }), val: () => null })),
+        set: vi.fn(async () => {}),
+        remove: vi.fn(async () => {}),
+    };
+    return { getDatabase: vi.fn(() => ({ ref: vi.fn(() => ref) })) };
+});
 
 import { getFirestore } from 'firebase-admin/firestore';
 import Rate from '../models/Rate.js';
@@ -59,11 +75,20 @@ const RATES = [
         source_url: 'https://rbz.co.zw', rate: 18.5, last_rate: 18.2, enabled: true,
         updated_at: ago({ hours: 1 }), rate_updated_at: ago({ hours: 3 })
     },
-    // Not scraped in a fortnight — only the "updated" scope's absence should surface it
+    // Unseen for longer than the freshness window, but still inside the retention
+    // one — only the "updated" scope's absence should surface it
     {
         id: 'zwg-stale', rate_currency: 'ZWG', rate_name: 'Abandoned - ZWG', source_id: 'source6',
         source_url: 'https://gone.co.zw', rate: 99.0, last_rate: 99.0, enabled: true,
-        updated_at: ago({ days: 14 }), rate_updated_at: ago({ days: 14 })
+        updated_at: ago({ months: 6 }), rate_updated_at: ago({ months: 6 })
+    },
+    // Past the retention window, and belongs to the source the sweep tests scrape.
+    // A currency of its own, so lifting the freshness scope does not change the
+    // ZWG set the aggregate tests are counting.
+    {
+        id: 'zmw-ancient', rate_currency: 'ZMW', rate_name: 'RBZ - ZMW', source_id: 'source1',
+        source_url: 'https://rbz.co.zw', rate: 12.0, last_rate: 12.0, enabled: true,
+        updated_at: ago({ months: 13 }), rate_updated_at: ago({ months: 13 })
     },
     {
         id: 'zwg-off', rate_currency: 'ZWG', rate_name: 'Disabled - ZWG', source_id: 'source7',
@@ -88,7 +113,10 @@ function snapshotOf(docs) {
             id: d.id,
             exists: true,
             data: () => ({ ...d }),
-            ref: { id: d.id }
+            // The document itself rides along on the ref so a committed batch can
+            // write back to it. upsertFromScrape commits its renames and then
+            // queries for the new names, which a write-only mock never returns.
+            ref: { id: d.id, doc: d }
         })),
         empty: docs.length === 0
     };
@@ -115,17 +143,29 @@ function makeQuery(docs, clauses = [], take = null) {
 
 let batched;
 
+/** Batch writes land on the documents, so a later read in the same call sees them. */
+function makeBatch() {
+    return {
+        set: vi.fn((ref, data) => batched.set.push({ id: ref.id, data })),
+        update: vi.fn((ref, data) => {
+            batched.update.push({ id: ref.id, data });
+            if (ref.doc) Object.assign(ref.doc, data);
+        }),
+        delete: vi.fn(ref => batched.deleted.push(ref.id)),
+        commit: vi.fn().mockResolvedValue(undefined)
+    };
+}
+
 beforeEach(() => {
     batched = { set: [], update: [], deleted: [] };
 
+    // Copied per test: writes now mutate the documents, and the fixtures are
+    // shared, so a test that scrapes must not leave its edits for the next one.
+    const live = RATES.map(r => ({ ...r }));
+
     vi.mocked(getFirestore).mockReturnValue({
-        collection: vi.fn(() => makeQuery(RATES)),
-        batch: vi.fn(() => ({
-            set: vi.fn((ref, data) => batched.set.push({ id: ref.id, data })),
-            update: vi.fn((ref, data) => batched.update.push({ id: ref.id, data })),
-            delete: vi.fn(ref => batched.deleted.push(ref.id)),
-            commit: vi.fn().mockResolvedValue(undefined)
-        }))
+        collection: vi.fn(() => makeQuery(live)),
+        batch: vi.fn(makeBatch)
     });
 });
 
@@ -144,7 +184,7 @@ describe('scopes', () => {
         expect(rates.every(r => r.enabled)).toBe(true);
     });
 
-    it('updated: excludes rates not checked within the last week', async () => {
+    it('updated: excludes rates not seen within the freshness window', async () => {
         const rates = await Rate.findAll({ enabled: true });
 
         expect(idsOf(rates)).not.toContain('zwg-stale');
@@ -289,5 +329,87 @@ describe('upsertFromScrape screening', () => {
         await Rate.upsertFromScrape(SOURCE, [{ currency: 'ZWG', rate: 50000 }]);
 
         expect(batched.deleted).not.toContain('zwg-rbz');
+    });
+});
+
+// =============================================================================
+// upsertFromScrape rename reconciliation
+// =============================================================================
+
+describe('upsertFromScrape renames', () => {
+
+    const SOURCE = { id: 'source1', name: 'RBZ', url: 'https://rbz.co.zw' };
+
+    it('relabels a stored rate when the page reworded its row', async () => {
+        // The label belongs to the source's editors: 'RBZ - ZWG' becoming
+        // 'RBZ - Official' is the same rate renamed, not a new one.
+        await Rate.upsertFromScrape(SOURCE, [{ currency: 'ZWG', rate: 26.6, name: 'Official' }]);
+
+        expect(batched.update).toContainEqual(
+            expect.objectContaining({ id: 'zwg-rbz', data: { rate_name: 'RBZ - Official' } })
+        );
+    });
+
+    it('keeps the rate on its existing record rather than starting a new one', async () => {
+        await Rate.upsertFromScrape(SOURCE, [{ currency: 'ZWG', rate: 26.6, name: 'Official' }]);
+
+        // A new document here would mean the reading lost its history.
+        expect(batched.set).toHaveLength(0);
+        expect(batched.update.some(u => u.id === 'zwg-rbz' && u.data.rate === 26.6)).toBe(true);
+    });
+
+    it('does not guess when more than one rate is unaccounted for', async () => {
+        // Two stored ZWG names for this source and two unmatched arrivals: which
+        // became which is unknowable, so nothing is relabelled.
+        const two = [...RATES, {
+            id: 'zwg-rbz-2', rate_currency: 'ZWG', rate_name: 'RBZ - Interbank', source_id: 'source1',
+            source_url: 'https://rbz.co.zw', rate: 27.0, last_rate: 27.0, enabled: true,
+            updated_at: ago({ hours: 1 }), rate_updated_at: ago({ hours: 1 })
+        }];
+        vi.mocked(getFirestore).mockReturnValue({
+            collection: vi.fn(() => makeQuery(two)),
+            batch: vi.fn(makeBatch)
+        });
+
+        await Rate.upsertFromScrape(SOURCE, [
+            { currency: 'ZWG', rate: 26.6, name: 'Official' },
+            { currency: 'ZWG', rate: 27.1, name: 'Cash Rate' }
+        ]);
+
+        const relabels = batched.update.filter(u => u.data.rate_name);
+        expect(relabels).toHaveLength(0);
+    });
+});
+
+// =============================================================================
+// upsertFromScrape retention sweep
+// =============================================================================
+
+describe('upsertFromScrape retention', () => {
+
+    const SOURCE = { id: 'source1', name: 'RBZ', url: 'https://rbz.co.zw' };
+
+    // A scrape of this source that no longer lists ZWG at all.
+    const scrapeWithoutZwg = () => Rate.upsertFromScrape(SOURCE, [{ currency: 'ZAR', rate: 18.6 }]);
+
+    it('keeps a rate the source has stopped listing', async () => {
+        await scrapeWithoutZwg();
+
+        // One absence proves nothing: a truncated page or a missed extraction
+        // looks identical to a delisting, and deleting would take last_rate with it.
+        expect(batched.deleted).not.toContain('zwg-rbz');
+    });
+
+    it('deletes a rate unseen for longer than the retention window', async () => {
+        await scrapeWithoutZwg();
+
+        expect(batched.deleted).toContain('zmw-ancient');
+    });
+
+    it('leaves a rate that is merely stale in place', async () => {
+        await scrapeWithoutZwg();
+
+        // Six months: out of the API, but well inside the year it is kept for.
+        expect(batched.deleted).not.toContain('zwg-stale');
     });
 });

@@ -2,6 +2,8 @@ import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions';
 import { DateTime } from 'luxon';
 import _ from 'lodash';
+import Option from './Option.js';
+import { getCache, setCache } from '../utils/cache.js';
 
 /**
  * The middle value, averaging the two middle ones on an even-sized set — what the
@@ -16,6 +18,42 @@ function median(values) {
     return sorted.length % 2 === 0
         ? (sorted[middle - 1] + sorted[middle]) / 2
         : sorted[middle];
+}
+
+/**
+ * How long a rate keeps being served after the last scrape that saw it on its
+ * source page. `updated_at` records that sighting, so this is the whole of the
+ * public API's freshness rule.
+ */
+export const FRESHNESS_MONTHS_KEY = 'rate_freshness_months';
+const DEFAULT_FRESHNESS_MONTHS = 3;
+
+/**
+ * How long a rate is kept in Firestore after it stops being seen — far past the
+ * point it stopped being served, so a record is only destroyed once it is
+ * thoroughly dead. See the sweep at the end of upsertFromScrape.
+ */
+export const RETENTION_MONTHS_KEY = 'rate_retention_months';
+const DEFAULT_RETENTION_MONTHS = 12;
+
+/**
+ * A window setting in months, read from the options collection and cached for
+ * five minutes the way the currency list is: every rate query needs the
+ * freshness window, and an admin's edit should still take effect without a
+ * redeploy.
+ *
+ * A missing, non-numeric or non-positive value falls back to the default. A typo
+ * in settings must not unpublish every rate, still less delete one.
+ */
+async function windowMonths(key, fallback) {
+    const cached = await getCache(key);
+    if (cached) return cached;
+
+    const stored = Number(await Option.getValue(key, fallback));
+    const months = Number.isFinite(stored) && stored > 0 ? stored : fallback;
+
+    await setCache(key, months, DateTime.now().plus({ minutes: 5 }));
+    return months;
 }
 
 class Rate {
@@ -42,6 +80,19 @@ class Rate {
     static getCollection() {
         const db = getFirestore();
         return db.collection('rates');
+    }
+
+    /**
+     * The `updated_at` a rate must be newer than to still be served. Shared by
+     * every read path so one rule decides what the API considers current.
+     */
+    static async freshnessCutoff() {
+        return DateTime.now().minus({ months: await windowMonths(FRESHNESS_MONTHS_KEY, DEFAULT_FRESHNESS_MONTHS) }).toJSDate();
+    }
+
+    /** The `updated_at` past which a rate is deleted rather than merely hidden. */
+    static async retentionCutoff() {
+        return DateTime.now().minus({ months: await windowMonths(RETENTION_MONTHS_KEY, DEFAULT_RETENTION_MONTHS) }).toJSDate();
     }
 
     // Convert to Firestore format
@@ -148,11 +199,11 @@ class Rate {
 
         // The "updated" scope keeps stale rates out of the public API.
         //
-        // This used to be a union of two queries: `status == true` OR updated in
-        // the last week. Because every scraped rate was written with
-        // status = true and nothing ever set it to false, the first query matched
-        // the entire collection and the week window never excluded anything.
-        // With the status field gone, the window is the whole scope.
+        // This used to be a union of two queries: `status == true` OR recently
+        // updated. Because every scraped rate was written with status = true and
+        // nothing ever set it to false, the first query matched the entire
+        // collection and the time window never excluded anything. With the status
+        // field gone, the window is the whole scope.
         let query = Rate.getCollection();
         Object.entries(baseFilters).forEach(([key, value]) => {
             if (key === 'dateAfter') {
@@ -163,8 +214,7 @@ class Rate {
         });
 
         if (filters.applyUpdatedScope !== false) { // default to true unless explicitly disabled
-            const oneWeekAgo = DateTime.now().minus({ weeks: 1 }).toJSDate();
-            query = query.where('updated_at', '>', Timestamp.fromDate(oneWeekAgo));
+            query = query.where('updated_at', '>', Timestamp.fromDate(await Rate.freshnessCutoff()));
         }
 
         queries.push(query);
@@ -275,11 +325,9 @@ class Rate {
     // Matches the "updated" scope in findAll — see the note there on why the
     // former `status == true` half of this union was doing nothing.
     static async getUniqueCurrencies() {
-        const oneWeekAgo = DateTime.now().minus({ weeks: 1 }).toJSDate();
-
         const snapshot = await Rate.getCollection()
             .where('enabled', '==', true)
-            .where('updated_at', '>', Timestamp.fromDate(oneWeekAgo))
+            .where('updated_at', '>', Timestamp.fromDate(await Rate.freshnessCutoff()))
             .select('rate_currency')
             .get();
 
@@ -296,7 +344,7 @@ class Rate {
      * The plausible range of each currency, keyed by code: the lowest and highest
      * rate the API is currently serving for it.
      *
-     * findAll's default week window is the same "enabled and updated" set the
+     * findAll's default freshness window is the same "enabled and updated" set the
      * Laravel scraper measured a fresh reading against.
      */
     static async currencyBands() {
@@ -331,6 +379,66 @@ class Rate {
     }
 
     /**
+     * Relabel stored rates whose name changed on the source page.
+     *
+     * A rate is identified by (source, currency, name), but that name is the
+     * page's own label — written and reworded by the site's editors, with no
+     * signal to us that anything changed. Matched on the name alone, a reworded
+     * row reads as one rate disappearing and a different one arriving: the
+     * reading loses its history and its last_rate, and both variants are then
+     * served side by side until the old one ages out.
+     *
+     * So where a currency has exactly one stored rate and exactly one scraped
+     * rate left over once the names that do match are paired off, the two are
+     * taken to be the same rate under a new label, and the stored record is
+     * relabelled so it keeps its history. Anything more ambiguous is left alone:
+     * a wrong pairing is worse than a duplicate, and retention now makes a
+     * duplicate survivable.
+     *
+     * Runs before the upsert loop and commits separately, so the loop's lookup by
+     * name finds the record under its new label.
+     *
+     * @returns {Promise<number>} how many records were relabelled
+     */
+    static async reconcileRenames(source, scraped) {
+        const nameFor = (r) => r.name
+            ? `${source.name} - ${r.name}`
+            : `${source.name} - ${r.currency.toUpperCase()}`;
+
+        const storedSnap = await Rate.getCollection()
+            .where('source_id', '==', source.id)
+            .get();
+
+        const stored = storedSnap.docs.map(doc => ({
+            ref: doc.ref,
+            currency: (doc.data().rate_currency || '').toUpperCase(),
+            name: doc.data().rate_name || ''
+        }));
+
+        const wanted = scraped.map(r => ({ currency: r.currency.toUpperCase(), name: nameFor(r) }));
+
+        const batch = getFirestore().batch();
+        let renamed = 0;
+
+        for (const [currency, group] of Object.entries(_.groupBy(wanted, 'currency'))) {
+            const storedHere = stored.filter(s => s.currency === currency);
+            const scrapedNames = new Set(group.map(g => g.name));
+            const storedNames = new Set(storedHere.map(s => s.name));
+
+            const orphans = storedHere.filter(s => !scrapedNames.has(s.name));
+            const arrivals = group.filter(g => !storedNames.has(g.name));
+
+            if (orphans.length === 1 && arrivals.length === 1) {
+                batch.update(orphans[0].ref, { rate_name: arrivals[0].name });
+                renamed++;
+            }
+        }
+
+        if (renamed > 0) await batch.commit();
+        return renamed;
+    }
+
+    /**
      * Upsert rates returned by the AI scraper for a given source.
      * For each extracted rate: find existing (source_id + rate_currency) or create new.
      * Saves the new rate value, shifting the current rate → last_rate only when the
@@ -354,6 +462,9 @@ class Rate {
             _.keyBy(extractedRates, r => `${r.currency.toUpperCase()}::${(r.name || '').toLowerCase()}`)
         );
 
+        // Settle label edits before anything is matched by name.
+        await Rate.reconcileRenames(source, deduped);
+
         // Read once per source rather than per rate — every value in this scrape is
         // screened against the same picture of what the API currently serves.
         const bands = await Rate.currencyBands();
@@ -372,8 +483,11 @@ class Rate {
 
                 // A reading the band refuses is dropped, never written: the stored
                 // record keeps the last value we trusted rather than publishing a
-                // misread. Its key stays in scrapedKeys below, so the sweep at the
-                // end does not mistake the refusal for a rate the page stopped listing.
+                // misread. That leaves its updated_at untouched, so a rate refused
+                // scrape after scrape ages out of the API and is eventually swept
+                // like any other rate that stopped arriving — which is the right
+                // end for a source whose figures have not been trustworthy in a
+                // fortnight. It is never deleted for a single refusal.
                 const scraped = Rate.screenRate(parseFloat(extracted.rate), bands[currency]);
 
                 if (scraped === null) {
@@ -442,16 +556,24 @@ class Rate {
             await batch.commit();
         }
 
-        // Remove rates for this source that were not in the scraped set.
-        // This prevents stale records accumulating when a page stops listing a rate variant.
-        const scrapedKeys = new Set(
-            deduped.map(r => {
-                const name = r.name
-                    ? `${source.name} - ${r.name}`
-                    : `${source.name} - ${r.currency.toUpperCase()}`;
-                return `${r.currency.toUpperCase()}::${name}`;
-            })
-        );
+        // Remove this source's rates only once they have gone a full
+        // RETENTION_WINDOW without being seen.
+        //
+        // Absence from a single scrape means nothing: a truncated page, a failed
+        // fetch or an extraction that missed a row all look exactly like a
+        // delisting, and deleting on that evidence destroyed the record — last_rate
+        // with it, so a currency that came back reappeared with no change history
+        // and no band to screen the next reading against. Consumers saw currencies
+        // blink in and out hourly, and last_updated could not warn them because
+        // there was no longer a record to carry it.
+        //
+        // A rate that stops updating leaves the API on its own once it falls
+        // outside the freshness window; this sweep only reclaims the storage,
+        // much later. Both windows are settings, so the later of the two cutoffs
+        // is never used: a retention window mistakenly set shorter than the
+        // serving one would otherwise delete rates still being served.
+        const [retention, freshness] = await Promise.all([Rate.retentionCutoff(), Rate.freshnessCutoff()]);
+        const retentionCutoff = retention < freshness ? retention : freshness;
 
         const allSourceRates = await Rate.getCollection()
             .where('source_id', '==', source.id)
@@ -461,8 +583,13 @@ class Rate {
         let deleteCount = 0;
         allSourceRates.docs.forEach(doc => {
             const data = doc.data();
-            const key = `${(data.rate_currency || '').toUpperCase()}::${data.rate_name || ''}`;
-            if (!scrapedKeys.has(key)) {
+            // Filtered here rather than in the query: it keeps this a single-field
+            // read needing no composite index, and a source's rates number in the
+            // tens. A record with no updated_at at all (the legacy MySQL import
+            // could produce one) is kept — it is already invisible to every read
+            // path, and guessing an age for it would only risk deleting real data.
+            const lastSeen = data.updated_at?.toDate ? data.updated_at.toDate() : data.updated_at;
+            if (lastSeen && lastSeen < retentionCutoff) {
                 deleteBatch.delete(doc.ref);
                 deleteCount++;
                 results.push({ action: 'deleted', currency: data.rate_currency });

@@ -203,6 +203,31 @@ than waiting up to an hour.
 
 Set the `scraping_enabled` option to `false` to pause scraping without redeploying.
 
+### Rate lifetime
+
+A rate missing from one scrape is **not** deleted. A truncated page, a failed fetch or an
+extraction that skipped a row look exactly like a delisting, and deleting on that evidence
+destroyed the record along with its `last_rate` history — so currencies blinked in and out
+between hourly runs.
+
+Instead `updated_at` records the last scrape that saw the rate, and two windows act on it:
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `rate_freshness_months` | 3 | how long the rate keeps being served after it was last seen |
+| `rate_retention_months` | 12 | how long it is kept in Firestore before the scrape sweep deletes it |
+
+So a delisted rate stays in the API for three months with an honest `last_updated`, stops being
+served, then is deleted nine months later. Both are editable under **Settings → Scraping** and
+take effect within five minutes. A retention shorter than the serving window is ignored rather
+than allowed to delete rates still being served.
+
+A rate is identified by (source, currency, **name**), and that name is the source page's own row
+label — written by the site's editors and reworded without warning. Before each upsert,
+`Rate.reconcileRenames` pairs a currency's single leftover stored rate with its single leftover
+scraped one and relabels the stored record, so a rewording keeps its history instead of forking
+into two rates. Anything more ambiguous is left alone.
+
 ### Adding a source
 
 Add a document to the `sources` collection, or use **Sources** in the admin dashboard.
