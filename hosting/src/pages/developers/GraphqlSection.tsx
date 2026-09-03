@@ -4,7 +4,6 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import { ApolloSandbox } from '@apollo/sandbox';
 import CodeBlock from './CodeBlock';
 import ParamList from './ParamList';
 import { GRAPHQL_PARAMS } from './params';
@@ -27,21 +26,36 @@ export default function GraphqlSection({
   const sandboxInitialized = useRef(false);
 
   useEffect(() => {
-    if (sandboxInitialized.current) {
+    // The playground starts collapsed, so most readers never open it. Waiting
+    // for the first expand keeps @apollo/sandbox out of the page chunk and
+    // skips building the sandbox for everyone who only reads the docs.
+    if (!expanded || sandboxInitialized.current) {
       return;
     }
 
-    sandboxInitialized.current = true;
+    let cancelled = false;
 
-    new ApolloSandbox({
-      target: `#${sandboxId}`,
-      initialEndpoint: graphqlUrl,
-      initialState: {
-        document: GRAPHQL_QUERY,
-      },
-      endpointIsEditable: false,
+    import('@apollo/sandbox').then(({ ApolloSandbox }) => {
+      if (cancelled || sandboxInitialized.current) {
+        return;
+      }
+
+      sandboxInitialized.current = true;
+
+      new ApolloSandbox({
+        target: `#${sandboxId}`,
+        initialEndpoint: graphqlUrl,
+        initialState: {
+          document: GRAPHQL_QUERY,
+        },
+        endpointIsEditable: false,
+      });
     });
-  }, [graphqlUrl, sandboxId]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [expanded, graphqlUrl, sandboxId]);
 
   return (
     <Box>

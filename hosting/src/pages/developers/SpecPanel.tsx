@@ -1,11 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Box, CircularProgress, Paper, Typography } from '@mui/material';
-import { RedocStandalone } from 'redoc';
-import { parse as parseYaml } from 'yaml';
 import type { RestVersion } from './types';
 
 /** Brand blue, readable on Redoc's white canvas. */
 const REDOC_PRIMARY = '#0B6FD0';
+
+// Redoc is by far the heaviest dependency on this page — statically imported it
+// was most of the DevelopersPage chunk. Nothing can render it until the spec has
+// been fetched and parsed, so it is loaded alongside that fetch instead.
+const RedocStandalone = lazy(() =>
+  import('redoc').then((mod) => ({ default: mod.RedocStandalone })),
+);
 
 /**
  * Renders only the selected version's operations from the single OpenAPI file.
@@ -28,7 +33,10 @@ export default function SpecPanel({
     let cancelled = false;
     fetch(openApiUrl)
       .then((res) => (res.ok ? res.text() : Promise.reject(new Error(`HTTP ${res.status}`))))
-      .then((text) => {
+      .then(async (text) => {
+        // yaml is only ever needed for this one parse, so it rides along in the
+        // fetched-spec path rather than in the page chunk.
+        const { parse: parseYaml } = await import('yaml');
         if (!cancelled) setSpec(parseYaml(text) as Record<string, unknown>);
       })
       .catch((err: unknown) => {
@@ -69,6 +77,14 @@ export default function SpecPanel({
     };
   }, [spec, version]);
 
+  // Shown both while the spec is being fetched and while Redoc's own chunk is
+  // still in flight — from the reader's side they are the same wait.
+  const spinner = (
+    <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+      <CircularProgress />
+    </Box>
+  );
+
   return (
     // Redoc renders light-only, so this container is pinned white in both
     // schemes rather than inheriting the surface token.
@@ -84,22 +100,22 @@ export default function SpecPanel({
             </Box>
           </Box>
         ) : versionSpec ? (
-          <RedocStandalone
-            // Remount on version change so no operation from the previously
-            // selected version survives in the panel.
-            key={version}
-            spec={versionSpec}
-            options={{
-              hideDownloadButton: true,
-              expandResponses: '200,201',
-              nativeScrollbars: true,
-              theme: { colors: { primary: { main: REDOC_PRIMARY } } },
-            }}
-          />
+          <Suspense fallback={spinner}>
+            <RedocStandalone
+              // Remount on version change so no operation from the previously
+              // selected version survives in the panel.
+              key={version}
+              spec={versionSpec}
+              options={{
+                hideDownloadButton: true,
+                expandResponses: '200,201',
+                nativeScrollbars: true,
+                theme: { colors: { primary: { main: REDOC_PRIMARY } } },
+              }}
+            />
+          </Suspense>
         ) : (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-            <CircularProgress />
-          </Box>
+          spinner
         )}
       </Box>
     </Paper>
