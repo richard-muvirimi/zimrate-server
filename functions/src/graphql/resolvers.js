@@ -1,5 +1,6 @@
 import Rate from '../models/Rate.js';
 import Option from '../models/Option.js';
+import { RateService } from '../services/RateService.js';
 import { graphqlRateQuerySchema } from '../validation/schemas.js';
 export const resolvers = {
   Query: {
@@ -13,6 +14,19 @@ export const resolvers = {
       const { error, value } = graphqlRateQuerySchema.validate(normalisedArgs);
       if (error) {
         throw new Error(`Validation error: ${error.details.map(d => d.message).join(', ')}`);
+      }
+
+      // base is the only argument that changes what a rate *means*, so it takes
+      // its own path: the same cross-rate maths REST v2 serves. Without it the
+      // query answers exactly as it always has, in rates per 1 USD.
+      if (value.base) {
+        return await RateService.getRatesForBase({
+          base: value.base,
+          prefer: value.prefer,
+          currency: value.currency,
+          search: value.search,
+          date: value.date
+        });
       }
 
       const filters = {

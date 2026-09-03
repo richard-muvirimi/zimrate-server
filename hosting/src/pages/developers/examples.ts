@@ -66,12 +66,21 @@ export function jsonpRequest(versionUrl: string, version: RestVersion) {
   ].join('\n');
 }
 
+/**
+ * Two aliases of one request: the default USD quote, and the same rates put
+ * through `base` — the GraphQL equivalent of v2, and the only parameter that
+ * changes what the numbers mean rather than which rows come back.
+ */
 export const GRAPHQL_QUERY = [
   'query {',
   '  USD: rate(prefer: RANDOM) {',
   '    currency',
   '    last_checked',
   '    last_updated',
+  '    rate',
+  '  }',
+  '  ZAR: rate(base: ZAR, prefer: RANDOM) {',
+  '    currency',
   '    rate',
   '  }',
   '  notice: info',

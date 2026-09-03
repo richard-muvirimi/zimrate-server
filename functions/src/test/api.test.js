@@ -554,6 +554,56 @@ const AGGREGATES = ['MIN', 'MAX', 'MEAN', 'MEDIAN', 'MODE', 'RANDOM'];
         expect(Array.isArray(res.body.data.USD)).toBe(true);
     });
 
+    it('leaves results in USD when base is omitted', async () => {
+        // The regression guard for existing clients: adding the argument must not
+        // change what a query that does not use it returns.
+        const res = await GQL('query { USD: rate(currency: ZAR) { currency rate } }');
+        expect(res.status).toBe(200);
+        expect(res.body).not.toHaveProperty('errors');
+        expect(res.body.data.USD.find(r => r.currency === 'ZAR').rate).toBe(18.5);
+    });
+
+    it('expresses rates against the base currency when base is given', async () => {
+        const res = await GQL(
+            'query($base: Base) { rates: rate(base: $base) { currency name rate last_rate } }',
+            { base: 'ZAR' }
+        );
+        expect(res.status).toBe(200);
+        expect(res.body).not.toHaveProperty('errors');
+
+        const byName = Object.fromEntries(res.body.data.rates.map(r => [r.name, r.rate]));
+        expect(byName['RBZ - ZWG']).toBeCloseTo(26.5 / 18.5, 6);
+        expect(byName['Black Market - ZWG']).toBeCloseTo(28.0 / 18.5, 6);
+
+        // The base currency is meaningless expressed against itself.
+        expect(res.body.data.rates.some(r => r.currency === 'ZAR')).toBe(false);
+    });
+
+    it('accepts USD as a base and returns stored rates unchanged', async () => {
+        // USD is in the Base enum but not in Currency: no rate is stored for it.
+        const res = await GQL('query { rates: rate(base: USD, currency: ZAR) { currency rate } }');
+        expect(res.status).toBe(200);
+        expect(res.body).not.toHaveProperty('errors');
+        expect(res.body.data.rates.find(r => r.currency === 'ZAR').rate).toBe(18.5);
+    });
+
+    it('combines base with currency and prefer', async () => {
+        const res = await GQL('query { rates: rate(base: ZAR, currency: ZWG, prefer: MEAN) { currency rate } }');
+        expect(res.status).toBe(200);
+        expect(res.body).not.toHaveProperty('errors');
+        expect(res.body.data.rates).toHaveLength(1);
+        // MEAN of the two ZWG rates, then crossed through ZAR.
+        expect(res.body.data.rates[0].rate).toBeCloseTo(((26.5 + 28.0) / 2) / 18.5, 6);
+    });
+
+    it('errors for a base currency with no rates', async () => {
+        // JPY is not in the fixture, so the Base enum rejects it before the
+        // resolver runs — the same class of answer REST v2 gives with a 404.
+        const res = await GQL('query { rates: rate(base: JPY) { currency rate } }');
+        expect(res.status).toBe(200);
+        expect(res.body.errors).toBeDefined();
+    });
+
     it('returns info string from the info query', async () => {
         const res = await GQL('query { USD: rate { currency rate url }, info: info }');
         expect(res.status).toBe(200);

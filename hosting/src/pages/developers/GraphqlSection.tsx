@@ -66,7 +66,7 @@ export default function GraphqlSection({
       {/* Parameters before the example, matching the REST tabs. */}
       <Typography variant="h6" gutterBottom>Parameters</Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>
-        The <code>rate</code> query accepts these four. It has no equivalent of the REST{' '}
+        The <code>rate</code> query accepts these five. It has no equivalent of the REST{' '}
         <code>callback</code>, <code>extra</code> or <code>info</code> parameters —{' '}
         <code>info</code> is a field you select instead.
       </Typography>

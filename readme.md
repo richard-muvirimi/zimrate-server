@@ -43,7 +43,7 @@ both GET and form-encoded POST.
 | `ALL /api` | v0, legacy shape |
 | `ALL /api/v1` | main endpoint — `search`, `name`, `currency`, `date`, `prefer`, `extra`, `info` |
 | `ALL /api/v2` | cross rates — requires `base` |
-| `POST /api/graphql` | GraphQL, introspection on |
+| `POST /api/graphql` | GraphQL, introspection on — `search`, `currency`, `date`, `base`, `prefer` |
 | `GET/POST /api/contact` | contact form (see [Contact form](#contact-form)) |
 | `/api/admin/**` | admin only — Firebase ID token + `admin` claim + App Check |
 
@@ -51,6 +51,17 @@ both GET and form-encoded POST.
 
 ```bash
 curl -X POST https://zimrate.tyganeutronics.com/api/v1 -d 'prefer=mean'
+```
+
+`base` picks the currency rates are quoted against, using the same cross-rate maths in both
+places: required as a path segment on v2, optional on GraphQL. Omit it on GraphQL and rates
+come back per 1 USD as before. It accepts `USD` or any currency the API currently serves, and
+the base currency is left out of its own results.
+
+```bash
+curl -X POST https://zimrate.tyganeutronics.com/api/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ rate(base: ZAR, prefer: MEAN) { currency rate } }"}'
 ```
 
 The OpenAPI spec is at `hosting/public/docs/documentation.yaml` and is rendered on `/developers`.

@@ -47,6 +47,9 @@ export const graphqlRateQuerySchema = Joi.object({
     search: Joi.string().optional(),
     date: pastUnixTimestamp.optional(),
     currency: Joi.string().uppercase().optional(),
+    // Optional, unlike v2's required path segment: omitting it keeps the USD-based
+    // results every existing client already gets.
+    base: Joi.string().uppercase().optional(),
     prefer: Joi.string().valid('min', 'max', 'mean', 'median', 'random', 'mode').optional()
 });
 

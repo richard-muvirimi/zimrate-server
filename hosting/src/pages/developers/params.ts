@@ -12,7 +12,7 @@
 
 export const PREFER_VALUES = ['MIN', 'MAX', 'MEAN', 'MEDIAN', 'RANDOM', 'MODE'];
 
-export const GRAPHQL_PARAMS = ['search', 'currency', 'date', 'prefer'];
+export const GRAPHQL_PARAMS = ['search', 'currency', 'date', 'base', 'prefer'];
 
 export function buildParamDocs({
   loading,
@@ -22,7 +22,7 @@ export function buildParamDocs({
   currencyList: string;
 }): Record<string, string> {
   return {
-    base: 'The currency every rate is returned against, for example ZAR. Must be one of the supported currencies. Requests without it are rejected.',
+    base: 'The currency every rate is returned against, for example ZAR. Optional — leave it out and rates come back per 1 USD, as they always have. Accepts USD or any supported currency, and the base currency itself is left out of the results.',
     search: 'Allows you to get currency rates using only part of a currency or source name.',
     name: 'An alias of search. Pass one or the other, not both.',
     source: 'Deprecated, use name instead. Cannot be combined with search or name.',
