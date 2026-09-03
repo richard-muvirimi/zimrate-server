@@ -1,9 +1,10 @@
 import crypto from 'crypto';
+import { DateTime, Duration } from 'luxon';
 
 const GA4_ENDPOINT = 'https://www.google-analytics.com/mp/collect';
 
 /** Rotates the derived session id; GA4's own web sessions time out at 30 min. */
-const SESSION_WINDOW_MS = 30 * 60 * 1000;
+const SESSION_WINDOW_MS = Duration.fromObject({ minutes: 30 }).toMillis();
 
 /**
  * Salt for the caller hash. Without one the hash is not protective: the whole
@@ -72,7 +73,7 @@ export const logAnalytics = (req, res, next) => {
 
         // Same identity, bucketed into windows, so sessions expire instead of
         // every caller having one session that never ends.
-        const sessionId = `${clientId.slice(0, 16)}.${Math.floor(Date.now() / SESSION_WINDOW_MS)}`;
+        const sessionId = `${clientId.slice(0, 16)}.${Math.floor(DateTime.now().toMillis() / SESSION_WINDOW_MS)}`;
 
         const payload = {
             // No user_id: that field means a known, signed-in person, and this

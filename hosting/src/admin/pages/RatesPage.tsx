@@ -18,6 +18,7 @@ import { useCursorPage } from '../hooks/useCursorPage';
 import { usePerPage } from '../hooks/usePerPage';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import PaginationBar from '../components/PaginationBar';
+import { DateTime, Duration } from 'luxon';
 import ListFilterBar from '../components/ListFilterBar';
 
 interface Rate {
@@ -42,7 +43,7 @@ const STATE_OPTIONS: { value: StateFilter; label: string }[] = [
  * Scraping runs hourly, so a rate untouched for six hours has missed several
  * passes. Six matches the threshold the legacy status report used.
  */
-const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
+const STALE_AFTER = Duration.fromObject({ hours: 6 });
 
 /**
  * Derived from the clock on every render rather than stored on the document:
@@ -58,10 +59,13 @@ const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
 function freshness(rate: Rate): { label: string; color: 'success' | 'warning' | 'default' } {
   const updated = rate.updated_at?.toDate?.();
   if (!updated) return { label: 'Unknown', color: 'default' };
-  return Date.now() - updated.getTime() > STALE_AFTER_MS
+  return DateTime.fromJSDate(updated) < DateTime.now().minus(STALE_AFTER)
     ? { label: 'Stale', color: 'warning' }
     : { label: 'Fresh', color: 'success' };
 }
+
+const formatDate = (value?: Date) =>
+  value ? DateTime.fromJSDate(value).toLocaleString(DateTime.DATE_SHORT) : '—';
 
 function mapRate(d: QueryDocumentSnapshot<DocumentData>): Rate {
   return { id: d.id, ...d.data() } as Rate;
@@ -243,7 +247,7 @@ export default function RatesPage() {
                 </TableCell>
                 <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' }, whiteSpace: 'nowrap' }}>
                   <Typography variant="caption" color="text.secondary">
-                    {rate.updated_at?.toDate?.()?.toLocaleDateString() ?? '—'}
+                    {formatDate(rate.updated_at?.toDate?.())}
                   </Typography>
                 </TableCell>
                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>

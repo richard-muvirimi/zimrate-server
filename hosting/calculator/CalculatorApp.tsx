@@ -12,6 +12,8 @@ import CloudOffIcon from '@mui/icons-material/CloudOff';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Decimal from 'decimal.js';
+import { DateTime } from 'luxon';
+import { groupBy } from 'lodash-es';
 import RateRow from './RateRow';
 import AddCustomRateDialog from './dialogs/AddCustomRateDialog';
 import HiddenCurrenciesDialog from './dialogs/HiddenCurrenciesDialog';
@@ -167,14 +169,7 @@ export default function CalculatorApp() {
     };
   }, []);
 
-  const grouped = useMemo(() => {
-    const groups = new Map<SectionKey, StoredRate[]>();
-    for (const rate of visible) {
-      const key = sectionOf(rate);
-      groups.set(key, [...(groups.get(key) ?? []), rate]);
-    }
-    return groups;
-  }, [visible]);
+  const grouped = useMemo(() => groupBy(visible, sectionOf), [visible]);
 
   const closeMenu = () => setMenuAnchor(null);
 
@@ -254,7 +249,7 @@ export default function CalculatorApp() {
 
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
           {fetchedAt
-            ? `Rates saved ${relativeTime(Math.floor(fetchedAt / 1000))} · ${aggregate}`
+            ? `Rates saved ${relativeTime(DateTime.fromMillis(fetchedAt).toUnixInteger())} · ${aggregate}`
             : 'No rates saved yet'}
         </Typography>
 
@@ -273,7 +268,7 @@ export default function CalculatorApp() {
           </Stack>
         ) : (
           SECTIONS.map(({ key, title }) => {
-            const rows = grouped.get(key);
+            const rows = grouped[key];
             if (!rows?.length) return null;
 
             return (

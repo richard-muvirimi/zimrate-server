@@ -2,10 +2,11 @@ import { Box, Typography, Link, Stack, Divider } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import logoUrl from '../assets/logo.svg';
 import { useBranding } from '../useBranding';
+import { DateTime } from 'luxon';
 import SafeEmail from './SafeEmail';
 
 export default function Footer() {
-  const year = new Date().getFullYear();
+  const year = DateTime.now().year;
   const branding = useBranding();
 
   return (

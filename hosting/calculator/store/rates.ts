@@ -11,6 +11,7 @@
  * localStorage rather than IndexedDB: this is a few dozen rows, and the
  * synchronous read is what makes an offline cold start instant.
  */
+import { DateTime, Duration } from 'luxon';
 import { BASE_CURRENCY } from '../currency';
 
 export const AGGREGATES = ['min', 'max', 'mean', 'median', 'mode', 'random'] as const;
@@ -20,7 +21,7 @@ export type Aggregate = (typeof AGGREGATES)[number];
 export const DEFAULT_AGGREGATE: Aggregate = 'median';
 
 /** How stale saved rates may be before opening the app refreshes them. */
-export const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
+export const STALE_AFTER = Duration.fromObject({ hours: 24 });
 
 export interface StoredRate {
   currency: string;
@@ -149,8 +150,8 @@ export function addCustomRate(currency: string, name: string, rate: number) {
         name: name.trim() || code,
         rate,
         last_rate: rate,
-        last_checked: Math.floor(Date.now() / 1000),
-        last_updated: Math.floor(Date.now() / 1000),
+        last_checked: DateTime.now().toUnixInteger(),
+        last_updated: DateTime.now().toUnixInteger(),
         pinned: false,
         hidden: false,
         custom: true,
@@ -175,8 +176,8 @@ export function updateCustomRate(currency: string, rate: number) {
             ...existing,
             last_rate: existing.rate,
             rate,
-            last_checked: Math.floor(Date.now() / 1000),
-            last_updated: Math.floor(Date.now() / 1000),
+            last_checked: DateTime.now().toUnixInteger(),
+            last_updated: DateTime.now().toUnixInteger(),
           }
         : existing,
     ),
@@ -266,10 +267,11 @@ export async function refreshRates(currency?: string): Promise<void> {
     throw new Error('The rates service returned nothing to update');
   }
 
-  commit({ ...state, rates: merge(state.rates, rows), fetchedAt: Date.now() });
+  commit({ ...state, rates: merge(state.rates, rows), fetchedAt: DateTime.now().toMillis() });
 }
 
 /** True when the saved rates are old enough that opening the app should refresh. */
 export function isStale(): boolean {
-  return state.fetchedAt === null || Date.now() - state.fetchedAt > STALE_AFTER_MS;
+  return state.fetchedAt === null
+    || DateTime.fromMillis(state.fetchedAt) < DateTime.now().minus(STALE_AFTER);
 }

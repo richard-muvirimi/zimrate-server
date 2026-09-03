@@ -12,6 +12,8 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useQuery } from '@apollo/client/react';
 import { useMemo, useState } from 'react';
 import Decimal from 'decimal.js';
+import { DateTime } from 'luxon';
+import { compact, groupBy, keyBy, map, mapValues, max, sortBy, uniqBy } from 'lodash-es';
 import { GET_RATES } from '../graphql/queries';
 
 interface Rate {
@@ -67,11 +69,7 @@ function formatRate(rate?: number) {
 
 function formatDate(ts?: number) {
   if (!ts) return '—';
-  return new Date(ts * 1000).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  return DateTime.fromSeconds(ts).toLocaleString(DateTime.DATE_MED);
 }
 
 function hostnameOf(url?: string) {
@@ -88,42 +86,34 @@ function hostnameOf(url?: string) {
 function buildRows(data?: RatesData): CurrencyRow[] {
   if (!data?.rates?.length) return [];
 
-  const byAggregate = {} as Record<AggregateKey, Map<string, number>>;
+  const byAggregate = {} as Record<AggregateKey, Record<string, number>>;
   for (const key of AGGREGATES) {
-    byAggregate[key] = new Map((data[key] ?? []).map((r) => [r.currency, r.rate]));
+    byAggregate[key] = mapValues(keyBy(data[key] ?? [], 'currency'), (r) => r.rate);
   }
 
-  const grouped = new Map<string, Rate[]>();
-  for (const rate of data.rates) {
-    const list = grouped.get(rate.currency);
-    if (list) list.push(rate);
-    else grouped.set(rate.currency, [rate]);
-  }
-
-  return [...grouped.entries()]
-    .map(([currency, rates]) => {
-      const sorted = [...rates].sort((a, b) => a.rate - b.rate);
-      const sources = new Map<string, { href: string; hostname: string }>();
-      for (const r of sorted) {
-        const parsed = hostnameOf(r.url);
-        if (parsed) sources.set(parsed.href, parsed);
-      }
+  return sortBy(
+    map(groupBy(data.rates, 'currency'), (rates, currency) => {
+      const sorted = sortBy(rates, 'rate');
+      const sources = uniqBy(compact(sorted.map((r) => hostnameOf(r.url))), 'href');
 
       const aggregated = {} as Record<AggregateKey, number | undefined>;
-      for (const key of AGGREGATES) aggregated[key] = byAggregate[key].get(currency);
+      for (const key of AGGREGATES) aggregated[key] = byAggregate[key][currency];
 
       return {
         currency,
-        lastChecked: Math.max(...sorted.map((r) => r.last_checked ?? 0)) || undefined,
-        lastUpdated: Math.max(...sorted.map((r) => r.last_updated ?? 0)) || undefined,
+        // Zero is "never checked" here, and `|| undefined` is what the row's
+        // date formatter reads as a dash.
+        lastChecked: max(map(sorted, (r) => r.last_checked ?? 0)) || undefined,
+        lastUpdated: max(map(sorted, (r) => r.last_updated ?? 0)) || undefined,
         minRate: sorted[0].rate,
         maxRate: sorted[sorted.length - 1].rate,
         aggregated,
         rates: sorted,
-        sources: [...sources.values()],
+        sources,
       };
-    })
-    .sort((a, b) => a.currency.localeCompare(b.currency));
+    }),
+    'currency',
+  );
 }
 
 function DeltaChip({ rate, lastRate }: { rate: number; lastRate?: number }) {

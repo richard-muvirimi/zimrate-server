@@ -18,6 +18,7 @@ import AddIcon from '@mui/icons-material/Add';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ImportExportIcon from '@mui/icons-material/ImportExport';
 import MailIcon from '@mui/icons-material/Mail';
+import { DateTime } from 'luxon';
 import PeopleIcon from '@mui/icons-material/People';
 
 interface RateRow {
@@ -53,7 +54,7 @@ interface Stat {
 }
 
 function toDate(value?: { toDate?: () => Date }) {
-  return value?.toDate ? value.toDate() : null;
+  return value?.toDate ? DateTime.fromJSDate(value.toDate()) : null;
 }
 
 export default function DashboardPage() {
@@ -62,7 +63,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stat[]>([]);
   const [recent, setRecent] = useState<RateRow[]>([]);
   const [failing, setFailing] = useState<SourceRow[]>([]);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<DateTime | null>(null);
   const [scrapingEnabled, setScrapingEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -166,10 +167,10 @@ export default function DashboardPage() {
             />
           )}
           {lastUpdated && (
-            <Tooltip title={lastUpdated.toLocaleString()}>
+            <Tooltip title={lastUpdated.toLocaleString(DateTime.DATETIME_MED)}>
               <Chip
                 icon={<UpdateIcon />}
-                label={`Updated ${lastUpdated.toLocaleDateString()}`}
+                label={`Updated ${lastUpdated.toLocaleString(DateTime.DATE_SHORT)}`}
                 size="small"
                 variant="outlined"
               />
@@ -270,7 +271,7 @@ export default function DashboardPage() {
                       </TableCell>
                       <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                         <Typography variant="caption" color="text.secondary">
-                          {toDate(r.updated_at)?.toLocaleDateString() ?? '—'}
+                          {toDate(r.updated_at)?.toLocaleString(DateTime.DATE_SHORT) ?? '—'}
                         </Typography>
                       </TableCell>
                     </TableRow>

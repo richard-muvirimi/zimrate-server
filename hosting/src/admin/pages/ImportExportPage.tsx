@@ -5,6 +5,7 @@ import {
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import UploadIcon from '@mui/icons-material/Upload';
+import { DateTime } from 'luxon';
 import { adminFetch } from '../adminFetch';
 
 export default function ImportExportPage() {
@@ -23,7 +24,7 @@ export default function ImportExportPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `zimrate-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `zimrate-export-${DateTime.now().toISODate()}.json`;
       a.click();
       URL.revokeObjectURL(url);
       setSuccess('Export downloaded.');

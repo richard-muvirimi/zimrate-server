@@ -1,5 +1,6 @@
 /** Number and time formatting for the rates list. */
 import Decimal from 'decimal.js';
+import { DateTime } from 'luxon';
 
 /**
  * A plain number for an input field — no grouping separators, since the field
@@ -21,16 +22,6 @@ export function formatAmount(value: Decimal.Value): string {
   return amount.isFinite() ? amount.toFixed(2) : '';
 }
 
-const DIVISIONS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
-  ['second', 60],
-  ['minute', 60],
-  ['hour', 24],
-  ['day', 7],
-  ['week', 4.35],
-  ['month', 12],
-  ['year', Infinity],
-];
-
 /**
  * "3 hours ago", from a unix timestamp in seconds — the relative form the app's
  * rows use, so how old a rate is reads at a glance rather than needing a date
@@ -39,14 +30,5 @@ const DIVISIONS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
 export function relativeTime(unixSeconds?: number | null): string {
   if (!unixSeconds) return '';
 
-  const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
-  // Negative for the past, which is what every timestamp here is.
-  let duration = (unixSeconds * 1000 - Date.now()) / 1000;
-
-  for (const [unit, span] of DIVISIONS) {
-    if (Math.abs(duration) < span) return formatter.format(Math.round(duration), unit);
-    duration /= span;
-  }
-
-  return formatter.format(Math.round(duration), 'year');
+  return DateTime.fromSeconds(unixSeconds).toRelative() ?? '';
 }

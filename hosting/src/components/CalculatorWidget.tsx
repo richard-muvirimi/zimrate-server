@@ -5,6 +5,7 @@ import {
   Typography, CircularProgress, Paper, Grid,
 } from '@mui/material';
 import Decimal from 'decimal.js';
+import { map, sortBy, uniq, without } from 'lodash-es';
 import { GET_RATES } from '../graphql/queries';
 import { detectLocaleCurrency } from '../utils/localeCurrency';
 
@@ -36,9 +37,7 @@ export default function CalculatorWidget() {
   // USD is prepended explicitly: without it the default "From" value matched no
   // MenuItem and the select rendered blank, and USD could not be picked at all.
   const currencies = useMemo(() => {
-    const fromApi = [...new Set(data?.mean?.map((r) => r.currency) ?? [])]
-      .filter((c) => c !== BASE_CURRENCY)
-      .sort((a, b) => a.localeCompare(b));
+    const fromApi = sortBy(without(uniq(map(data?.mean ?? [], 'currency')), BASE_CURRENCY));
     return [BASE_CURRENCY, ...fromApi];
   }, [data]);
 

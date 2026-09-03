@@ -18,6 +18,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import { DateTime } from 'luxon';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import UploadIcon from '@mui/icons-material/Upload';
 import { ref, uploadBytes } from 'firebase/storage';
@@ -40,8 +41,13 @@ interface AdminUser {
 
 function formatDate(value?: string | null) {
   if (!value) return '—';
-  const d = new Date(value);
-  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
+
+  // Firebase reports these as HTTP-date strings ("Tue, 01 Sep 2026 09:00:00
+  // GMT"), which fromISO cannot read. ISO is still accepted, as `new Date` did.
+  const http = DateTime.fromHTTP(value);
+  const parsed = http.isValid ? http : DateTime.fromISO(value);
+
+  return parsed.isValid ? parsed.toLocaleString(DateTime.DATE_SHORT) : '—';
 }
 
 export default function UsersPage() {
@@ -93,7 +99,7 @@ export default function UsersPage() {
     try {
       const path = `avatars/${target.uid}`;
       await uploadBytes(ref(storage, path), file, { contentType: file.type });
-      const url = `https://storage.googleapis.com/${storage.app.options.storageBucket}/${path}?v=${Date.now()}`;
+      const url = `https://storage.googleapis.com/${storage.app.options.storageBucket}/${path}?v=${DateTime.now().toMillis()}`;
 
       await adminFetch(`/api/admin/users/${target.uid}`, {
         method: 'PUT',
