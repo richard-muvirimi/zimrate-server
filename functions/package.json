@@ -36,7 +36,6 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.9.1",
-    "firebase-functions-test": "^3.1.0",
     "globals": "^17.11.0",
     "supertest": "^7.2.2",
     "vitest": "^4.1.4"
