@@ -1,4 +1,5 @@
 /** Number and time formatting for the rates list. */
+import Decimal from 'decimal.js';
 
 /**
  * A plain number for an input field — no grouping separators, since the field
@@ -7,15 +8,17 @@
  * The Android app fixes rate fields at 2dp. Here they get up to 4, trimmed,
  * because a rate quoted below 1 would round away to nothing at 2.
  */
-export function formatNumber(value: number, maxDecimals = 4): string {
-  if (!Number.isFinite(value)) return '';
+export function formatNumber(value: Decimal.Value, maxDecimals = 4): string {
+  const number = new Decimal(value);
+  if (!number.isFinite()) return '';
 
-  return String(Number(value.toFixed(maxDecimals)));
+  return number.toDecimalPlaces(maxDecimals).toString();
 }
 
 /** Converted amounts stay at 2dp, as they are in the app. */
-export function formatAmount(value: number): string {
-  return Number.isFinite(value) ? value.toFixed(2) : '';
+export function formatAmount(value: Decimal.Value): string {
+  const amount = new Decimal(value);
+  return amount.isFinite() ? amount.toFixed(2) : '';
 }
 
 const DIVISIONS: Array<[Intl.RelativeTimeFormatUnit, number]> = [

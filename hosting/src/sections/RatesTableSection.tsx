@@ -11,6 +11,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useQuery } from '@apollo/client/react';
 import { useMemo, useState } from 'react';
+import Decimal from 'decimal.js';
 import { GET_RATES } from '../graphql/queries';
 
 interface Rate {
@@ -127,17 +128,18 @@ function buildRows(data?: RatesData): CurrencyRow[] {
 
 function DeltaChip({ rate, lastRate }: { rate: number; lastRate?: number }) {
   if (!lastRate || lastRate <= 0) return <>—</>;
-  const change = ((rate - lastRate) / lastRate) * 100;
+  const change = new Decimal(rate).minus(lastRate).div(lastRate).times(100);
   // A move too small to survive the 2dp label is shown as flat rather than as a
   // signed "-0.00%" under a red arrow, which reads as a fall that did not happen.
-  const flat = Math.abs(change) < 0.005;
+  const flat = change.abs().lt(0.005);
+  const rising = change.gt(0);
   return (
     <Chip
       size="small"
       variant="outlined"
-      color={flat ? 'default' : change > 0 ? 'success' : 'error'}
-      icon={flat ? undefined : change > 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
-      label={flat ? '0.00%' : `${change > 0 ? '+' : ''}${change.toFixed(2)}%`}
+      color={flat ? 'default' : rising ? 'success' : 'error'}
+      icon={flat ? undefined : rising ? <TrendingUpIcon /> : <TrendingDownIcon />}
+      label={flat ? '0.00%' : `${rising ? '+' : ''}${change.toFixed(2)}%`}
     />
   );
 }

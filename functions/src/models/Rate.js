@@ -4,21 +4,8 @@ import { DateTime } from 'luxon';
 import _ from 'lodash';
 import Option from './Option.js';
 import { getCache, setCache } from '../utils/cache.js';
-
-/**
- * The middle value, averaging the two middle ones on an even-sized set — what the
- * Laravel `preferred('median')` scope did by feeding an even split back through
- * its MEAN aggregate. Taking the upper-middle value instead skews every even
- * group upward.
- */
-function median(values) {
-    const sorted = _.sortBy(values);
-    const middle = Math.floor(sorted.length / 2);
-
-    return sorted.length % 2 === 0
-        ? (sorted[middle - 1] + sorted[middle]) / 2
-        : sorted[middle];
-}
+import Decimal from 'decimal.js';
+import { mean, median } from '../utils/decimal.js';
 
 /**
  * How long a rate keeps being served after the last scrape that saw it on its
@@ -277,8 +264,8 @@ class Rate {
                     break;
 
                 case 'mean': {
-                    const avgRate = _.meanBy(currencyRates, 'rate');
-                    const avgLastRate = _.meanBy(currencyRates, 'last_rate');
+                    const avgRate = mean(_.map(currencyRates, 'rate')).toNumber();
+                    const avgLastRate = mean(_.map(currencyRates, 'last_rate')).toNumber();
                     aggregatedRate = new Rate({
                         ...currencyRates[0],
                         rate: avgRate,
@@ -288,10 +275,11 @@ class Rate {
                 }
 
                 case 'median': {
-                    const medianRate = median(_.map(currencyRates, 'rate'));
-                    const medianLastRate = median(_.map(currencyRates, 'last_rate'));
+                    const medianRate = median(_.map(currencyRates, 'rate')).toNumber();
+                    const medianLastRate = median(_.map(currencyRates, 'last_rate')).toNumber();
 
-                    aggregatedRate = _.minBy(currencyRates, rate => Math.abs(rate.rate - medianRate));
+                    aggregatedRate = _.minBy(currencyRates, rate =>
+                        new Decimal(rate.rate).minus(medianRate).abs().toNumber());
                     aggregatedRate = new Rate({
                         ...aggregatedRate,
                         rate: medianRate,
@@ -370,12 +358,14 @@ class Rate {
     static screenRate(value, band) {
         if (!band || !band.min || !band.max) return value;
 
-        const inBand = (candidate) => candidate >= band.min * 0.7 && candidate <= band.max * 1.3;
+        const floor = new Decimal(band.min).times(0.7);
+        const ceiling = new Decimal(band.max).times(1.3);
+        const inBand = (candidate) => candidate.gte(floor) && candidate.lte(ceiling);
 
-        if (inBand(value)) return value;
+        if (inBand(new Decimal(value))) return value;
 
-        const corrected = value / 100;
-        return inBand(corrected) ? corrected : null;
+        const corrected = new Decimal(value).div(100);
+        return inBand(corrected) ? corrected.toNumber() : null;
     }
 
     /**

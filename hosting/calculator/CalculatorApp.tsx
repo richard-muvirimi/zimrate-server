@@ -11,6 +11,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import Decimal from 'decimal.js';
 import RateRow from './RateRow';
 import AddCustomRateDialog from './dialogs/AddCustomRateDialog';
 import HiddenCurrenciesDialog from './dialogs/HiddenCurrenciesDialog';
@@ -104,7 +105,9 @@ export default function CalculatorApp() {
     (rate: StoredRate) => {
       if (rate.currency === active) return activeAmount;
       if (!sourceRate) return formatAmount(0);
-      return formatAmount((Number(activeAmount) || 0) * (effectiveRate(rate) / sourceRate));
+      return formatAmount(
+        new Decimal(Number(activeAmount) || 0).times(effectiveRate(rate)).div(sourceRate),
+      );
     },
     [active, activeAmount, sourceRate, effectiveRate],
   );

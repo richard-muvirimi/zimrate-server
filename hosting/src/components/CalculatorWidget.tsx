@@ -4,6 +4,7 @@ import {
   Box, TextField, Select, MenuItem, FormControl, InputLabel,
   Typography, CircularProgress, Paper, Grid,
 } from '@mui/material';
+import Decimal from 'decimal.js';
 import { GET_RATES } from '../graphql/queries';
 import { detectLocaleCurrency } from '../utils/localeCurrency';
 
@@ -82,8 +83,8 @@ export default function CalculatorWidget() {
     if (!fromRate || !toRate) return '';
 
     // All rates expressed as units-per-USD; formula: result = amount * toRate / fromRate
-    const converted = (num * toRate) / fromRate;
-    return converted.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    const converted = new Decimal(num).times(toRate).div(fromRate).toDecimalPlaces(2);
+    return converted.toNumber().toLocaleString(undefined, { maximumFractionDigits: 2 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, amount, from, to]);
 

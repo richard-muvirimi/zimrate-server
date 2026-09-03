@@ -6,6 +6,7 @@ import Rate from '../models/Rate.js';
 import Option from '../models/Option.js';
 import pLimit from 'p-limit';
 import _ from 'lodash';
+import Decimal from 'decimal.js';
 
 const DEFAULT_LLM_BASE_URL = 'https://api.deepseek.com';
 
@@ -66,13 +67,14 @@ export const tidyLabel = (label) => {
  * computed 26.5089. Inside the guard the two are the same rate either way.
  */
 export const restorePrecision = (rate, computed) => {
-    const text = String(rate);
-    if (/e/i.test(text)) return rate;
-    const dot = text.indexOf('.');
-    const decimals = dot === -1 ? 0 : text.length - dot - 1;
-    const match = computed.find(value =>
-        Number(value.toFixed(decimals)) === rate && Math.abs(value - rate) / rate < 1e-4
-    );
+    const decimals = new Decimal(rate).decimalPlaces();
+
+    const match = computed.find(value => {
+        const candidate = new Decimal(value);
+        return candidate.toDecimalPlaces(decimals).eq(rate)
+            && candidate.minus(rate).abs().div(rate).lt(1e-4);
+    });
+
     return match ?? rate;
 };
 
@@ -402,12 +404,12 @@ ${truncatedContent}`;
                             content = JSON.stringify({ error: 'zwg_per_usd must be a positive number' });
                         } else if (zwg_per_foreign !== undefined && zwg_per_foreign > 0) {
                             // "1 FOREIGN = zwg_per_foreign ZWG"  →  foreign per USD = zwg_per_usd / zwg_per_foreign
-                            const usd_rate = parseFloat((zwg_per_usd / zwg_per_foreign).toFixed(6));
+                            const usd_rate = new Decimal(zwg_per_usd).div(zwg_per_foreign).toDecimalPlaces(6).toNumber();
                             computedRates.push(usd_rate);
                             content = JSON.stringify({ usd_rate });
                         } else if (foreign_per_zwg !== undefined && foreign_per_zwg > 0) {
                             // "1 ZWG = foreign_per_zwg FOREIGN"  →  foreign per USD = zwg_per_usd * foreign_per_zwg
-                            const usd_rate = parseFloat((zwg_per_usd * foreign_per_zwg).toFixed(6));
+                            const usd_rate = new Decimal(zwg_per_usd).times(foreign_per_zwg).toDecimalPlaces(6).toNumber();
                             computedRates.push(usd_rate);
                             content = JSON.stringify({ usd_rate });
                         } else {

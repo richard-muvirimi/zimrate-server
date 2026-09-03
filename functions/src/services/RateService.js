@@ -2,6 +2,8 @@ import Rate from '../models/Rate.js';
 import { getCache, setCache } from '../utils/cache.js';
 import { DateTime } from 'luxon';
 import _ from 'lodash';
+import Decimal from 'decimal.js';
+import { mean } from '../utils/decimal.js';
 
 /**
  * A base currency that cannot be served: unknown, or quoted at zero.
@@ -165,8 +167,8 @@ export class RateService {
         }
 
         // Use mean of base rates if multiple (normalises across different sources)
-        const rateUSDPerBase = _.meanBy(baseRates, 'rate');
-        if (!rateUSDPerBase) {
+        const rateUSDPerBase = mean(_.map(baseRates, 'rate'));
+        if (!rateUSDPerBase.isFinite() || rateUSDPerBase.isZero()) {
             throw new BaseRateError(`Base currency rate for ${base} is zero or unavailable`, 422);
         }
 
@@ -177,11 +179,13 @@ export class RateService {
             .filter(r => r.rate_currency !== base)
             .map(r => {
                 if (!r.rate) return null;
-                const crossRate = r.rate / rateUSDPerBase;
+                const crossRate = new Decimal(r.rate).div(rateUSDPerBase).toNumber();
                 return {
                     ...r.toAPI(),
                     rate: crossRate,
-                    last_rate: r.last_rate ? r.last_rate / rateUSDPerBase : crossRate
+                    last_rate: r.last_rate
+                        ? new Decimal(r.last_rate).div(rateUSDPerBase).toNumber()
+                        : crossRate
                 };
             })
             .filter(Boolean);
