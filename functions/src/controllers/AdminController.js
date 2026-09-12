@@ -6,6 +6,7 @@ import Option from '../models/Option.js';
 import { DateTime } from 'luxon';
 import _ from 'lodash';
 import { deleteCache } from '../utils/cache.js';
+import { deleteAccount } from '../utils/account.js';
 
 export class AdminController {
 
@@ -110,7 +111,10 @@ export class AdminController {
             if (uid === req.user.uid) {
                 return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Cannot delete your own account' });
             }
-            await getAuth().deleteUser(uid);
+            // Same helper the self-service route uses, so an admin deletion also takes the
+            // wallet with it. Calling deleteUser alone left users/{uid} orphaned in the
+            // database with nobody able to authenticate as it and clear it.
+            await deleteAccount(uid);
             res.json({ success: true });
         } catch (err) {
             next(err);

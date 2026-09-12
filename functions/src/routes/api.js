@@ -1,10 +1,11 @@
 import express from 'express';
 import { RatesController } from '../controllers/RatesController.js';
 import { AdminController } from '../controllers/AdminController.js';
+import { AccountController } from '../controllers/AccountController.js';
 import { ContactController } from '../controllers/ContactController.js';
 import { BrandingController } from '../controllers/BrandingController.js';
 import { handleGraphQLRequest } from '../graphql/server.js';
-import { adminAuth } from '../middleware/auth.js';
+import { adminAuth, verifyIdToken } from '../middleware/auth.js';
 import { verifyAppCheck, optionalAppCheck } from '../middleware/appCheck.js';
 
 const router = express.Router();
@@ -25,6 +26,14 @@ router.get('/branding', BrandingController.publicGet);
 // configured SMTP and enabled it.
 router.get('/contact', ContactController.status);
 router.post('/contact', ContactController.submit);
+
+// Account deletion — the signed-in app or web user removing their own account.
+// verifyIdToken without requireAdmin: these are ordinary users, and the uid the
+// controller acts on comes from the token, so the route has no other target.
+// Deliberately not left to the clients — the database rules forbid a client
+// deleting its own wallet, and loosening them would drop the guard that stops
+// an overdrawn grant being deleted.
+router.delete('/account', verifyAppCheck, verifyIdToken, AccountController.deleteSelf);
 
 // GraphQL endpoint — serverless approach.
 // optionalAppCheck records whether the caller is a verified first-party client

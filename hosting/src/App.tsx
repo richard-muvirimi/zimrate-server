@@ -14,6 +14,7 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const FaqPage = lazy(() => import('./pages/FaqPage'));
 const DevelopersPage = lazy(() => import('./pages/DevelopersPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
+const DeleteAccountPage = lazy(() => import('./pages/DeleteAccountPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const LoginPage = lazy(() => import('./admin/pages/LoginPage'));
@@ -38,6 +39,7 @@ const routeTitles: Array<[RegExp, string]> = [
   [/^\/privacy$/, 'Privacy | ZimRate'],
   [/^\/faq$/, 'FAQ | ZimRate'],
   [/^\/contact$/, 'Contact | ZimRate'],
+  [/^\/delete-account$/, 'Delete Account | ZimRate'],
   [/^\/developers$/, 'Developers | ZimRate'],
   [/^\/admin\/login$/, 'Admin Login | ZimRate'],
   [/^\/admin\/forgot-password$/, 'Reset Password | ZimRate'],
@@ -104,6 +106,7 @@ function App() {
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/faq" element={<FaqPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/delete-account" element={<DeleteAccountPage />} />
             <Route path="/developers" element={<DevelopersPage />} />
 
             {/* Admin auth */}

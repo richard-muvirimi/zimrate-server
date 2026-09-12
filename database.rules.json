@@ -2,8 +2,91 @@
   "rules": {
     ".read": false,
     ".write": false,
+
     "cache": {
       ".indexOn": "expires_at"
+    },
+
+    "users": {
+      "$uid": {
+        ".read": "auth !== null && auth.uid === $uid",
+
+        "rewards": {
+          ".indexOn": ["purgeAt", "expiresAt"],
+
+          "$rewardId": {
+            ".write": "auth !== null && auth.uid === $uid && newData.exists()",
+
+            ".validate": "newData.hasChildren(['amount', 'balance', 'type', 'createdAt', 'expiresAt', 'purgeAt'])",
+
+            "amount": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
+            },
+            "balance": {
+              ".validate": "newData.isNumber() && newData.val() <= 100000"
+            },
+            "type": {
+              ".validate": "newData.isString() && (newData.val() !== 'purchase' || auth.token.firebase.sign_in_provider !== 'anonymous')"
+            },
+            "description": {
+              ".validate": "newData.isString() && newData.val().length <= 200"
+            },
+            "createdAt": { ".validate": "newData.isNumber()" },
+            "expiresAt": { ".validate": "newData.isNumber()" },
+            "purgeAt": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+
+        "spends": {
+          ".indexOn": ["purgeAt"],
+
+          "$spendId": {
+            ".write": "auth !== null && auth.uid === $uid && newData.exists()",
+
+            ".validate": "newData.hasChildren(['amount', 'type', 'createdAt', 'purgeAt'])",
+
+            "amount": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
+            },
+            "type": { ".validate": "newData.isString()" },
+            "description": {
+              ".validate": "newData.isString() && newData.val().length <= 200"
+            },
+            "rewards": {
+              "$rewardId": { ".validate": "newData.isBoolean()" }
+            },
+            "createdAt": { ".validate": "newData.isNumber()" },
+            "purgeAt": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+
+        "currencies": {
+          "$code": {
+            ".write": "auth !== null && auth.uid === $uid",
+
+            ".validate": "!newData.exists() || newData.hasChildren(['rate'])",
+
+            "rate": { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "lastRate": { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "name": { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "url": { ".validate": "newData.isString() && newData.val().length <= 500" },
+            "lastChecked": { ".validate": "newData.isNumber()" },
+            "createdAt": { ".validate": "newData.isNumber()" },
+            "updatedAt": { ".validate": "newData.isNumber()" },
+            "sortOrder": { ".validate": "newData.isNumber()" },
+            "pinned": { ".validate": "newData.isBoolean()" },
+            "hidden": { ".validate": "newData.isBoolean()" },
+            "custom": { ".validate": "newData.isBoolean()" },
+            "$other": { ".validate": false }
+          }
+        },
+
+        "appdata": {
+          ".write": "auth !== null && auth.uid === $uid"
+        }
+      }
     }
   }
 }

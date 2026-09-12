@@ -64,6 +64,7 @@ export default function Footer() {
                 <Link component={RouterLink} to="/faq" color="text.secondary" underline="hover" variant="body2">FAQ</Link>
                 <Link component={RouterLink} to="/contact" color="text.secondary" underline="hover" variant="body2">Contact</Link>
                 <Link component={RouterLink} to="/privacy" color="text.secondary" underline="hover" variant="body2">Privacy</Link>
+                <Link component={RouterLink} to="/delete-account" color="text.secondary" underline="hover" variant="body2">Delete account</Link>
                 {branding.repo_url && (
                   <Link href={branding.repo_url} target="_blank" rel="noopener" color="text.secondary" underline="hover" variant="body2">GitHub</Link>
                 )}

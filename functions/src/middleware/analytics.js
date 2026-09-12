@@ -26,7 +26,7 @@ const CLIENT_ID_SALT = process.env.ANALYTICS_SALT || crypto.randomBytes(16).toSt
  * the real endpoints stop being distinguishable.
  */
 const ROUTE_SEGMENTS = new Set([
-    'v1', 'v2', 'branding', 'contact', 'graphql', 'admin', 'users', 'sources',
+    'v1', 'v2', 'branding', 'contact', 'account', 'graphql', 'admin', 'users', 'sources',
     'rates', 'scrape', 'smtp', 'test', 'export', 'import', 'claims',
 ]);
 

@@ -11,6 +11,7 @@ import { logAnalytics } from './middleware/analytics.js';
 import cors from 'cors';
 import Option from './models/Option.js';
 import { hasCache, setCache, cleanCache } from './utils/cache.js';
+import { purgeExpiredWallets } from './utils/wallet.js';
 import { DateTime } from 'luxon';
 
 const app = express();
@@ -68,5 +69,26 @@ export const zimrate_scrape = onSchedule({
         ]);
     } catch (err) {
         logger.error('Scheduled scraping failed:', err);
+    }
+});
+
+// ── Wallet retention ──────────────────────────────────────────────────────────
+// Realtime Database has no TTL policy, so expired coin history is swept rather than expiring on
+// its own. Deliberately its own function and not folded into the scrape tick: it walks every
+// user, and a failure here should not be reported as a scraping failure.
+//
+// Nightly is ample — purgeAt sits six months past a row's expiry, so a day either way is noise.
+export const zimrate_purge = onSchedule({
+    schedule: '17 3 * * *',
+    timeZone: 'Africa/Harare',
+    region: 'us-central1', // Cloud Scheduler is not available in africa-south1
+    memory: '512MiB',
+    timeoutSeconds: 540,
+}, async () => {
+    try {
+        const removed = await purgeExpiredWallets();
+        logger.log(`Wallet purge removed ${removed} rows.`);
+    } catch (err) {
+        logger.error('Wallet purge failed:', err);
     }
 });

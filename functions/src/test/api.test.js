@@ -864,6 +864,24 @@ describe('Branding', () => {
 });
 
 // =============================================================================
+// Self-service account deletion  (DELETE /api/account)
+// =============================================================================
+
+describe('Account deletion', () => {
+    it('refuses a caller with no ID token', async () => {
+        // The uid deleted is the token's own, so an unverified caller must never
+        // reach the handler — this is the whole authorisation check.
+        const res = await request.delete('/api/account');
+        expect(res.status).toBe(401);
+    });
+
+    it('is not exposed on any other method', async () => {
+        expect((await request.get('/api/account')).status).toBe(404);
+        expect((await request.post('/api/account')).status).toBe(404);
+    });
+});
+
+// =============================================================================
 // Account registration gate  (registration_enabled)
 // =============================================================================
 
