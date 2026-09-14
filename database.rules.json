@@ -19,12 +19,21 @@
 
             ".validate": "newData.hasChildren(['amount', 'balance', 'type', 'createdAt', 'expiresAt', 'purgeAt'])",
 
+            // Free grants are tiny — a clock-in is at most 4, the starter pack 10 — so 100 is
+            // generous headroom for a promotion while making the old blanket 100000 ceiling
+            // useless for minting. Purchases keep the high ceiling only for as long as clients
+            // still write them; see the type rule below.
             "amount": {
-              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
+              ".validate": "newData.isNumber() && newData.val() >= 0 && (newData.parent().child('type').val() === 'purchase' ? newData.val() <= 100000 : newData.val() <= 100)"
             },
             "balance": {
               ".validate": "newData.isNumber() && newData.val() <= 100000"
             },
+            // STEP 3 of the purchase rollout. Once /api/wallet/purchase is live and the app
+            // release that calls it has adoption, change this to reject 'purchase' from any
+            // client — that is what finally stops coins being minted. Server writes go through
+            // the Admin SDK and bypass rules, so crediting keeps working. Deploying it early
+            // would break every handset still crediting locally: they would pay and get nothing.
             "type": {
               ".validate": "newData.isString() && (newData.val() !== 'purchase' || auth.token.firebase.sign_in_provider !== 'anonymous')"
             },
@@ -81,10 +90,6 @@
             "custom": { ".validate": "newData.isBoolean()" },
             "$other": { ".validate": false }
           }
-        },
-
-        "appdata": {
-          ".write": "auth !== null && auth.uid === $uid"
         }
       }
     }

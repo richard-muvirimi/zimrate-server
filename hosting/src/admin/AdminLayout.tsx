@@ -10,6 +10,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange';
 import SourceIcon from '@mui/icons-material/Source';
 import PeopleIcon from '@mui/icons-material/People';
+import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MailIcon from '@mui/icons-material/Mail';
 import BrandingWatermarkIcon from '@mui/icons-material/BrandingWatermark';
@@ -29,6 +30,7 @@ const navItems = [
   { label: 'Rates', path: '/admin/rates', icon: <CurrencyExchangeIcon /> },
   { label: 'Sources', path: '/admin/sources', icon: <SourceIcon /> },
   { label: 'Users', path: '/admin/users', icon: <PeopleIcon /> },
+  { label: 'App users', path: '/admin/app-users', icon: <PhoneAndroidIcon /> },
   { label: 'Options', path: '/admin/options', icon: <SettingsIcon /> },
   { label: 'Email / SMTP', path: '/admin/smtp', icon: <MailIcon /> },
   { label: 'Branding', path: '/admin/branding', icon: <BrandingWatermarkIcon /> },

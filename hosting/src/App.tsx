@@ -28,6 +28,7 @@ const RateFormPage = lazy(() => import('./admin/pages/RateFormPage'));
 const SourcesPage = lazy(() => import('./admin/pages/SourcesPage'));
 const SourceFormPage = lazy(() => import('./admin/pages/SourceFormPage'));
 const UsersPage = lazy(() => import('./admin/pages/UsersPage'));
+const AppUsersPage = lazy(() => import('./admin/pages/AppUsersPage'));
 const OptionsPage = lazy(() => import('./admin/pages/OptionsPage'));
 const ImportExportPage = lazy(() => import('./admin/pages/ImportExportPage'));
 const SmtpPage = lazy(() => import('./admin/pages/SmtpPage'));
@@ -124,6 +125,7 @@ function App() {
               <Route path="sources/new" element={<SourceFormPage />} />
               <Route path="sources/:id" element={<SourceFormPage />} />
               <Route path="users" element={<UsersPage />} />
+              <Route path="app-users" element={<AppUsersPage />} />
               <Route path="options" element={<OptionsPage />} />
               <Route path="smtp" element={<SmtpPage />} />
               <Route path="branding" element={<BrandingPage />} />

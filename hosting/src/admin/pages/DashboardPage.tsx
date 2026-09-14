@@ -20,6 +20,7 @@ import ImportExportIcon from '@mui/icons-material/ImportExport';
 import MailIcon from '@mui/icons-material/Mail';
 import { DateTime } from 'luxon';
 import PeopleIcon from '@mui/icons-material/People';
+import EconomySection from '../components/EconomySection';
 
 interface RateRow {
   id: string;
@@ -208,6 +209,8 @@ export default function DashboardPage() {
           </Grid>
         ))}
       </Grid>
+
+      <EconomySection />
 
       <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ mb: 1.5 }}>
         QUICK ACTIONS

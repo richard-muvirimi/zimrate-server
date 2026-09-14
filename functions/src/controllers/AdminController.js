@@ -14,17 +14,32 @@ export class AdminController {
     // USER MANAGEMENT
     // =========================================================================
 
+    /**
+     * The console roster: accounts that can actually sign in here.
+     *
+     * Anonymous accounts are dropped. Every app install creates one, so they now outnumber the
+     * people running the console by orders of magnitude, and leaving them in buried the admins in
+     * a list that also could not be paged. They have their own page — see EconomyController.
+     *
+     * Filtered server-side rather than in the browser because `listUsers` returns accounts in uid
+     * order: an admin can sit anywhere in that sequence, so a client-side filter over a truncated
+     * prefix would simply lose people.
+     */
     static async listUsers(_req, res, next) {
         try {
             // listUsers caps at 1000 per call. Follow nextPageToken so a tenant
             // over that limit isn't silently truncated; the cap keeps a runaway
             // loop bounded rather than pretending to be unlimited.
-            const MAX_PAGES = 5;
+            //
+            // Raised well past the old 5 now that anonymous accounts are filtered out: the walk
+            // is the cost either way, but what comes back is a handful of rows rather than
+            // everything it looked at.
+            const MAX_PAGES = 50;
             const collected = [];
             let pageToken;
             for (let i = 0; i < MAX_PAGES; i++) {
                 const page = await getAuth().listUsers(1000, pageToken);
-                collected.push(...page.users);
+                collected.push(...page.users.filter(u => (u.providerData ?? []).length > 0));
                 pageToken = page.pageToken;
                 if (!pageToken) break;
             }

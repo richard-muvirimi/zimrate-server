@@ -4,6 +4,8 @@ import { AdminController } from '../controllers/AdminController.js';
 import { AccountController } from '../controllers/AccountController.js';
 import { ContactController } from '../controllers/ContactController.js';
 import { BrandingController } from '../controllers/BrandingController.js';
+import { EconomyController } from '../controllers/EconomyController.js';
+import { WalletController } from '../controllers/WalletController.js';
 import { handleGraphQLRequest } from '../graphql/server.js';
 import { adminAuth, verifyIdToken } from '../middleware/auth.js';
 import { verifyAppCheck, optionalAppCheck } from '../middleware/appCheck.js';
@@ -35,6 +37,12 @@ router.post('/contact', ContactController.submit);
 // an overdrawn grant being deleted.
 router.delete('/account', verifyAppCheck, verifyIdToken, AccountController.deleteSelf);
 
+// Coin purchases — the signed-in app user claiming coins they have paid Google for.
+// Same middleware as account deletion and for the same reason: an ordinary user acting on their
+// own uid, taken from the token. The grant is written with the Admin SDK so the database rules
+// can forbid clients writing purchase rows at all, which is what stops coins being minted.
+router.post('/wallet/purchase', verifyAppCheck, verifyIdToken, WalletController.creditPurchase);
+
 // GraphQL endpoint — serverless approach.
 // optionalAppCheck records whether the caller is a verified first-party client
 // without shutting out the public Sandbox or third-party consumers.
@@ -49,6 +57,13 @@ adminRouter.post('/users', AdminController.createUser);
 adminRouter.put('/users/:uid', AdminController.updateUser);
 adminRouter.delete('/users/:uid', AdminController.deleteUser);
 adminRouter.post('/users/:uid/claims', AdminController.setUserClaims);
+
+// Coin economy — read-only. /users above is the console roster; app users are their own list
+// because every install now creates an auth account, and the two have nothing to do with
+// each other beyond sharing a user store.
+adminRouter.get('/economy', EconomyController.overview);
+adminRouter.get('/app-users', EconomyController.listAppUsers);
+adminRouter.get('/app-users/:uid/wallet', EconomyController.userWallet);
 
 // Source management
 adminRouter.get('/sources', AdminController.listSources);

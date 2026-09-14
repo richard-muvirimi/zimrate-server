@@ -1217,3 +1217,187 @@ describe('API v2', () => {
         expect(res.body.info).toBeUndefined();
     });
 });
+
+// =============================================================================
+// Coin economy  (/api/admin/economy, /api/admin/app-users)
+// =============================================================================
+
+describe('Economy endpoints', () => {
+    /** An authenticated admin, plus whatever auth surface the test under it needs. */
+    function asAdmin(extra = {}) {
+        vi.mocked(getAuth).mockReturnValue({
+            verifyIdToken: vi.fn().mockResolvedValue({ uid: 'admin1', admin: true }),
+            ...extra
+        });
+    }
+
+    /** Stands a tree of `path -> value` in for the whole database mock, then restores it. */
+    async function withDatabase(tree, fn) {
+        const original = vi.mocked(getDatabase).getMockImplementation();
+        vi.mocked(getDatabase).mockReturnValue({
+            ref: vi.fn(path => ({
+                get: vi.fn(async () => ({
+                    exists: () => tree[path] !== undefined,
+                    val: () => tree[path],
+                    forEach: (cb) => Object.entries(tree[path] ?? {})
+                        .forEach(([key, value]) => cb({ key, val: () => value })),
+                })),
+            }))
+        });
+        try {
+            return await fn();
+        } finally {
+            if (original) vi.mocked(getDatabase).mockImplementation(original);
+        }
+    }
+
+    afterEach(() => {
+        vi.mocked(getAuth).mockReturnValue({ verifyIdToken: vi.fn() });
+    });
+
+    it('requires admin auth', async () => {
+        expect((await request.get('/api/admin/economy')).status).toBe(401);
+        expect((await request.get('/api/admin/app-users')).status).toBe(401);
+    });
+
+    it('reports no snapshot rather than an error before the first sweep', async () => {
+        asAdmin();
+        const res = await request
+            .get('/api/admin/economy')
+            .set('Authorization', 'Bearer test-token');
+
+        // Nothing is wrong on a fresh project — the sweep simply has not run yet.
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ computedAt: null });
+    });
+
+    it('returns the nightly snapshot as written', async () => {
+        asAdmin();
+        const stats = {
+            computedAt: 1_700_000_000,
+            users: 3,
+            coinsOutstanding: 42,
+            usersOverdrawn: 1,
+            accounts: { total: 3, anonymous: 2, linked: 1, newLast7d: 1 },
+        };
+
+        const res = await withDatabase({ 'stats/economy': stats }, () =>
+            request.get('/api/admin/economy').set('Authorization', 'Bearer test-token')
+        );
+
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual(stats);
+    });
+
+    it('lists app users with their balance and whether they can sign back in', async () => {
+        asAdmin({
+            listUsers: vi.fn().mockResolvedValue({
+                users: [
+                    {
+                        uid: 'anon1',
+                        email: undefined,
+                        displayName: null,
+                        providerData: [],
+                        disabled: false,
+                        customClaims: {},
+                        metadata: { creationTime: 'Tue, 01 Sep 2026 09:00:00 GMT' },
+                    },
+                    {
+                        uid: 'linked1',
+                        email: 'someone@example.com',
+                        displayName: 'Someone',
+                        providerData: [{ providerId: 'google.com' }],
+                        disabled: false,
+                        customClaims: {},
+                        metadata: {
+                            creationTime: 'Tue, 01 Sep 2026 09:00:00 GMT',
+                            lastSignInTime: 'Wed, 02 Sep 2026 09:00:00 GMT',
+                        },
+                    },
+                ],
+                pageToken: 'next-page',
+            })
+        });
+
+        const ahead = Math.floor(Date.now() / 1000) + 86_400;
+        const res = await withDatabase({
+            'users/linked1/rewards': { a: { balance: 5, expiresAt: ahead } },
+        }, () => request.get('/api/admin/app-users').set('Authorization', 'Bearer test-token'));
+
+        expect(res.status).toBe(200);
+        expect(res.body.nextPageToken).toBe('next-page');
+        expect(res.body.users).toHaveLength(2);
+        expect(res.body.users[0]).toMatchObject({ uid: 'anon1', anonymous: true, balance: 0 });
+        expect(res.body.users[1]).toMatchObject({ uid: 'linked1', anonymous: false, balance: 5 });
+    });
+
+    it('caps the page size so one call cannot pull the whole user base', async () => {
+        const listUsers = vi.fn().mockResolvedValue({ users: [], pageToken: undefined });
+        asAdmin({ listUsers });
+
+        await request
+            .get('/api/admin/app-users?limit=5000')
+            .set('Authorization', 'Bearer test-token');
+
+        expect(listUsers).toHaveBeenCalledWith(100, undefined);
+    });
+
+    it('404s a wallet for a uid that has no account', async () => {
+        asAdmin({ getUser: vi.fn().mockRejectedValue(new Error('no such user')) });
+
+        const res = await request
+            .get('/api/admin/app-users/ghost/wallet')
+            .set('Authorization', 'Bearer test-token');
+
+        expect(res.status).toBe(404);
+    });
+});
+
+// =============================================================================
+// Console roster  (/api/admin/users)
+// =============================================================================
+
+describe('Console roster', () => {
+    afterEach(() => {
+        vi.mocked(getAuth).mockReturnValue({ verifyIdToken: vi.fn() });
+    });
+
+    it('leaves out anonymous accounts, and keeps looking past a page of them', async () => {
+        const anonymous = (uid) => ({
+            uid,
+            providerData: [],
+            metadata: { creationTime: 'Tue, 01 Sep 2026 09:00:00 GMT' },
+        });
+
+        // The admin sits on the second page. listUsers returns accounts in uid order, so
+        // filtering in the browser over a truncated prefix would simply lose them.
+        const listUsers = vi.fn()
+            .mockResolvedValueOnce({
+                users: [anonymous('a1'), anonymous('a2')],
+                pageToken: 'page2',
+            })
+            .mockResolvedValueOnce({
+                users: [{
+                    uid: 'admin1',
+                    email: 'admin@example.com',
+                    providerData: [{ providerId: 'password' }],
+                    customClaims: { admin: true },
+                    metadata: { creationTime: 'Tue, 01 Sep 2026 09:00:00 GMT' },
+                }],
+                pageToken: undefined,
+            });
+
+        vi.mocked(getAuth).mockReturnValue({
+            verifyIdToken: vi.fn().mockResolvedValue({ uid: 'admin1', admin: true }),
+            listUsers,
+        });
+
+        const res = await request
+            .get('/api/admin/users')
+            .set('Authorization', 'Bearer test-token');
+
+        expect(res.status).toBe(200);
+        expect(res.body.map(u => u.uid)).toEqual(['admin1']);
+        expect(listUsers).toHaveBeenCalledTimes(2);
+    });
+});
