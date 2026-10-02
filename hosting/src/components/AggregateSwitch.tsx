@@ -11,31 +11,40 @@ const AGGREGATES = [
 ] as const;
 export type Aggregate = (typeof AGGREGATES)[number]['key'];
 
+const RANGE = { key: 'range', label: 'Range', hint: 'The lowest to the highest rate across sources' };
+
 /** Segmented switch: one track, the chosen aggregate raised within it. */
-export default function AggregateSwitch({
+export default function AggregateSwitch<T extends Aggregate | 'range'>({
   value,
   onChange,
   disabled,
+  range,
 }: {
-  value: Aggregate;
-  onChange: (value: Aggregate) => void;
+  value: T;
+  onChange: (value: T) => void;
   disabled?: boolean;
+  /** Leads with a "Range" option, for views that can show min–max. */
+  range?: boolean;
 }) {
+  const options: readonly { key: string; label: string; hint: string }[] = range
+    ? [RANGE, ...AGGREGATES]
+    : AGGREGATES;
+
   return (
     <ToggleButtonGroup
       value={value}
       exclusive
       disabled={disabled}
       // Clicking the active option passes null; keep the current choice.
-      onChange={(_, next: Aggregate | null) => next && onChange(next)}
+      onChange={(_, next: T | null) => next && onChange(next)}
       color="primary"
       size="small"
-      aria-label="Rate to convert with"
+      aria-label={range ? 'Rate to show' : 'Rate to convert with'}
       // Too narrow for one row on phones: an even 3×2 grid there rather
       // than a wrapped pill with one option stranded on the second line.
       sx={{
         display: 'grid',
-        gridTemplateColumns: { xs: 'repeat(3, 1fr)', sm: 'repeat(6, auto)' },
+        gridTemplateColumns: { xs: 'repeat(3, 1fr)', sm: `repeat(${options.length}, auto)` },
         gap: 0.25,
         p: 0.375,
         borderRadius: { xs: '14px', sm: '999px' },
@@ -56,8 +65,14 @@ export default function AggregateSwitch({
         },
       }}
     >
-      {AGGREGATES.map(({ key, label, hint }) => (
-        <ToggleButton key={key} value={key} title={hint}>
+      {options.map(({ key, label, hint }) => (
+        <ToggleButton
+          key={key}
+          value={key}
+          title={hint}
+          // On phones Range takes its own row so the aggregates stay a 3×2 grid.
+          sx={key === RANGE.key ? { gridColumn: { xs: '1 / -1', sm: 'auto' } } : undefined}
+        >
           {label}
         </ToggleButton>
       ))}

@@ -1,7 +1,7 @@
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Chip, CircularProgress, Alert,
-  Select, MenuItem, FormControl, InputLabel, Fade, Button, Collapse,
+  Fade, Button, Collapse,
   Link, Stack, Divider,
 } from '@mui/material';
 import { useMotionTimeout } from '../hooks/useReducedMotion';
@@ -16,6 +16,7 @@ import { DateTime } from 'luxon';
 import { compact, groupBy, keyBy, map, mapValues, max, sortBy, uniqBy } from 'lodash-es';
 import { GET_RATES } from '../graphql/queries';
 import CurrencyLabel from '../components/CurrencyLabel';
+import AggregateSwitch from '../components/AggregateSwitch';
 
 interface Rate {
   rate: number;
@@ -311,8 +312,10 @@ export default function RatesTableSection() {
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: { xs: 'flex-start', sm: 'center' },
-            flexDirection: { xs: 'column', sm: 'row' },
+            // The strip is wider than the old dropdown, so it only sits beside
+            // the title once there is room for both.
+            alignItems: { xs: 'flex-start', md: 'center' },
+            flexDirection: { xs: 'column', md: 'row' },
             gap: 2,
             mb: 4,
           }}
@@ -333,21 +336,7 @@ export default function RatesTableSection() {
             )}
           </Box>
 
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>Show</InputLabel>
-            <Select
-              value={prefer}
-              label="Show"
-              onChange={(e) => setPrefer(e.target.value as AggregateKey | 'range')}
-            >
-              <MenuItem value="range">Range (min–max)</MenuItem>
-              {AGGREGATES.map((key) => (
-                <MenuItem key={key} value={key} sx={{ textTransform: 'capitalize' }}>
-                  {key}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <AggregateSwitch range value={prefer} onChange={setPrefer} />
         </Box>
 
         {loading && (
