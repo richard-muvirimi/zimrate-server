@@ -100,23 +100,43 @@ this file; it is gitignored.
 | --- | --- |
 | `APIFY_TOKEN` | Apify API token for the page fetcher |
 | `APIFY_ACTOR_ID` | actor id, e.g. `tyganeutronics~zimrate-page-fetcher` |
-| `DEEPSEEK_API_KEY` | API key for the extraction model |
-| `DEEPSEEK_API_URL` | chat-completions endpoint; defaults to DeepSeek |
-| `DEEPSEEK_MODEL` | model name; defaults to `deepseek-chat` |
+| `LLM_API_KEY` | API key for the main extraction model |
+| `LLM_API_URL` | main chat-completions endpoint |
+| `LLM_MODEL` | main model name |
+| `LLM_BACKUP_API_KEY` | API key for the backup model; optional |
+| `LLM_BACKUP_API_URL` | backup chat-completions endpoint; optional |
+| `LLM_BACKUP_MODEL` | backup model name; optional |
+| `LLM_EXTRA_BODY` / `LLM_BACKUP_EXTRA_BODY` | JSON object merged into that provider's requests; optional |
 | `APPCHECK_ENFORCE` | `true` to enforce App Check on `/api/admin/**`. Leave unset while rolling out |
 
 ### Swapping the LLM provider
 
-Rate extraction uses the official `openai` SDK against an OpenAI-format endpoint, so switching
-provider is only those three variables. `DEEPSEEK_API_URL` accepts either the base URL or the
-full chat-completions path. Gemini exposes an OpenAI-compatible
-endpoint, so it drops straight in:
+Rate extraction uses the official `openai` SDK against OpenAI-format endpoints, so switching
+provider is only environment variables. `LLM_*` is the main provider and must be set.
+`LLM_BACKUP_*` is optional: when set, any failure from the main provider (outage, quota, invalid
+JSON) reruns the whole extraction against the backup. The `*_API_URL` vars accept either the base
+URL or the full chat-completions path.
+
+There are no built-in defaults. This deployment runs Gemini as main, through its OpenAI-compatible
+endpoint, and DeepSeek as backup:
 
 ```bash
-DEEPSEEK_API_KEY=<google-ai-studio-key>
-DEEPSEEK_API_URL=https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
-DEEPSEEK_MODEL=gemini-2.0-flash
+LLM_API_KEY=<google-ai-studio-key>
+LLM_API_URL=https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
+LLM_MODEL=gemini-3.5-flash-lite
+
+LLM_BACKUP_API_KEY=<deepseek-key>
+LLM_BACKUP_API_URL=https://api.deepseek.com/chat/completions
+LLM_BACKUP_MODEL=deepseek-flash
+LLM_BACKUP_EXTRA_BODY={"thinking":{"type":"disabled"}}
 ```
+
+`*_EXTRA_BODY` carries parameters outside the OpenAI schema. DeepSeek needs thinking disabled:
+its models reason by default, and the reasoning tokens use up `max_tokens` before any JSON is
+written.
+
+Pin a dated model name rather than a `*-latest` alias: a silent model swap can reword rate
+labels, and a reworded label reads as a different rate.
 
 The replacement must support **tool calling** (`tools` + `tool_choice`) and
 **`response_format: { type: 'json_object' }`** — the extractor runs an agentic loop that calls
@@ -239,7 +259,7 @@ Add a document to the `sources` collection, or use **Sources** in the admin dash
 | `enabled` | include in scheduled runs |
 | `javascript` | render with a real browser before extracting |
 
-The scraper fetches the page through Apify, strips chrome, and asks DeepSeek to extract the
+The scraper fetches the page through Apify, strips chrome, and asks the LLM to extract the
 rates, so no CSS selectors are needed — unlike the older selector-based setup.
 
 ---
@@ -261,4 +281,4 @@ Contributions and issue reports are welcome:
 <https://github.com/richard-muvirimi/zimrate-server/issues>
 
 Forking is fine. Note that a fork is only useful with your own Firebase project, Apify token and
-DeepSeek key — none of which are in this repository.
+LLM API keys — none of which are in this repository.

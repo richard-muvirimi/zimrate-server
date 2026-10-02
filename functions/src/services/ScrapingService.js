@@ -8,17 +8,55 @@ import pLimit from 'p-limit';
 import _ from 'lodash';
 import Decimal from 'decimal.js';
 
-const DEFAULT_LLM_BASE_URL = 'https://api.deepseek.com';
+/**
+ * The OpenAI SDK wants a base URL and appends /chat/completions itself, but the
+ * URL vars are documented as the full endpoint. Accept either.
+ */
+function resolveBaseUrl(raw) {
+    return raw.replace(/\/+chat\/completions\/?$/, '');
+}
 
 /**
- * The OpenAI SDK wants a base URL and appends /chat/completions itself, but
- * DEEPSEEK_API_URL has always been documented as the full endpoint. Accept
- * either so existing deployments keep working after the switch off raw fetch.
+ * The OpenAI-compatible endpoints to extract with, in the order to try them:
+ * LLM_* is the main one and is required, LLM_BACKUP_* is optional and only
+ * used when the main one fails.
+ *
+ * *_EXTRA_BODY is an optional JSON object merged into that provider's requests,
+ * for parameters outside the OpenAI schema — e.g. DeepSeek's
+ * {"thinking":{"type":"disabled"}}, without which its reasoning tokens use up
+ * max_tokens before any JSON is written.
  */
-function resolveBaseUrl() {
-    const raw = process.env.DEEPSEEK_API_URL;
-    if (!raw) return DEFAULT_LLM_BASE_URL;
-    return raw.replace(/\/+chat\/completions\/?$/, '');
+export function llmProviders() {
+    const providers = [];
+
+    for (const [label, prefix] of [['main', 'LLM_'], ['backup', 'LLM_BACKUP_']]) {
+        const apiKey = process.env[`${prefix}API_KEY`];
+        const apiUrl = process.env[`${prefix}API_URL`];
+        const model = process.env[`${prefix}MODEL`];
+
+        if (!apiKey && !apiUrl && !model && label === 'backup') continue;
+
+        if (!apiKey || !apiUrl || !model) {
+            throw new Error(`${prefix}API_KEY, ${prefix}API_URL and ${prefix}MODEL must all be set`);
+        }
+
+        let extraBody = {};
+        const rawExtraBody = process.env[`${prefix}EXTRA_BODY`];
+        if (rawExtraBody) {
+            try {
+                extraBody = JSON.parse(rawExtraBody);
+            } catch {
+                throw new Error(`${prefix}EXTRA_BODY must be a JSON object`);
+            }
+            if (!_.isPlainObject(extraBody)) {
+                throw new Error(`${prefix}EXTRA_BODY must be a JSON object`);
+            }
+        }
+
+        providers.push({ label, model, apiKey, baseURL: resolveBaseUrl(apiUrl), extraBody });
+    }
+
+    return providers;
 }
 
 /**
@@ -81,11 +119,11 @@ export const restorePrecision = (rate, computed) => {
 /**
  * ScrapingService
  *
- * Orchestrates web scraping using Apify (page fetching) and DeepSeek AI (rate extraction).
+ * Orchestrates web scraping using Apify (page fetching) and an LLM (rate extraction).
  *
  * Flow for each source:
  *   1. Apify fetches the page (handles JS rendering if needed)
- *   2. DeepSeek extracts all currency rates from the page content
+ *   2. The LLM extracts all currency rates from the page content
  *   3. Rate.upsertFromScrape saves/updates the rates in Firestore
  *   4. Source document is updated with last_scraped timestamp and status
  */
@@ -144,11 +182,11 @@ export class ScrapingService {
                 throw new Error('Apify returned empty or insufficient page content');
             }
 
-            // Step 2: Extract rates via DeepSeek AI
+            // Step 2: Extract rates via the LLM
             const extractedRates = await ScrapingService.extractRates(content, source.url);
 
             if (extractedRates.length === 0) {
-                throw new Error('DeepSeek could not find any currency rates on this page');
+                throw new Error('The LLM could not find any currency rates on this page');
             }
 
             logger.log(`[ScrapingService] ${source.url}: found ${extractedRates.length} rate(s)`);
@@ -278,30 +316,52 @@ export class ScrapingService {
     }
 
     // =========================================================================
-    // DEEPSEEK AI INTEGRATION
+    // LLM INTEGRATION
     // =========================================================================
 
     /**
-     * Use DeepSeek AI to extract all currency exchange rates from page content.
+     * Extract all currency exchange rates from page content with the main LLM,
+     * falling back to the backup LLM if the main one fails.
      *
-     * Supports tool calling: when the page expresses rates in ZWG terms (cross-rates),
-     * DeepSeek calls convert_cross_rate_to_usd to convert them to USD base before
-     * returning the final JSON. This avoids the model guessing the conversion.
-     *
-     * Compatible with any OpenAI-format API (swap DEEPSEEK_API_URL to change provider).
+     * The backup reruns the whole extraction rather than resuming the main one's
+     * conversation: tool call ids and message shapes differ between providers.
      *
      * @param {string} content - page content (markdown, text, or HTML)
      * @param {string} url - source URL (context hint for the model)
      * @returns {Array<{currency, rate, name, updated_at}>}
      */
     static async extractRates(content, url) {
-        const apiKey = process.env.DEEPSEEK_API_KEY;
-        if (!apiKey) {
-            throw new Error('DEEPSEEK_API_KEY environment variable is not set');
+        const failures = [];
+
+        for (const provider of llmProviders()) {
+            try {
+                return await ScrapingService.extractRatesWith(provider, content, url);
+            } catch (err) {
+                logger.warn(`[LLM] ${provider.label} (${provider.model}) failed: ${err.message}`);
+                failures.push(`${provider.label} LLM (${provider.model}): ${err.message}`);
+            }
         }
 
-        const model = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
-        const client = new OpenAI({ apiKey, baseURL: resolveBaseUrl() });
+        throw new Error(failures.join(' | '));
+    }
+
+    /**
+     * Use one OpenAI-compatible LLM to extract all currency exchange rates from
+     * page content.
+     *
+     * Supports tool calling: when the page expresses rates in ZWG terms (cross-rates),
+     * the model calls convert_cross_rate_to_usd to convert them to USD base before
+     * returning the final JSON. This avoids the model guessing the conversion.
+     *
+     * @param {{label, model, apiKey, baseURL, extraBody}} provider - one entry of llmProviders()
+     * @param {string} content - page content (markdown, text, or HTML)
+     * @param {string} url - source URL (context hint for the model)
+     * @returns {Array<{currency, rate, name, updated_at}>}
+     */
+    static async extractRatesWith({ model, apiKey, baseURL, extraBody }, content, url) {
+        // Bounded so a hung main provider leaves the backup time to run inside
+        // the function's 300s timeout; the SDK default is 10 minutes, 2 retries.
+        const client = new OpenAI({ apiKey, baseURL, timeout: 60_000, maxRetries: 1 });
 
         // Read current local currency code from options — configurable without redeployment
         const localCurrency = await Option.getValue('local_currency_code', 'ZWG');
@@ -418,7 +478,8 @@ ${truncatedContent}`;
                 tools,
                 tool_choice: 'auto',
                 temperature: 0.1,
-                max_tokens: 3000
+                max_tokens: 3000,
+                ...extraBody
             });
 
             // The SDK throws APIError on a non-2xx, so there is no status check
@@ -476,7 +537,7 @@ ${truncatedContent}`;
 
         // ── Dedicated JSON-only final call ────────────────────────────────────
         // All tool calls are done. Make one clean call with no tools and
-        // response_format: json_object so DeepSeek is forced to return valid JSON.
+        // response_format: json_object so the model is forced to return valid JSON.
         messages.push({ role: 'user', content: 'Return the {"rates": [...]} JSON now.' });
 
         const finalResult = await client.chat.completions.create({
@@ -484,7 +545,8 @@ ${truncatedContent}`;
             messages,
             response_format: { type: 'json_object' },
             temperature: 0.1,
-            max_tokens: 3000
+            max_tokens: 3000,
+            ...extraBody
         });
 
         const finalContent = finalResult.choices?.[0]?.message?.content;

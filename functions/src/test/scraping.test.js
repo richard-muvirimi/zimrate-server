@@ -3,13 +3,13 @@
  * model returns. The model's own output is checked by hand against the live API;
  * these are the guards that must not depend on it.
  */
-import { vi, describe, it, expect, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 vi.mock('firebase-functions', () => ({
     logger: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn(), warn: vi.fn() }
 }));
 
-import { normaliseCurrency, tidyLabel, restorePrecision, ScrapingService } from '../services/ScrapingService.js';
+import { normaliseCurrency, tidyLabel, restorePrecision, llmProviders, ScrapingService } from '../services/ScrapingService.js';
 
 describe('normaliseCurrency', () => {
 
@@ -137,5 +137,111 @@ describe('ScrapingService.testSource', () => {
             'Apify returned no items for this URL',
         ]);
         expect(result.attempts[0].preview).toBe(PAGE);
+    });
+});
+
+describe('llmProviders', () => {
+
+    const MAIN = { LLM_API_KEY: 'g-key', LLM_API_URL: 'https://gemini.test/v1beta/openai/chat/completions', LLM_MODEL: 'gemini-x' };
+    const BACKUP = { LLM_BACKUP_API_KEY: 'd-key', LLM_BACKUP_API_URL: 'https://deepseek.test', LLM_BACKUP_MODEL: 'deepseek-x' };
+
+    afterEach(() => vi.unstubAllEnvs());
+
+    const stubEnv = (vars) => {
+        for (const name of [...Object.keys(MAIN), ...Object.keys(BACKUP), 'LLM_EXTRA_BODY', 'LLM_BACKUP_EXTRA_BODY']) {
+            vi.stubEnv(name, vars[name] ?? '');
+        }
+    };
+
+    it('lists main then backup, with the chat-completions path stripped', () => {
+        stubEnv({ ...MAIN, ...BACKUP });
+
+        expect(llmProviders()).toEqual([
+            { label: 'main', model: 'gemini-x', apiKey: 'g-key', baseURL: 'https://gemini.test/v1beta/openai', extraBody: {} },
+            { label: 'backup', model: 'deepseek-x', apiKey: 'd-key', baseURL: 'https://deepseek.test', extraBody: {} },
+        ]);
+    });
+
+    it('runs without a backup when none is configured', () => {
+        stubEnv(MAIN);
+        expect(llmProviders().map(p => p.label)).toEqual(['main']);
+    });
+
+    it('refuses a missing or half-configured provider', () => {
+        stubEnv(BACKUP);
+        expect(() => llmProviders()).toThrow(/LLM_API_KEY, LLM_API_URL and LLM_MODEL/);
+
+        stubEnv({ ...MAIN, LLM_BACKUP_API_KEY: 'd-key' });
+        expect(() => llmProviders()).toThrow(/LLM_BACKUP_API_KEY, LLM_BACKUP_API_URL and LLM_BACKUP_MODEL/);
+    });
+
+    it('parses extra body params for the provider they are set on only', () => {
+        stubEnv({ ...MAIN, ...BACKUP, LLM_BACKUP_EXTRA_BODY: '{"thinking":{"type":"disabled"}}' });
+
+        const [main, backup] = llmProviders();
+        expect(main.extraBody).toEqual({});
+        expect(backup.extraBody).toEqual({ thinking: { type: 'disabled' } });
+    });
+
+    it.each(['{thinking: disabled}', '["thinking"]', '"disabled"'])(
+        'refuses extra body that is not a JSON object: %s',
+        (raw) => {
+            stubEnv({ ...MAIN, LLM_EXTRA_BODY: raw });
+            expect(() => llmProviders()).toThrow('LLM_EXTRA_BODY must be a JSON object');
+        },
+    );
+});
+
+describe('ScrapingService.extractRates', () => {
+
+    const RATES = [{ currency: 'ZWG', rate: 26.5, name: 'Official', updated_at: null }];
+
+    beforeEach(() => {
+        vi.stubEnv('LLM_API_KEY', 'g-key');
+        vi.stubEnv('LLM_API_URL', 'https://gemini.test');
+        vi.stubEnv('LLM_MODEL', 'gemini-x');
+        vi.stubEnv('LLM_BACKUP_API_KEY', 'd-key');
+        vi.stubEnv('LLM_BACKUP_API_URL', 'https://deepseek.test');
+        vi.stubEnv('LLM_BACKUP_MODEL', 'deepseek-x');
+    });
+
+    afterEach(() => {
+        vi.unstubAllEnvs();
+        vi.restoreAllMocks();
+    });
+
+    it('uses the main provider alone when it succeeds', async () => {
+        const run = vi.spyOn(ScrapingService, 'extractRatesWith').mockResolvedValue(RATES);
+
+        expect(await ScrapingService.extractRates('page', 'https://example.com')).toEqual(RATES);
+        expect(run.mock.calls.map(([p]) => p.label)).toEqual(['main']);
+    });
+
+    it('reruns with the backup when the main provider fails', async () => {
+        const run = vi.spyOn(ScrapingService, 'extractRatesWith')
+            .mockRejectedValueOnce(new Error('429 quota exceeded'))
+            .mockResolvedValueOnce(RATES);
+
+        expect(await ScrapingService.extractRates('page', 'https://example.com')).toEqual(RATES);
+        expect(run.mock.calls.map(([p]) => p.model)).toEqual(['gemini-x', 'deepseek-x']);
+    });
+
+    it('reports both failures when the backup fails too', async () => {
+        vi.spyOn(ScrapingService, 'extractRatesWith')
+            .mockRejectedValueOnce(new Error('503 high demand'))
+            .mockRejectedValueOnce(new Error('401 invalid key'));
+
+        await expect(ScrapingService.extractRates('page', 'https://example.com')).rejects.toThrow(
+            'main LLM (gemini-x): 503 high demand | backup LLM (deepseek-x): 401 invalid key'
+        );
+    });
+
+    it('does not fall back on an empty result', async () => {
+        // No rates is an answer, not a failure: testSource relies on it to try
+        // the browser fetch, and the backup reading the same page would agree.
+        const run = vi.spyOn(ScrapingService, 'extractRatesWith').mockResolvedValue([]);
+
+        expect(await ScrapingService.extractRates('page', 'https://example.com')).toEqual([]);
+        expect(run).toHaveBeenCalledTimes(1);
     });
 });

@@ -31,7 +31,7 @@ app.use(errorHandler);
 app.use(notFoundHandler);
 
 // ── Main HTTP function ────────────────────────────────────────────────────────
-// timeoutSeconds 300: scrape endpoint calls Apify (~60s) + DeepSeek (~15s) + Firestore
+// timeoutSeconds 300: scrape endpoint calls Apify (~60s) + LLM (~15s) + Firestore
 export const zimrate_app = onRequest({ timeoutSeconds: 300, memory: '512MiB', region: 'us-central1' }, app);
 
 // ── Scheduled scraping function ───────────────────────────────────────────────
@@ -52,7 +52,7 @@ export const zimrate_purge = onSchedule({
 }, runPurge);
 
 // ── Source test (dry-run scrape requested by the admin source form) ───────────
-// timeoutSeconds 300: up to two Apify fetches (static, then browser) + DeepSeek
+// timeoutSeconds 300: up to two Apify fetches (static, then browser) + LLM
 export const zimrate_source_test = onDocumentCreated({
     document: 'source_tests/{testId}',
     region: 'us-central1',
