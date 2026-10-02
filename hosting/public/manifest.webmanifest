@@ -14,7 +14,7 @@
       "purpose": "any"
     },
     {
-      "src": "https://storage.googleapis.com/my-rate-calculator.firebasestorage.app/branding/app-icon.png",
+      "src": "https://firebasestorage.googleapis.com/v0/b/my-rate-calculator.firebasestorage.app/o/branding%2Fapp-icon.png?alt=media",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

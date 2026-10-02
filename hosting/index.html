@@ -38,11 +38,18 @@
       in place, so the URL never changes. This must stay static: social crawlers
       do not run JavaScript, so a runtime swap would never be seen. Upload a
       social image once from Admin > Branding or this will 404.
+      Must be the firebasestorage.googleapis.com form: storage.rules only
+      governs that one; storage.googleapis.com goes by bucket IAM and 403s.
     -->
     <meta
       property="og:image"
-      content="https://storage.googleapis.com/my-rate-calculator.firebasestorage.app/branding/og-image.png"
+      content="https://firebasestorage.googleapis.com/v0/b/my-rate-calculator.firebasestorage.app/o/branding%2Fog-image.png?alt=media"
     />
+    <!-- Dimensions let WhatsApp render the large preview on the first share
+         instead of waiting to fetch the image. Keep in step with the upload. -->
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="ZimRate: Zimbabwe exchange rates from multiple sources, in one place." />
     <meta property="og:url" content="https://zimrate.tyganeutronics.com" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -53,7 +60,7 @@
     />
     <meta
       name="twitter:image"
-      content="https://storage.googleapis.com/my-rate-calculator.firebasestorage.app/branding/og-image.png"
+      content="https://firebasestorage.googleapis.com/v0/b/my-rate-calculator.firebasestorage.app/o/branding%2Fog-image.png?alt=media"
     />
     <title>ZimRate</title>
 

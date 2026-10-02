@@ -115,8 +115,5 @@ export const brandingSchema = Joi.object({
     author_name: Joi.string().trim().allow('').max(80).optional(),
     author_email: Joi.string().trim().email({ minDomainSegments: 2 }).allow('').optional(),
     author_url: Joi.string().trim().uri({ scheme: ['http', 'https'] }).allow('').optional(),
-    repo_url: Joi.string().trim().uri({ scheme: ['http', 'https'] }).allow('').optional(),
-    // Version counters are owned server-side; the client only asks for a bump.
-    bump_icon: Joi.boolean().optional(),
-    bump_og: Joi.boolean().optional()
+    repo_url: Joi.string().trim().uri({ scheme: ['http', 'https'] }).allow('').optional()
 });

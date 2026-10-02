@@ -99,7 +99,9 @@ export default function UsersPage() {
     try {
       const path = `avatars/${target.uid}`;
       await uploadBytes(ref(storage, path), file, { contentType: file.type });
-      const url = `https://storage.googleapis.com/${storage.app.options.storageBucket}/${path}?v=${DateTime.now().toMillis()}`;
+      // Firebase Storage URL so storage.rules' public read applies; the
+      // storage.googleapis.com form is gated by bucket IAM and 403s.
+      const url = `https://firebasestorage.googleapis.com/v0/b/${storage.app.options.storageBucket}/o/${encodeURIComponent(path)}?alt=media&v=${DateTime.now().toMillis()}`;
 
       await adminFetch(`/api/admin/users/${target.uid}`, {
         method: 'PUT',

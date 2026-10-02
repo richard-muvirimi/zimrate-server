@@ -835,13 +835,21 @@ describe('Branding', () => {
         const res = await request.get('/api/branding');
         // The path must not change between uploads — the og:image meta tag in
         // index.html points at it statically.
-        expect(res.body.icon_url).toContain('/branding/app-icon.png');
-        expect(res.body.og_image_url).toContain('/branding/og-image.png');
+        expect(res.body.icon_url).toContain('/o/branding%2Fapp-icon.png');
+        expect(res.body.og_image_url).toContain('/o/branding%2Fog-image.png');
     });
 
-    it('carries a cache-busting version on asset URLs', async () => {
+    it('serves assets from Firebase Storage URLs so storage.rules applies', async () => {
         const res = await request.get('/api/branding');
-        expect(res.body.icon_url).toMatch(/\?v=\d+$/);
+        // storage.googleapis.com is gated by bucket IAM, not the rules, and 403s.
+        expect(res.body.og_image_url).toMatch(/^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\//);
+        expect(res.body.og_image_url).toContain('alt=media');
+    });
+
+    it('carries no version query, so the URL is identical across uploads', async () => {
+        const res = await request.get('/api/branding');
+        expect(res.body.icon_url).toMatch(/\?alt=media$/);
+        expect(res.body.og_image_url).toMatch(/\?alt=media$/);
     });
 
     it('exposes repo_url publicly so the fork ribbon and footer link can render', async () => {

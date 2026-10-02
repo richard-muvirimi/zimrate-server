@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import {
   Box, Typography, Paper, Stack, TextField, Button, Alert,
   CircularProgress, Divider,
@@ -17,8 +17,6 @@ interface BrandingConfig {
   author_email: string;
   author_url: string;
   repo_url: string;
-  icon_version: number;
-  og_version: number;
   bucket: string;
 }
 
@@ -29,25 +27,36 @@ const EMPTY: BrandingConfig = {
   author_email: '',
   author_url: '',
   repo_url: '',
-  icon_version: 0,
-  og_version: 0,
   bucket: '',
 };
 
 /** Fixed paths, overwritten in place, so the public URL never changes. */
 const ICON_PATH = 'branding/app-icon.png';
 const OG_PATH = 'branding/og-image.png';
+const OG_CALCULATOR_PATH = 'branding/og-calculator.png';
+
+type UploadKind = 'icon' | 'og' | 'og_calculator';
+
+const UPLOADS: Record<UploadKind, { path: string; done: string }> = {
+  icon: { path: ICON_PATH, done: 'App icon updated.' },
+  og: { path: OG_PATH, done: 'Social image updated.' },
+  og_calculator: { path: OG_CALCULATOR_PATH, done: 'Calculator social image updated.' },
+};
 
 export default function BrandingPage() {
   const [config, setConfig] = useState<BrandingConfig>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState<'icon' | 'og' | null>(null);
+  const [uploading, setUploading] = useState<UploadKind | null>(null);
+  // The public URL is identical before and after an upload, so the browser
+  // would keep showing its in-memory copy; preview the uploaded file instead.
+  const [uploaded, setUploaded] = useState<Partial<Record<UploadKind, string>>>({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const iconInput = useRef<HTMLInputElement>(null);
   const ogInput = useRef<HTMLInputElement>(null);
+  const ogCalculatorInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     adminFetch<BrandingConfig>('/api/admin/branding')
@@ -56,8 +65,20 @@ export default function BrandingPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const publicUrl = (path: string, version: number) =>
-    config.bucket ? `https://storage.googleapis.com/${config.bucket}/${path}?v=${version}` : '';
+  // Firebase Storage URL so storage.rules' public read applies; the
+  // storage.googleapis.com form is gated by bucket IAM and 403s.
+  const publicUrl = (path: string) =>
+    config.bucket
+      ? `https://firebasestorage.googleapis.com/v0/b/${config.bucket}/o/${encodeURIComponent(path)}?alt=media`
+      : '';
+
+  const previewSrc = (kind: UploadKind) => uploaded[kind] ?? publicUrl(UPLOADS[kind].path);
+
+  // Nothing uploaded yet means a 404 — hide the broken image rather than track
+  // whether an upload has ever happened.
+  const hideMissing = (e: SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.style.display = 'none';
+  };
 
   // The cached copy is what the public site paints from on first load, so it
   // has to be cleared or the old name lingers for returning visitors.
@@ -95,23 +116,18 @@ export default function BrandingPage() {
     }
   };
 
-  const handleUpload = async (kind: 'icon' | 'og', file: File) => {
+  const handleUpload = async (kind: UploadKind, file: File) => {
     setUploading(kind);
     setError('');
     setSuccess('');
     try {
-      const path = kind === 'icon' ? ICON_PATH : OG_PATH;
-      await uploadBytes(ref(storage, path), file, { contentType: file.type });
-
-      // The server owns the counter so it can only move forward; bumping it is
-      // what busts caches on an otherwise identical URL.
-      const updated = await adminFetch<BrandingConfig>('/api/admin/branding', {
-        method: 'PUT',
-        body: JSON.stringify(kind === 'icon' ? { bump_icon: true } : { bump_og: true }),
-      });
-      setConfig({ ...EMPTY, ...updated });
-      clearPublicCache();
-      setSuccess(kind === 'icon' ? 'App icon updated.' : 'Social image updated.');
+      const { path, done } = UPLOADS[kind];
+      // Same path every time, so the URL never changes. no-cache makes
+      // browsers and crawlers revalidate, so a replacement shows up without
+      // any version query on the URL.
+      await uploadBytes(ref(storage, path), file, { contentType: file.type, cacheControl: 'no-cache' });
+      setUploaded((u) => ({ ...u, [kind]: URL.createObjectURL(file) }));
+      setSuccess(done);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -219,10 +235,12 @@ export default function BrandingPage() {
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
                 Header, footer and browser tab. Square PNG, at least 512×512.
               </Typography>
-              {config.icon_version > 0 && (
+              {config.bucket && (
                 <Box
+                  key={previewSrc('icon')}
                   component="img"
-                  src={publicUrl(ICON_PATH, config.icon_version)}
+                  src={previewSrc('icon')}
+                  onError={hideMissing}
                   alt="Current app icon"
                   sx={{ width: 56, height: 56, objectFit: 'contain', mb: 1, display: 'block' }}
                 />
@@ -254,10 +272,12 @@ export default function BrandingPage() {
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
                 Shown when a link is shared. 1200×630 PNG or JPEG.
               </Typography>
-              {config.og_version > 0 && (
+              {config.bucket && (
                 <Box
+                  key={previewSrc('og')}
                   component="img"
-                  src={publicUrl(OG_PATH, config.og_version)}
+                  src={previewSrc('og')}
+                  onError={hideMissing}
                   alt="Current social preview"
                   sx={{ width: 160, borderRadius: 1, mb: 1, display: 'block' }}
                 />
@@ -283,12 +303,49 @@ export default function BrandingPage() {
                 Upload image
               </Button>
             </Box>
+
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" fontWeight={600} gutterBottom>Calculator preview</Typography>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                Shown when a /calculator/ link is shared. 1200×630 PNG or JPEG.
+              </Typography>
+              {config.bucket && (
+                <Box
+                  key={previewSrc('og_calculator')}
+                  component="img"
+                  src={previewSrc('og_calculator')}
+                  onError={hideMissing}
+                  alt="Current calculator social preview"
+                  sx={{ width: 160, borderRadius: 1, mb: 1, display: 'block' }}
+                />
+              )}
+              <input
+                ref={ogCalculatorInput}
+                type="file"
+                accept="image/png,image/jpeg"
+                hidden
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleUpload('og_calculator', file);
+                  e.target.value = '';
+                }}
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => ogCalculatorInput.current?.click()}
+                disabled={uploading !== null}
+                startIcon={uploading === 'og_calculator' ? <CircularProgress size={16} /> : <UploadIcon />}
+              >
+                Upload image
+              </Button>
+            </Box>
           </Stack>
 
           <Alert severity="info" variant="outlined">
             Social previews are read by crawlers that don't run JavaScript, so the tag in
-            <code> index.html</code> points at the fixed Storage URL. Upload a social image at
-            least once or that preview will 404. The browser tab icon also shows the bundled
+            <code> index.html</code> and <code>calculator/index.html</code> point at the fixed
+            Storage URLs. Upload each social image at least once or that preview will 404. The browser tab icon also shows the bundled
             default briefly before the configured one loads.
           </Alert>
         </Stack>

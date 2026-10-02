@@ -22,7 +22,7 @@ export class BrandingController {
         }
     }
 
-    /** Admin: full record including version counters. */
+    /** Admin: full record plus the bucket the images live in. */
     static async get(_req, res, next) {
         try {
             const branding = await getBranding();
@@ -32,7 +32,7 @@ export class BrandingController {
         }
     }
 
-    /** Admin: update name/tagline, and bump a version after an upload. */
+    /** Admin: update name, tagline and contact details. */
     static async update(req, res, next) {
         try {
             const { error, value } = brandingSchema.validate(req.body);
@@ -42,17 +42,7 @@ export class BrandingController {
                 });
             }
 
-            const current = await getBranding();
-            const patch = { ...value };
-
-            // The client says which asset it just replaced; the counter is
-            // owned here so it can only ever move forward.
-            if (value.bump_icon) patch.icon_version = (current.icon_version || 0) + 1;
-            if (value.bump_og) patch.og_version = (current.og_version || 0) + 1;
-            delete patch.bump_icon;
-            delete patch.bump_og;
-
-            await saveBranding(patch);
+            await saveBranding(value);
             const branding = await getBranding();
             res.json({ ...branding, bucket: bucketName() });
         } catch (err) {
