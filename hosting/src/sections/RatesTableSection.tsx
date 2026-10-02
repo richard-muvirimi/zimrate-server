@@ -15,6 +15,7 @@ import Decimal from 'decimal.js';
 import { DateTime } from 'luxon';
 import { compact, groupBy, keyBy, map, mapValues, max, sortBy, uniqBy } from 'lodash-es';
 import { GET_RATES } from '../graphql/queries';
+import CurrencyLabel from '../components/CurrencyLabel';
 
 interface Rate {
   rate: number;
@@ -385,7 +386,7 @@ export default function RatesTableSection() {
                     return [
                       <TableRow key={row.currency} hover sx={{ '& > *': { borderBottom: isOpen ? 'none' : undefined } }}>
                         <TableCell>
-                          <Typography fontWeight={700}>{row.currency.toUpperCase()}</Typography>
+                          <CurrencyLabel currency={row.currency} />
                         </TableCell>
                         <TableCell align="right">
                           <Typography fontWeight={700} color="primary">

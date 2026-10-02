@@ -9,6 +9,7 @@ import { map, sortBy, uniq, without } from 'lodash-es';
 import { GET_RATES } from '../graphql/queries';
 import { detectLocaleCurrency } from '../utils/localeCurrency';
 import AggregateSwitch, { type Aggregate } from './AggregateSwitch';
+import CurrencyLabel from './CurrencyLabel';
 
 interface Rate {
   rate: number;
@@ -129,9 +130,10 @@ export default function CalculatorWidget() {
                   value={from}
                   label="From"
                   onChange={(e) => setFromCurrency(e.target.value)}
+                  renderValue={(c) => <CurrencyLabel currency={c} inline />}
                 >
                   {currencies.map((c) => (
-                    <MenuItem key={c} value={c}>{c}</MenuItem>
+                    <MenuItem key={c} value={c}><CurrencyLabel currency={c} /></MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -144,9 +146,10 @@ export default function CalculatorWidget() {
               value={to}
               label="To"
               onChange={(e) => setToCurrency(e.target.value)}
+              renderValue={(c) => <CurrencyLabel currency={c} inline />}
             >
               {currencies.map((c) => (
-                <MenuItem key={c} value={c}>{c}</MenuItem>
+                <MenuItem key={c} value={c}><CurrencyLabel currency={c} /></MenuItem>
               ))}
             </Select>
           </FormControl>

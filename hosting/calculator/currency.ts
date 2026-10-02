@@ -45,8 +45,27 @@ export function countryName(currency: string): string {
 }
 
 /**
- * The label a rate is shown under: "ZAR · South Africa", or just the code where
- * the two would repeat.
+ * Localised currency name, as the WordPress plugin's currency_name() does it:
+ * ICU's name for the currency, else its country. ICU's currency table is
+ * thinner than its region table (ZWG only reached it in 2024), so a currency it
+ * cannot name falls through to countryName(), which always answers.
+ */
+export function currencyName(currency: string): string {
+  const code = currency.toUpperCase();
+
+  try {
+    const name = new Intl.DisplayNames(navigator.languages as string[], { type: 'currency' }).of(code);
+    if (name && name.toLowerCase() !== code.toLowerCase()) return name;
+  } catch {
+    /* Malformed code, or no Intl data for it. */
+  }
+
+  return countryName(currency);
+}
+
+/**
+ * The label a rate is shown under: "ZAR · South African Rand", or just the code
+ * where the two would repeat.
  *
  * A custom rate passes its own [name]: a code the user invented is not ISO, so
  * resolving it to a country would dress it in an unrelated flag and label —
@@ -54,7 +73,7 @@ export function countryName(currency: string): string {
  */
 export function currencyLabel(currency: string, name?: string): string {
   const code = currency.toUpperCase();
-  const resolved = name?.trim() || countryName(currency);
+  const resolved = name?.trim() || currencyName(currency);
 
   return resolved.toLowerCase() === code.toLowerCase() ? code : `${code} · ${resolved}`;
 }
