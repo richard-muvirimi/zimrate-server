@@ -4,12 +4,14 @@ import { initializeApp } from 'firebase-admin/app';
 import { setGlobalOptions } from 'firebase-functions';
 import { onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import apiRoutes from './routes/api.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { logAnalytics } from './middleware/analytics.js';
 import cors from 'cors';
 import { runScrape } from './jobs/scrape.js';
 import { runPurge } from './jobs/purge.js';
+import { runSourceTest } from './jobs/testSource.js';
 
 const app = express();
 
@@ -48,3 +50,12 @@ export const zimrate_purge = onSchedule({
     memory: '512MiB',
     timeoutSeconds: 540,
 }, runPurge);
+
+// ── Source test (dry-run scrape requested by the admin source form) ───────────
+// timeoutSeconds 300: up to two Apify fetches (static, then browser) + DeepSeek
+export const zimrate_source_test = onDocumentCreated({
+    document: 'source_tests/{testId}',
+    region: 'us-central1',
+    memory: '512MiB',
+    timeoutSeconds: 300,
+}, runSourceTest);

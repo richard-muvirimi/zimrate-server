@@ -177,6 +177,52 @@ export class ScrapingService {
         }
     }
 
+    /**
+     * Dry run of scrapeSource for a URL that is not saved yet: fetch and extract,
+     * but write no rates and touch no source. Lets an admin see within a couple of
+     * minutes whether a page will yield rates, instead of after the next hourly run.
+     *
+     * Also settles the `javascript` flag by trying it: the cheap static fetch first,
+     * the browser only if that found nothing. The browser run finding rates where
+     * the static one did not is direct evidence the page needs it, which no reading
+     * of the static text could give as reliably.
+     *
+     * @param {string} url
+     * @returns {{ok: boolean, javascript: boolean|null, attempts: Array<{javascript, content_length, preview, rates, error}>}}
+     */
+    static async testSource(url) {
+        const attempts = [];
+
+        for (const javascript of [false, true]) {
+            const attempt = { javascript, content_length: 0, preview: '', rates: [], error: null };
+            attempts.push(attempt);
+
+            try {
+                const content = await ScrapingService.fetchPage(url, javascript);
+                attempt.content_length = content.length;
+                attempt.preview = content.substring(0, 1000);
+
+                if (content.length < 50) {
+                    throw new Error('The page returned too little text to read rates from');
+                }
+
+                attempt.rates = await ScrapingService.extractRates(content, url);
+
+                if (attempt.rates.length === 0) {
+                    throw new Error('No currency rates were found on this page');
+                }
+            } catch (err) {
+                attempt.error = err.message;
+                continue;
+            }
+
+            break;
+        }
+
+        const passed = attempts.find(attempt => !attempt.error);
+        return { ok: !!passed, javascript: passed ? passed.javascript : null, attempts };
+    }
+
     // =========================================================================
     // APIFY INTEGRATION
     // =========================================================================

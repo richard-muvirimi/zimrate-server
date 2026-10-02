@@ -3,13 +3,13 @@
  * model returns. The model's own output is checked by hand against the live API;
  * these are the guards that must not depend on it.
  */
-import { vi, describe, it, expect } from 'vitest';
+import { vi, describe, it, expect, afterEach } from 'vitest';
 
 vi.mock('firebase-functions', () => ({
     logger: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn(), warn: vi.fn() }
 }));
 
-import { normaliseCurrency, tidyLabel, restorePrecision } from '../services/ScrapingService.js';
+import { normaliseCurrency, tidyLabel, restorePrecision, ScrapingService } from '../services/ScrapingService.js';
 
 describe('normaliseCurrency', () => {
 
@@ -71,5 +71,71 @@ describe('restorePrecision', () => {
 
     it('leaves everything alone when no conversion was computed', () => {
         expect(restorePrecision(17.585, [])).toBe(17.585);
+    });
+});
+
+describe('ScrapingService.testSource', () => {
+
+    const PAGE = 'x'.repeat(100);
+    const RATES = [{ currency: 'ZWG', rate: 26.5, name: 'Official', updated_at: null }];
+
+    // Each case scripts the two fetch modes; the real Apify and LLM calls never run.
+    const stub = ({ staticPage, browserPage, staticRates = [], browserRates = [] }) => {
+        const fetchPage = vi.spyOn(ScrapingService, 'fetchPage')
+            .mockImplementation(async (_url, javascript) => {
+                const page = javascript ? browserPage : staticPage;
+                if (page instanceof Error) throw page;
+                return page;
+            });
+        vi.spyOn(ScrapingService, 'extractRates')
+            .mockImplementation(async () =>
+                fetchPage.mock.lastCall[1] ? browserRates : staticRates);
+        return fetchPage;
+    };
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it('stops at the static fetch when it finds rates', async () => {
+        const fetchPage = stub({ staticPage: PAGE, staticRates: RATES });
+
+        const result = await ScrapingService.testSource('https://example.com');
+
+        expect(result.ok).toBe(true);
+        expect(result.javascript).toBe(false);
+        expect(fetchPage).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to the browser when the static page has no rates', async () => {
+        stub({ staticPage: PAGE, browserPage: PAGE, browserRates: RATES });
+
+        const result = await ScrapingService.testSource('https://example.com');
+
+        expect(result.ok).toBe(true);
+        expect(result.javascript).toBe(true);
+        expect(result.attempts[0].error).toMatch(/No currency rates/);
+        expect(result.attempts[1].rates).toEqual(RATES);
+    });
+
+    it('falls back to the browser when the static fetch is nearly empty or throws', async () => {
+        stub({ staticPage: 'Loading…', browserPage: PAGE, browserRates: RATES });
+        expect((await ScrapingService.testSource('https://example.com')).javascript).toBe(true);
+
+        vi.restoreAllMocks();
+        stub({ staticPage: new Error('Apify API error 500'), browserPage: PAGE, browserRates: RATES });
+        expect((await ScrapingService.testSource('https://example.com')).javascript).toBe(true);
+    });
+
+    it('reports failure with both attempts when neither finds rates', async () => {
+        stub({ staticPage: PAGE, browserPage: new Error('Apify returned no items for this URL') });
+
+        const result = await ScrapingService.testSource('https://example.com');
+
+        expect(result.ok).toBe(false);
+        expect(result.javascript).toBeNull();
+        expect(result.attempts.map(a => a.error)).toEqual([
+            'No currency rates were found on this page',
+            'Apify returned no items for this URL',
+        ]);
+        expect(result.attempts[0].preview).toBe(PAGE);
     });
 });

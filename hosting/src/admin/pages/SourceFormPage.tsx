@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box, Typography, Button, Paper, TextField, Alert,
-  CircularProgress, Stack, FormControlLabel, Switch,
+  CircularProgress, Stack, FormControlLabel, Switch, LinearProgress,
+  Accordion, AccordionSummary, AccordionDetails,
+  Table, TableBody, TableCell, TableHead, TableRow,
 } from '@mui/material';
-import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import {
+  doc, getDoc, setDoc, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp,
+} from 'firebase/firestore';
 import { db } from '../../firebase';
 
 interface SourceForm {
@@ -13,6 +18,24 @@ interface SourceForm {
   enabled: boolean;
   javascript: boolean;
 }
+
+/** One fetch mode tried by ScrapingService.testSource. */
+interface TestAttempt {
+  javascript: boolean;
+  content_length: number;
+  preview: string;
+  rates: { currency: string; rate: number; name: string | null }[];
+  error: string | null;
+}
+
+interface TestResult {
+  ok: boolean;
+  javascript: boolean | null;
+  attempts: TestAttempt[];
+  error?: string;
+}
+
+const modeLabel = (javascript: boolean) => (javascript ? 'Browser rendering' : 'Plain fetch');
 
 const EMPTY: SourceForm = {
   name: '',
@@ -30,6 +53,12 @@ export default function SourceFormPage() {
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [savedUrl, setSavedUrl] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [test, setTest] = useState<{ url: string; result: TestResult } | null>(null);
+  const stopTest = useRef<(() => void) | null>(null);
+
+  useEffect(() => () => stopTest.current?.(), []);
 
   useEffect(() => {
     if (isNew) return;
@@ -43,6 +72,7 @@ export default function SourceFormPage() {
             enabled: d.enabled !== false,
             javascript: d.javascript === true,
           });
+          setSavedUrl(d.url ?? '');
         }
       })
       .finally(() => setLoading(false));
@@ -56,6 +86,58 @@ export default function SourceFormPage() {
         [field]: e.target.type === 'checkbox' ? e.target.checked : e.target.value,
       }));
     };
+
+  // Writing a source_tests doc starts the zimrate_source_test trigger, which
+  // writes the outcome back to the same doc. See functions/src/jobs/testSource.js
+  // for why this is not a plain API call.
+  const handleTest = async () => {
+    const url = form.url.trim();
+    setError('');
+    setTest(null);
+    setTesting(true);
+    try {
+      const ref = await addDoc(collection(db, 'source_tests'), { url, created_at: serverTimestamp() });
+
+      const settle = (result: TestResult) => {
+        stopTest.current?.();
+        setTest({ url, result });
+        if (result.ok) setForm((prev) => ({ ...prev, javascript: result.javascript === true }));
+        setTesting(false);
+        deleteDoc(ref).catch(() => {});
+      };
+
+      const unsubscribe = onSnapshot(ref, (snap) => {
+        const d = snap.data();
+        if (d?.status === 'done') {
+          settle({ ok: d.ok, javascript: d.javascript, attempts: d.attempts });
+        } else if (d?.status === 'failed') {
+          settle({ ok: false, javascript: null, attempts: [], error: d.error });
+        }
+      }, (e) => {
+        stopTest.current?.();
+        setError(String(e));
+        setTesting(false);
+      });
+
+      // The trigger is killed at 300s and leaves the doc "running", so stop
+      // waiting shortly after that rather than spin forever.
+      const timer = setTimeout(() => settle({
+        ok: false,
+        javascript: null,
+        attempts: [],
+        error: 'No result after 5 minutes. Check that the zimrate_source_test function is deployed, and its logs.',
+      }), 330_000);
+
+      stopTest.current = () => {
+        unsubscribe();
+        clearTimeout(timer);
+        stopTest.current = null;
+      };
+    } catch (e) {
+      setError(String(e));
+      setTesting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,6 +165,15 @@ export default function SourceFormPage() {
       setSaving(false);
     }
   };
+
+  const url = form.url.trim();
+  // A test of an earlier URL says nothing about this one.
+  const shownTest = test?.url === url ? test.result : null;
+  const foundRates = shownTest?.ok ? shownTest.attempts[shownTest.attempts.length - 1].rates : [];
+  // Existing sources already have a scrape record for their URL, so only a new
+  // or changed URL is flagged as unverified.
+  const unverified = !testing && (isNew || url !== savedUrl) && !shownTest?.ok;
+  const preview = shownTest?.attempts.map((a) => a.preview).filter(Boolean).pop();
 
   if (loading) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}><CircularProgress /></Box>;
@@ -116,6 +207,74 @@ export default function SourceFormPage() {
             />
             {/* No currency field: a source can yield several currencies, so the
                 currency lives on each extracted rate, not on the source. */}
+            <Box>
+              <Button variant="outlined" onClick={handleTest} disabled={!url || testing}>
+                {testing ? 'Testing…' : 'Test source'}
+              </Button>
+              {testing && (
+                <Box sx={{ mt: 2 }}>
+                  <LinearProgress />
+                  <Typography variant="caption" color="text.secondary">
+                    Fetching the page and reading its rates. This can take a minute or two,
+                    longer if the page needs a browser to render.
+                  </Typography>
+                </Box>
+              )}
+              {shownTest && (
+                <Box sx={{ mt: 2 }}>
+                  {shownTest.ok ? (
+                    <Alert severity="success">
+                      Found {foundRates.length} rate(s) using{' '}
+                      {modeLabel(shownTest.javascript === true).toLowerCase()}.
+                      {shownTest.javascript && ' Browser rendering has been switched on under Advanced.'}
+                    </Alert>
+                  ) : (
+                    <Alert severity="error">
+                      No rates could be read from this page.
+                      {shownTest.error && <Box>{shownTest.error}</Box>}
+                      {shownTest.attempts.map((a) => (
+                        <Box key={String(a.javascript)}>{modeLabel(a.javascript)}: {a.error}</Box>
+                      ))}
+                    </Alert>
+                  )}
+                  {shownTest.ok && (
+                    <Table size="small" sx={{ mt: 1 }}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Currency</TableCell>
+                          <TableCell>Name</TableCell>
+                          <TableCell align="right">Per 1 USD</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {foundRates.map((r) => (
+                          <TableRow key={`${r.currency}-${r.name}`}>
+                            <TableCell>{r.currency}</TableCell>
+                            <TableCell>{r.name ?? '—'}</TableCell>
+                            <TableCell align="right">{r.rate}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                  {!shownTest.ok && preview && (
+                    <Accordion variant="outlined" disableGutters sx={{ mt: 1 }}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography variant="body2">What the scraper saw</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Box
+                          component="pre"
+                          sx={{ m: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12 }}
+                        >
+                          {preview}
+                        </Box>
+                      </AccordionDetails>
+                    </Accordion>
+                  )}
+                </Box>
+              )}
+            </Box>
             <FormControlLabel
               control={
                 <Switch
@@ -125,15 +284,34 @@ export default function SourceFormPage() {
               }
               label="Enabled"
             />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={form.javascript}
-                  onChange={handleChange('javascript')}
+            <Accordion variant="outlined" disableGutters>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="body2">Advanced</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={form.javascript}
+                      onChange={handleChange('javascript')}
+                    />
+                  }
+                  label="Render with a browser (for pages that need JavaScript)"
                 />
-              }
-              label="Render with a browser (for pages that need JavaScript)"
-            />
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Set automatically by Test source. Browser rendering is slower and costs
+                  more per scrape, so it is only switched on when a plain fetch finds no rates.
+                </Typography>
+              </AccordionDetails>
+            </Accordion>
+
+            {unverified && (
+              <Alert severity="warning">
+                {shownTest
+                  ? 'This URL failed its test, so it will probably not produce rates. You can still save it.'
+                  : 'This URL has not been tested. Use Test source to check it yields rates before saving.'}
+              </Alert>
+            )}
 
             <Stack direction="row" spacing={2} justifyContent="flex-end">
               <Button variant="outlined" onClick={() => navigate('/admin/sources')}>

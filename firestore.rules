@@ -26,6 +26,17 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Dry-run scrapes requested by the admin source form. Creating one starts
+    // the zimrate_source_test trigger, which alone writes the result, so the
+    // client may only submit a URL and later clear the doc away.
+    match /source_tests/{testId} {
+      allow read, delete: if isAdmin();
+      allow create: if isAdmin()
+                    && request.resource.data.keys().hasOnly(['url', 'created_at'])
+                    && request.resource.data.url is string
+                    && request.resource.data.url.size() < 2048;
+    }
+
     // SMTP credentials and branding. Denied to every client, including admins:
     // reachable only via the Admin SDK behind /api/admin/**, so the SMTP
     // password can never be read out of Firestore by a browser.
