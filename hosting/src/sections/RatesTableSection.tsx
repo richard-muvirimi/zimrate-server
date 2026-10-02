@@ -47,6 +47,12 @@ interface RatesData {
 const AGGREGATES = ['max', 'mean', 'min', 'median', 'mode', 'random'] as const;
 type AggregateKey = (typeof AGGREGATES)[number];
 
+/**
+ * The aggregates a single source can be tagged with in the per-source table.
+ * Random is left out: it names whichever source the server happened to draw.
+ */
+const TAGGED = ['max', 'min', 'mean', 'median', 'mode'] as const;
+
 interface CurrencyRow {
   currency: string;
   lastChecked?: number;
@@ -115,6 +121,29 @@ function buildRows(data?: RatesData): CurrencyRow[] {
     }),
     'currency',
   );
+}
+
+/**
+ * Sources round their rates differently (one quotes 26.5, another 26.5089), so two
+ * rates count as the same when they agree at the coarser of their two precisions.
+ */
+function sameRate(a: number, b: number) {
+  const x = new Decimal(a);
+  const y = new Decimal(b);
+  const dp = Math.min(x.decimalPlaces(), y.decimalPlaces());
+  return x.toDecimalPlaces(dp).eq(y.toDecimalPlaces(dp));
+}
+
+/** Which of the currency's aggregates this source's rate is, allowing for rounding. */
+function tagsFor(rate: number, row: CurrencyRow) {
+  // When every source agrees, each one would be max, min, mean and all the rest.
+  if (sameRate(row.minRate, row.maxRate)) return [];
+  return TAGGED.filter((key) => {
+    const value = row.aggregated[key];
+    if (value == null || !sameRate(rate, value)) return false;
+    // With no rate repeated, the server's mode is just the first source it read.
+    return key !== 'mode' || row.rates.filter((r) => sameRate(r.rate, value)).length > 1;
+  });
 }
 
 function DeltaChip({ rate, lastRate }: { rate: number; lastRate?: number }) {
@@ -244,6 +273,18 @@ function CurrencyDetail({ row }: { row: CurrencyRow }) {
                     }}
                   >
                     {r.name ?? hostnameOf(r.url)?.hostname ?? '—'}
+                    <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
+                      {tagsFor(r.rate, row).map((key) => (
+                        <Chip
+                          key={key}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          label={key}
+                          sx={{ textTransform: 'capitalize', height: 20, fontSize: '0.7rem' }}
+                        />
+                      ))}
+                    </Stack>
                   </TableCell>
                   <TableCell align="right">
                     <Typography variant="body2" fontWeight={700}>
