@@ -2,30 +2,20 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@apollo/client/react';
 import {
   Box, TextField, Select, MenuItem, FormControl, InputLabel,
-  Typography, CircularProgress, Paper, Grid, ToggleButtonGroup, ToggleButton,
+  Typography, CircularProgress, Paper, Grid,
 } from '@mui/material';
 import Decimal from 'decimal.js';
 import { map, sortBy, uniq, without } from 'lodash-es';
 import { GET_RATES } from '../graphql/queries';
 import { detectLocaleCurrency } from '../utils/localeCurrency';
+import AggregateSwitch, { type Aggregate } from './AggregateSwitch';
 
 interface Rate {
   rate: number;
   currency: string;
 }
 
-/** The aggregations the API exposes, in the order the rates table lists them. */
-const AGGREGATES = [
-  { key: 'max', label: 'Max', hint: 'Highest rate across sources' },
-  { key: 'mean', label: 'Mean', hint: 'Average of all sources' },
-  { key: 'min', label: 'Min', hint: 'Lowest rate across sources' },
-  { key: 'median', label: 'Median', hint: 'Middle rate across sources' },
-  { key: 'mode', label: 'Mode', hint: 'Most common rate across sources' },
-  { key: 'random', label: 'Random', hint: "One source's rate, picked at random" },
-] as const;
-type AggregateKey = (typeof AGGREGATES)[number]['key'];
-
-type RatesData = Record<AggregateKey, Rate[]>;
+type RatesData = Record<Aggregate, Rate[]>;
 
 /** Every rate is quoted per 1 USD, so USD is the base and never appears in the API list. */
 const BASE_CURRENCY = 'USD';
@@ -41,7 +31,7 @@ export default function CalculatorWidget() {
   const [amount, setAmount] = useState('100');
   // Matches DEFAULT_AGGREGATE in calculator/store/rates.ts, so both calculators
   // open on the same rate.
-  const [prefer, setPrefer] = useState<AggregateKey>('median');
+  const [prefer, setPrefer] = useState<Aggregate>('median');
 
   // Read once per mount; navigator.languages does not change mid-session.
   const localeCurrency = useMemo(() => detectLocaleCurrency(), []);
@@ -161,50 +151,11 @@ export default function CalculatorWidget() {
             </Select>
           </FormControl>
 
-          {/* Segmented switch: one track, the chosen aggregate raised within it. */}
           <Box>
             <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
               Rate
             </Typography>
-            <ToggleButtonGroup
-              value={prefer}
-              exclusive
-              // Clicking the active option passes null; keep the current choice.
-              onChange={(_, value: AggregateKey | null) => value && setPrefer(value)}
-              color="primary"
-              size="small"
-              aria-label="Rate to convert with"
-              // Too narrow for one row on phones: an even 3×2 grid there rather
-              // than a wrapped pill with one option stranded on the second line.
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(3, 1fr)', sm: 'repeat(6, auto)' },
-                gap: 0.25,
-                p: 0.375,
-                borderRadius: { xs: '14px', sm: '999px' },
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
-                '& .MuiToggleButtonGroup-grouped': {
-                  border: 0,
-                  borderRadius: 999,
-                  m: 0,
-                  px: 1.25,
-                  py: 0.375,
-                  textTransform: 'none',
-                  fontSize: '0.8125rem',
-                  fontWeight: 600,
-                  color: 'text.secondary',
-                  '&.Mui-selected': { color: 'primary.main' },
-                },
-              }}
-            >
-              {AGGREGATES.map(({ key, label, hint }) => (
-                <ToggleButton key={key} value={key} title={hint}>
-                  {label}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
+            <AggregateSwitch value={prefer} onChange={setPrefer} />
           </Box>
 
           {result && (

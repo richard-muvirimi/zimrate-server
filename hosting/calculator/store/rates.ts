@@ -109,10 +109,6 @@ export function compareRates(a: StoredRate, b: StoredRate): number {
 
 // ── User state ────────────────────────────────────────────────────────────────
 
-export function setAggregate(aggregate: Aggregate) {
-  commit({ ...state, aggregate });
-}
-
 /** USD is the base: it stays pinned and stays visible. */
 export function togglePin(currency: string) {
   if (currency === BASE_CURRENCY) return;
@@ -249,9 +245,16 @@ function merge(existing: StoredRate[], incoming: ApiRate[]): StoredRate[] {
  * `prefer` drops `name` and `url` from the response, which is why rows label
  * themselves from the local currency lookup instead. Pass [currency] to refresh
  * a single row.
+ *
+ * Pass [aggregate] to switch to it. It is saved together with the rates it
+ * fetched, so a failed switch leaves the old choice and its rates in place
+ * rather than labelling the old rates with the new choice.
  */
-export async function refreshRates(currency?: string): Promise<void> {
-  const params = new URLSearchParams({ prefer: state.aggregate, extra: 'true' });
+export async function refreshRates(
+  currency?: string,
+  aggregate: Aggregate = state.aggregate,
+): Promise<void> {
+  const params = new URLSearchParams({ prefer: aggregate, extra: 'true' });
   if (currency) params.set('currency', currency);
 
   const response = await fetch(`/api/v1?${params}`);
@@ -267,7 +270,12 @@ export async function refreshRates(currency?: string): Promise<void> {
     throw new Error('The rates service returned nothing to update');
   }
 
-  commit({ ...state, rates: merge(state.rates, rows), fetchedAt: DateTime.now().toMillis() });
+  commit({
+    ...state,
+    rates: merge(state.rates, rows),
+    fetchedAt: DateTime.now().toMillis(),
+    aggregate,
+  });
 }
 
 /** True when the saved rates are old enough that opening the app should refresh. */

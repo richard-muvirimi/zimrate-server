@@ -7,7 +7,6 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import SettingsIcon from '@mui/icons-material/Settings';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -17,11 +16,11 @@ import { groupBy } from 'lodash-es';
 import RateRow from './RateRow';
 import AddCustomRateDialog from './dialogs/AddCustomRateDialog';
 import HiddenCurrenciesDialog from './dialogs/HiddenCurrenciesDialog';
-import SettingsDialog from './dialogs/SettingsDialog';
 import InstallHint from './InstallHint';
+import AggregateSwitch from '../src/components/AggregateSwitch';
 import {
   compareRates, deleteCustomRate, getRatesState, isStale, refreshRates, setHidden,
-  subscribeRates, togglePin, updateCustomRate, type StoredRate,
+  subscribeRates, togglePin, updateCustomRate, type Aggregate, type StoredRate,
 } from './store/rates';
 import { BASE_CURRENCY, LOCAL_COUNTRY_CODE, countryCode } from './currency';
 import { formatAmount, formatNumber, relativeTime } from './format';
@@ -60,7 +59,9 @@ export default function CalculatorApp() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-  const [dialog, setDialog] = useState<'add' | 'hidden' | 'settings' | null>(null);
+  const [dialog, setDialog] = useState<'add' | 'hidden' | null>(null);
+  // The aggregate being fetched, shown on the switch until it lands or fails.
+  const [pendingAggregate, setPendingAggregate] = useState<Aggregate | null>(null);
   const [online, setOnline] = useState(() => navigator.onLine);
   const standalone = useMemo(() => isStandalone(), []);
 
@@ -119,10 +120,10 @@ export default function CalculatorApp() {
    * without a word — the app's "refresh quietly, never nag" rule. Opening with
    * no network would otherwise greet them with an error every time.
    */
-  const refresh = useCallback(async (currency?: string, silent = false) => {
+  const refresh = useCallback(async (currency?: string, silent = false, aggregate?: Aggregate) => {
     setBusy(true);
     try {
-      await refreshRates(currency);
+      await refreshRates(currency, aggregate);
       setOnline(true);
       // A refresh the user asked for discards what they typed, so a stale
       // override never sits on top of a fresh rate.
@@ -173,7 +174,7 @@ export default function CalculatorApp() {
 
   const closeMenu = () => setMenuAnchor(null);
 
-  const openDialog = (which: 'add' | 'hidden' | 'settings') => {
+  const openDialog = (which: 'add' | 'hidden') => {
     closeMenu();
     setDialog(which);
   };
@@ -228,9 +229,6 @@ export default function CalculatorApp() {
         <MenuItem onClick={() => openDialog('hidden')} disabled={hidden.length === 0}>
           <VisibilityIcon fontSize="small" sx={{ mr: 1.5 }} /> Hidden ({hidden.length})
         </MenuItem>
-        <MenuItem onClick={() => openDialog('settings')}>
-          <SettingsIcon fontSize="small" sx={{ mr: 1.5 }} /> Settings
-        </MenuItem>
         {/* Installed, this leaves the app, so it opens a browser tab and leaves
             the app where it was. In a tab it is an ordinary navigation. */}
         <MenuItem
@@ -247,9 +245,22 @@ export default function CalculatorApp() {
       <Container maxWidth="sm" sx={{ py: 2 }}>
         <InstallHint />
 
+        {/* The stored rates were fetched under one aggregate, so switching
+            pulls them again rather than leaving a mismatch. */}
+        <Box sx={{ mb: 1 }}>
+          <AggregateSwitch
+            value={pendingAggregate ?? aggregate}
+            disabled={busy}
+            onChange={(next) => {
+              setPendingAggregate(next);
+              void refresh(undefined, false, next).finally(() => setPendingAggregate(null));
+            }}
+          />
+        </Box>
+
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
           {fetchedAt
-            ? `Rates saved ${relativeTime(DateTime.fromMillis(fetchedAt).toUnixInteger())} · ${aggregate}`
+            ? `Rates saved ${relativeTime(DateTime.fromMillis(fetchedAt).toUnixInteger())}`
             : 'No rates saved yet'}
         </Typography>
 
@@ -336,11 +347,6 @@ export default function CalculatorApp() {
         open={dialog === 'hidden'}
         hidden={hidden}
         onClose={() => setDialog(null)}
-      />
-      <SettingsDialog
-        open={dialog === 'settings'}
-        onClose={() => setDialog(null)}
-        onChanged={() => void refresh()}
       />
 
       <Snackbar
