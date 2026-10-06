@@ -9,6 +9,7 @@ import _ from 'lodash';
 import Decimal from 'decimal.js';
 import { DateTime } from 'luxon';
 import { runActor } from '../utils/apify.js';
+import { numberSetting } from '../utils/settings.js';
 
 /**
  * The OpenAI SDK wants a base URL and appends /chat/completions itself, but the
@@ -135,18 +136,12 @@ export const isStale = (rate, maxAgeDays, now = DateTime.now()) => {
     return date.isValid && date < now.minus({ days: maxAgeDays });
 };
 
-/** The age limit from settings, with a typo falling back to the default. */
-async function maxAgeDays() {
-    const stored = Number(await Option.getValue('source_max_age_days', 7));
-    return Number.isFinite(stored) && stored > 0 ? stored : 7;
-}
-
 /**
  * Drop the rates a page dates too old, throwing when that leaves nothing so the
  * source is reported as failing with the date its page gave.
  */
 export async function withoutStale(rates, url) {
-    const limit = await maxAgeDays();
+    const limit = await numberSetting('source_max_age_days', 7);
     const [stale, fresh] = _.partition(rates, rate => isStale(rate, limit));
 
     if (stale.length > 0 && fresh.length === 0) {
@@ -175,16 +170,95 @@ export async function withoutStale(rates, url) {
  * @returns {{kept: Array, conflicts: Array}}
  */
 export const dropConflicts = (rates, tolerance = 0.01) => {
-    const kept = [];
-    const conflicts = [];
+    const [agreeing, disagreeing] = _.partition(
+        _.values(_.groupBy(rates, r => `${r.currency}::${labelKey(r.name, r.currency)}`)),
+        group => _.maxBy(group, 'rate').rate / _.minBy(group, 'rate').rate - 1 <= tolerance
+    );
 
-    for (const group of Object.values(_.groupBy(rates, r => `${r.currency}::${labelKey(r.name, r.currency)}`))) {
-        const values = group.map(r => r.rate);
-        const disagree = Math.max(...values) / Math.min(...values) - 1 > tolerance;
-        (disagree ? conflicts : kept).push(...group);
+    return { kept: _.flatten(agreeing), conflicts: _.flatten(disagreeing) };
+};
+
+const SIDES = ['buy', 'sell', 'mid'];
+const BUY = /\b(buy|buying|bid)\b/i;
+const SELL = /\b(sell|selling|ask|offer)\b/i;
+const MID = /\b(mid|middle)\b/i;
+
+/** A label with its side word taken out: "Buy Cash" and "Sell Cash" both give "Cash". */
+const unsided = (name) => (name || '').replace(BUY, ' ').replace(SELL, ' ').replace(MID, ' ');
+
+/**
+ * Which side of a quote a rate is: as the model judged it from the page's
+ * meaning, or failing that from a side word in its label. Null for none, or
+ * for a label naming more than one side.
+ */
+const sideOf = (rate) => {
+    if (SIDES.includes(rate.side)) return rate.side;
+
+    const named = [['buy', BUY], ['sell', SELL], ['mid', MID]]
+        .filter(([, pattern]) => pattern.test(rate.name || ''))
+        .map(([side]) => side);
+    return named.length === 1 ? named[0] : null;
+};
+
+/**
+ * Which quote a sided rate belongs to: the row the model gave it, or failing
+ * that its label without the side word.
+ */
+const quoteOf = (rate) => (rate.row
+    ? `${rate.currency}::row::${rate.row.toLowerCase()}`
+    : `${rate.currency}::label::${labelKey(unsided(rate.name), rate.currency)}`);
+
+/**
+ * The name a midpoint is stored under. It has to come out the same on every
+ * run, since the name is how the record is found again — so it is built from
+ * the page's own labels, never from the model's row id or its choice of which
+ * side is which. "Buy Cash" and "Sell Cash" give "Mid Cash"; labels that differ
+ * beyond the side word are joined in alphabetical order.
+ */
+const midName = (buy, sell) => {
+    if (BUY.test(buy.name || '') && labelKey(unsided(buy.name)) === labelKey(unsided(sell.name))) {
+        return buy.name.replace(BUY, 'Mid');
     }
+    return [buy.name || '', sell.name || ''].sort().join(' / ');
+};
 
-    return { kept, conflicts };
+/** Whether a stored name is one midName made, not a page's own label. */
+export const isComputedMid = (name) => /\bmid\b/i.test(name || '') || (name || '').includes(' / ');
+
+/**
+ * Replace each buy/sell pair with its midpoint.
+ *
+ * A bank quotes USD either side of the official rate: CABS buys at 25.974 and
+ * sells at 27.473, around an official 26.76. Kept apart, the buying side reads
+ * as a low rate and the selling side as a high one, and both skew the
+ * aggregates; their midpoint, 26.723, is the bank's actual view of the rate.
+ *
+ * The model marks each rate's side and quote from what the page means, so a
+ * site rewording "Buy" as "We buy" or "Bank pays" still pairs; the label's own
+ * side word is the fallback when it does not. The arithmetic stays here: the
+ * model rounds what it computes, differently from run to run. Where the page
+ * gives its own middle rate for the quote, that is kept and the two sides
+ * dropped. A side with no partner, or a quote given more than one way, is left
+ * as it is.
+ */
+export const toMidRates = (rates) => {
+    const [sided, plain] = _.partition(rates, sideOf);
+
+    const quotes = _.flatMap(_.groupBy(sided, quoteOf), quote => {
+        const { buy = [], sell = [], mid = [] } = _.groupBy(quote, sideOf);
+
+        if (mid.length === 1) return mid;
+        if (mid.length === 0 && buy.length === 1 && sell.length === 1) {
+            return [{
+                ...buy[0],
+                name: midName(buy[0], sell[0]),
+                rate: new Decimal(buy[0].rate).plus(sell[0].rate).div(2).toDecimalPlaces(6).toNumber(),
+            }];
+        }
+        return quote;
+    });
+
+    return [...plain, ...quotes];
 };
 
 /**
@@ -254,7 +328,9 @@ export class ScrapingService {
             }
 
             // Step 2: Extract rates via the LLM
-            const knownLabels = await Rate.knownLabels(source);
+            // A midpoint's name is ours, not a page label, and the model must
+            // keep returning the two sides it was computed from.
+            const knownLabels = (await Rate.knownLabels(source)).filter(l => !isComputedMid(l.name));
             const extracted = await ScrapingService.extractRates(content, source.url, knownLabels);
 
             if (extracted.length === 0) {
@@ -270,10 +346,11 @@ export class ScrapingService {
                 logger.warn(`[ScrapingService] ${source.url}: dropped ${conflicts.length} reading(s) the page contradicts`);
             }
 
-            logger.log(`[ScrapingService] ${source.url}: found ${kept.length} rate(s)`);
+            const rates = toMidRates(kept);
+            logger.log(`[ScrapingService] ${source.url}: found ${rates.length} rate(s)`);
 
             // Step 3: Upsert rates into Firestore
-            const results = await Rate.upsertFromScrape(source, kept);
+            const results = await Rate.upsertFromScrape(source, rates);
             results.push(...conflicts.map(r => ({ action: 'conflict', currency: r.currency })));
 
             if (source.probation) {
@@ -284,6 +361,7 @@ export class ScrapingService {
             source.status = true;
             source.status_message = '';
             source.last_scraped = Timestamp.now().toDate();
+            source.last_success = source.last_scraped;
             await source.save();
 
             return results;
@@ -322,8 +400,7 @@ export class ScrapingService {
             return [];
         }
 
-        const stored = Number(await Option.getValue('probation_days', 7));
-        const days = Number.isFinite(stored) && stored > 0 ? stored : 7;
+        const days = await numberSetting('probation_days', 7);
 
         if (DateTime.fromJSDate(new Date(source.clean_since)) > now.minus({ days })) return [];
 
@@ -371,7 +448,7 @@ export class ScrapingService {
                 }
 
                 const { kept, conflicts } = dropConflicts(await withoutStale(attempt.rates, url));
-                attempt.rates = kept;
+                attempt.rates = toMidRates(kept);
                 attempt.conflicts = conflicts.length;
 
                 if (kept.length === 0) {
@@ -591,6 +668,12 @@ Each element of "rates" has:
   column header that tells it apart from its neighbours (Buy, Sell Cash) — not the table title or the row's
   currency, which "currency" already carries.
 - "updated_at": ISO 8601 datetime if visible for that row, else null
+- "side": "buy" or "sell" when the row is one side of a two-sided quote — a buying and a selling price for the same
+  thing, however the page words it (Buy / Sell, Bid / Ask, We buy / We sell, Street Cost / Street Value); "mid" for a
+  middle rate the page gives between the two; otherwise null. A range (lowest / highest rate) is not a buy and sell.
+- "row": for a two-sided quote, a short id shared by its buy, its sell and any mid (e.g. "cash"), different for each
+  quote on the page; otherwise null.
+Return both sides of a quote as separate entries with the page's own values — never average them yourself.
 
 Each (currency, name) pair from the same page must be unique.
 ${knownLabels.length === 0 ? '' : `
@@ -734,7 +817,9 @@ ${truncatedContent}`;
                 rate: restorePrecision(parseFloat(r.rate), computedRates),
                 name: typeof r.name === 'string' && r.name.trim() ? tidyLabel(r.name.trim()) : null,
                 updated_at: r.updated_at || null,
-                page_date: pageDate
+                page_date: pageDate,
+                side: SIDES.includes(r.side) ? r.side : null,
+                row: typeof r.row === 'string' && r.row.trim() ? r.row.trim().slice(0, 50) : null
             }));
     }
 }

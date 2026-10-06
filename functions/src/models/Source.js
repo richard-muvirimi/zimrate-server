@@ -9,6 +9,9 @@ class Source {
         this.enabled = data.enabled !== undefined ? data.enabled : true;
         this.javascript = data.javascript || false;
         this.last_scraped = data.last_scraped || null;
+        // Unlike last_scraped, only a scrape that stored rates sets this: rates
+        // its source scrapes successfully without stop being served.
+        this.last_success = data.last_success || null;
         this.status = data.status !== undefined ? data.status : false;
         this.status_message = data.status_message || '';
         // A source on probation is scraped, but its rates are not served until
@@ -38,6 +41,7 @@ class Source {
         };
 
         data.last_scraped = toTimestamp(this.last_scraped);
+        data.last_success = toTimestamp(this.last_success);
         data.clean_since = toTimestamp(this.clean_since);
         data.created_at = toTimestamp(this.created_at);
         data.updated_at = toTimestamp(this.updated_at);
@@ -52,6 +56,7 @@ class Source {
         const toDate = (val) => (val && val.toDate) ? val.toDate() : val;
 
         data.last_scraped = toDate(data.last_scraped);
+        data.last_success = toDate(data.last_success);
         data.clean_since = toDate(data.clean_since);
         data.created_at = toDate(data.created_at);
         data.updated_at = toDate(data.updated_at);

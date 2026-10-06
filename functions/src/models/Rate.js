@@ -2,26 +2,45 @@ import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions';
 import { DateTime } from 'luxon';
 import _ from 'lodash';
-import Option from './Option.js';
 import { getCache, setCache } from '../utils/cache.js';
 import Decimal from 'decimal.js';
 import { mean, median } from '../utils/decimal.js';
+import { numberSetting as readNumberSetting } from '../utils/settings.js';
 
 /**
- * How long a rate keeps being served after the last scrape that saw it on its
- * source page. `updated_at` records that sighting, so this is the whole of the
- * public API's freshness rule.
+ * How long, in days, a rate keeps being served after the last scrape that saw
+ * it on its source page. `updated_at` records that sighting. This is the outer
+ * limit, for a source that keeps failing; one that scrapes fine without the
+ * rate drops it much sooner (see UNSEEN_GRACE_HOURS).
  */
-export const FRESHNESS_MONTHS_KEY = 'rate_freshness_months';
-const DEFAULT_FRESHNESS_MONTHS = 3;
+export const FRESHNESS_DAYS_KEY = 'rate_freshness_days';
+const DEFAULT_FRESHNESS_DAYS = 7;
 
 /**
- * How long a rate is kept in Firestore after it stops being seen — far past the
- * point it stopped being served, so a record is only destroyed once it is
- * thoroughly dead. See the sweep at the end of upsertFromScrape.
+ * How long, in days, a rate is kept in Firestore after it stops being seen —
+ * far past the point it stopped being served, so a record is only destroyed
+ * once it is thoroughly dead. See the sweep at the end of upsertFromScrape.
+ * Fixed rather than a setting: it decides nothing anyone sees, only when
+ * storage is reclaimed.
  */
-export const RETENTION_MONTHS_KEY = 'rate_retention_months';
-const DEFAULT_RETENTION_MONTHS = 12;
+const RETENTION_DAYS = 365;
+
+/**
+ * How long a rate may go missing from a source that is scraping successfully
+ * before it stops being served. A site that renames or drops a row leaves the
+ * old record behind, frozen at its last value; a single absence proves nothing
+ * (a missed row, a mislabel held back), but a day of successful scrapes without
+ * it does. A source that is failing is not judged by this: a failed scrape says
+ * nothing about whether the rate still exists.
+ */
+const UNSEEN_GRACE_HOURS = 24;
+
+/** A Date, Firestore Timestamp or nothing, as milliseconds (0 for nothing). */
+const toMillis = (value) => {
+    if (!value) return 0;
+    if (typeof value.toMillis === 'function') return value.toMillis();
+    return new Date(value).getTime() || 0;
+};
 
 /**
  * How far a scraped reading may sit from the consensus of other sources before
@@ -32,20 +51,29 @@ const DEFAULT_RETENTION_MONTHS = 12;
 export const CONSENSUS_TOLERANCE_KEY = 'consensus_tolerance';
 const DEFAULT_CONSENSUS_TOLERANCE = 2;
 
+/** How recently a rate must have been scraped to count towards the consensus. */
+const CONSENSUS_WINDOW_HOURS = 48;
+
 /**
- * A numeric setting, read from the options collection and cached for five
- * minutes the way the currency list is: every rate query needs the freshness
- * window, and an admin's edit should still take effect without a redeploy.
- *
- * A missing, non-numeric or non-positive value falls back to the default. A typo
- * in settings must not unpublish every rate, still less delete one.
+ * How far, in percent, a stored rate may move in one scrape before the new
+ * value is held back for the next scrape to confirm. The model occasionally
+ * files one row's value under another's label — Zim Price Check's cash rate
+ * went from 40 to 26.74, its inverted official rate, in a single run. A real
+ * move of that size repeats on the next scrape; a mislabel almost never does.
+ */
+export const JUMP_PERCENT_KEY = 'rate_jump_percent';
+const DEFAULT_JUMP_PERCENT = 20;
+
+/**
+ * A numeric setting, cached for five minutes the way the currency list is:
+ * every rate query needs the freshness window, and an admin's edit should still
+ * take effect without a redeploy.
  */
 async function numberSetting(key, fallback) {
     const cached = await getCache(key);
     if (cached) return cached;
 
-    const stored = Number(await Option.getValue(key, fallback));
-    const value = Number.isFinite(stored) && stored > 0 ? stored : fallback;
+    const value = await readNumberSetting(key, fallback);
 
     await setCache(key, value, DateTime.now().plus({ minutes: 5 }));
     return value;
@@ -70,14 +98,12 @@ const CURRENCY_WORDS = ['usd', 'zig', 'zwg'];
  * this reduces to the same empty key as a scraped rate with no label.
  */
 export function labelKey(name, currency) {
-    const ignored = new Set([...CURRENCY_WORDS, (currency || '').toLowerCase()]);
-
-    return (name || '')
-        .toLowerCase()
-        .split(/[^a-z0-9]+/)
-        .filter(word => word && !ignored.has(word))
-        .sort()
-        .join(' ');
+    return _.chain((name || '').toLowerCase().split(/[^a-z0-9]+/))
+        .compact()
+        .difference([...CURRENCY_WORDS, (currency || '').toLowerCase()])
+        .sortBy()
+        .join(' ')
+        .value();
 }
 
 class Rate {
@@ -114,41 +140,55 @@ class Rate {
      * every read path so one rule decides what the API considers current.
      */
     static async freshnessCutoff() {
-        return DateTime.now().minus({ months: await numberSetting(FRESHNESS_MONTHS_KEY, DEFAULT_FRESHNESS_MONTHS) }).toJSDate();
+        return DateTime.now().minus({ days: await numberSetting(FRESHNESS_DAYS_KEY, DEFAULT_FRESHNESS_DAYS) }).toJSDate();
     }
 
     /** The `updated_at` past which a rate is deleted rather than merely hidden. */
     static async retentionCutoff() {
-        return DateTime.now().minus({ months: await numberSetting(RETENTION_MONTHS_KEY, DEFAULT_RETENTION_MONTHS) }).toJSDate();
+        return DateTime.now().minus({ days: RETENTION_DAYS }).toJSDate();
     }
 
     /**
-     * The ids of the sources whose rates may be served: every source not
-     * switched off. Read here rather than copied onto each rate, so disabling a
-     * source takes its rates out of the API without touching them — and they
-     * come back as they were, including any switched off one by one, when it is
-     * enabled again. Cached for five minutes like the other settings every rate
-     * query needs.
+     * The sources whose rates may be served — every source not switched off —
+     * each with the time of its last successful scrape (0 if it has none yet).
+     * Read here rather than copied onto each rate, so disabling a source takes
+     * its rates out of the API without touching them, and they come back as
+     * they were, including any switched off one by one, when it is enabled
+     * again. Cached for five minutes like the other settings every rate query
+     * needs.
+     *
+     * @returns {Promise<Map<string, number>>}
      */
-    static async servedSourceIds() {
-        const cached = await getCache('served_sources');
-        if (cached) return new Set(cached);
+    static async servedSources() {
+        const cached = await getCache('served_sources_seen');
+        if (cached) return new Map(Object.entries(cached));
 
-        const snap = await getFirestore().collection('sources').select('enabled').get();
-        const ids = snap.docs.filter(doc => doc.data().enabled !== false).map(doc => doc.id);
+        const snap = await getFirestore().collection('sources').select('enabled', 'last_success').get();
+        const served = Object.fromEntries(snap.docs
+            .filter(doc => doc.data().enabled !== false)
+            .map(doc => [doc.id, toMillis(doc.data().last_success)]));
 
-        await setCache('served_sources', ids, DateTime.now().plus({ minutes: 5 }));
-        return new Set(ids);
+        await setCache('served_sources_seen', served, DateTime.now().plus({ minutes: 5 }));
+        return new Map(Object.entries(served));
     }
 
     /**
-     * Whether a rate's source is one being served. A rate with no source — one
-     * added by hand on the Rates page — has nothing to be disabled with. A rate
-     * whose source was deleted is not served: deletion now takes the rates with
-     * it, but sources deleted before that left theirs behind.
+     * Whether a rate may be served as far as its source goes.
+     *
+     * - A rate with no source — one added by hand on the Rates page — has
+     *   nothing to be disabled with, and is always served.
+     * - A rate whose source is disabled or deleted is not. Deletion now takes
+     *   the rates with it, but sources deleted before that left theirs behind.
+     * - A rate its source has scraped successfully without for longer than
+     *   UNSEEN_GRACE_HOURS is not: the row has gone from the page or been
+     *   renamed, and the record is only its last value, frozen.
      */
     static fromServedSource(rate, served) {
-        return !rate.source_id || served.has(rate.source_id);
+        if (!rate.source_id) return true;
+        if (!served.has(rate.source_id)) return false;
+
+        const lastSuccess = served.get(rate.source_id);
+        return !lastSuccess || toMillis(rate.updated_at) >= lastSuccess - UNSEEN_GRACE_HOURS * 3_600_000;
     }
 
     /** The consensus tolerance factor; anything not above 1 would refuse every reading. */
@@ -302,7 +342,7 @@ class Rate {
 
         // Probation is filtered in memory: a where() on it would drop every
         // document written before the field existed.
-        const served = await Rate.servedSourceIds();
+        const served = await Rate.servedSources();
         rates = rates.filter(rate => !rate.probation && Rate.fromServedSource(rate, served));
 
         // Apply search filter in memory (Firestore limitation)
@@ -396,9 +436,9 @@ class Rate {
         const snapshot = await Rate.getCollection()
             .where('enabled', '==', true)
             .where('updated_at', '>', Timestamp.fromDate(await Rate.freshnessCutoff()))
-            .select('rate_currency', 'probation', 'source_id')
+            .select('rate_currency', 'probation', 'source_id', 'updated_at')
             .get();
-        const served = await Rate.servedSourceIds();
+        const served = await Rate.servedSources();
 
         return _.chain(snapshot.docs)
             .reject(doc => doc.data().probation || !Rate.fromServedSource(doc.data(), served))
@@ -423,7 +463,14 @@ class Rate {
      * @param {string|null} excludeSourceId - the source being scraped
      */
     static async consensus(excludeSourceId = null) {
+        // Only rates seen lately vote. A record its source has stopped updating
+        // is still served until the freshness window ends, but its value is
+        // frozen: CABS's EUR, stored upside down before the conflict check
+        // stopped it, went on outvoting Zim Price Check's correct EUR.
+        const seenSince = DateTime.now().minus({ hours: CONSENSUS_WINDOW_HOURS }).toJSDate();
+
         const rates = (await Rate.findAll({ enabled: true }))
+            .filter(rate => rate.updated_at && new Date(rate.updated_at) >= seenSince)
             .filter(rate => !excludeSourceId || rate.source_id !== excludeSourceId);
 
         return _.mapValues(_.groupBy(rates, 'rate_currency'), group => {
@@ -610,26 +657,29 @@ class Rate {
         // model's label drift created a record per wording; the most recently
         // seen one carries on and the rest are deleted, so a source's existing
         // duplicates are merged the next time it is scraped.
-        const byKey = new Map();
-        const merged = new Set();
-        const mergeBatch = db.batch();
-        for (const stored of await Rate.storedFor(source)) {
-            if (!byKey.has(stored.key)) {
-                byKey.set(stored.key, stored);
-                continue;
-            }
-            mergeBatch.delete(stored.ref);
-            merged.add(stored.ref.id);
-            results.push({ action: 'merged', currency: stored.currency });
+        // storedFor lists the most recently seen first, and groupBy keeps order.
+        const groups = _.groupBy(await Rate.storedFor(source), 'key');
+        const byKey = new Map(_.map(groups, (group, key) => [key, group[0]]));
+        const duplicates = _.flatMap(groups, group => group.slice(1));
+        const merged = new Set(_.map(duplicates, 'ref.id'));
+
+        if (duplicates.length > 0) {
+            const mergeBatch = db.batch();
+            duplicates.forEach(stored => mergeBatch.delete(stored.ref));
+            await mergeBatch.commit();
+            results.push(...duplicates.map(stored => ({ action: 'merged', currency: stored.currency })));
         }
-        if (merged.size > 0) await mergeBatch.commit();
 
         // Settle label edits before anything is matched.
         await Rate.reconcileRenames(source, deduped, byKey);
 
         // Read once per source rather than per rate — every value in this scrape is
         // screened against the same picture of what the API currently serves.
-        const [reference, tolerance] = await Promise.all([Rate.consensus(source.id), Rate.consensusTolerance()]);
+        const [reference, tolerance, jumpPercent] = await Promise.all([
+            Rate.consensus(source.id),
+            Rate.consensusTolerance(),
+            numberSetting(JUMP_PERCENT_KEY, DEFAULT_JUMP_PERCENT),
+        ]);
         const probation = source.probation === true;
 
         // Process in batches of 499 to respect Firestore limits
@@ -687,6 +737,23 @@ class Rate {
                     const docRef = existing.ref;
                     const oldRate = existing.data.rate || 0;
                     const newRate = scraped;
+                    const pending = existing.data.pending_rate;
+
+                    // A jump is parked in pending_rate and the stored value kept,
+                    // updated_at included, as for a refused reading. The next
+                    // scrape giving the same figure (to within 1%) confirms it.
+                    const jumped = oldRate > 0 && Math.abs(newRate / oldRate - 1) * 100 > jumpPercent;
+                    const confirmed = pending > 0 && Math.abs(newRate / pending - 1) <= 0.01;
+
+                    if (jumped && !confirmed) {
+                        logger.warn(
+                            `[Rate] Held back ${currency} rate ${newRate} for "${existing.name}" from ${source.url} ` +
+                            `(stored ${oldRate}); stored if the next scrape confirms it`
+                        );
+                        batch.update(docRef, { pending_rate: newRate });
+                        results.push({ action: 'held', currency });
+                        continue;
+                    }
 
                     const changes = {
                         rate: newRate,
@@ -694,6 +761,7 @@ class Rate {
                         probation,
                         updated_at: now
                     };
+                    if (pending !== undefined && pending !== null) changes.pending_rate = null;
 
                     // last_rate holds the previous *different* reading, as it did in the
                     // Laravel scraper. Shifting on every scrape would overwrite the real
@@ -725,9 +793,9 @@ class Rate {
         //
         // A rate that stops updating leaves the API on its own once it falls
         // outside the freshness window; this sweep only reclaims the storage,
-        // much later. Both windows are settings, so the later of the two cutoffs
-        // is never used: a retention window mistakenly set shorter than the
-        // serving one would otherwise delete rates still being served.
+        // much later. The serving window is a setting, so the later of the two
+        // cutoffs is never used: one set longer than a year would otherwise have
+        // this delete rates still being served.
         const [retention, freshness] = await Promise.all([Rate.retentionCutoff(), Rate.freshnessCutoff()]);
         const retentionCutoff = retention < freshness ? retention : freshness;
 

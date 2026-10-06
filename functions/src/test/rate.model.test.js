@@ -349,7 +349,9 @@ describe('probation', () => {
 
     const onProbation = {
         id: 'zwg-new', rate_currency: 'ZWG', rate_name: 'New - ZWG', source_id: 'new',
-        source_url: 'https://new.co.zw', rate: 500, last_rate: 500, enabled: true, probation: true,
+        // 33: above every served ZWG rate, so the max and the consensus both
+        // show whether it was counted.
+        source_url: 'https://new.co.zw', rate: 33, last_rate: 33, enabled: true, probation: true,
         updated_at: ago({ minutes: 5 }), rate_updated_at: ago({ minutes: 5 })
     };
 
@@ -628,6 +630,130 @@ describe('rates of a source that is switched off', () => {
     });
 
     it('do not count towards the currencies served', async () => {
+        expect(await Rate.getUniqueCurrencies()).not.toContain('GBP');
+    });
+});
+
+// =============================================================================
+// Sudden jumps and the consensus window
+// =============================================================================
+
+describe('upsertFromScrape jumps', () => {
+
+    const SOURCE = { id: 'zpc', name: 'Zim price check', url: 'https://zimpricecheck.com' };
+
+    const cash = (extra = {}) => ({
+        id: 'cash', rate_currency: 'ZWG', rate_name: 'Zim price check - cash rate', source_id: 'zpc',
+        source_url: SOURCE.url, rate: 40, last_rate: 40, enabled: true,
+        updated_at: ago({ hours: 1 }), rate_updated_at: ago({ hours: 1 }), ...extra
+    });
+
+    const useRates = (rates) => vi.mocked(getFirestore).mockReturnValue({
+        collection: vi.fn(name => (name === 'sources' ? makeQuery([...SOURCES, { id: 'zpc', enabled: true }]) : makeQuery(rates))),
+        batch: vi.fn(makeBatch)
+    });
+
+    it('holds back a value that jumps, keeping the stored one', async () => {
+        // The cash rate, mislabelled with the inverted official rate.
+        useRates([...RATES, cash()]);
+
+        const results = await Rate.upsertFromScrape(SOURCE, [{ currency: 'ZWG', rate: 26.737968, name: 'cash rate' }]);
+
+        expect(results).toContainEqual({ action: 'held', currency: 'ZWG' });
+        expect(batched.update).toEqual([{ id: 'cash', data: { pending_rate: 26.737968 } }]);
+    });
+
+    it('stores the jump once the next scrape confirms it', async () => {
+        useRates([...RATES, cash({ pending_rate: 30 })]);
+
+        const results = await Rate.upsertFromScrape(SOURCE, [{ currency: 'ZWG', rate: 30.1, name: 'cash rate' }]);
+
+        expect(results).toContainEqual({ action: 'updated', currency: 'ZWG' });
+        expect(batched.update[0].data).toMatchObject({ rate: 30.1, last_rate: 40, pending_rate: null });
+    });
+
+    it('holds again when the next scrape disagrees with the held value', async () => {
+        useRates([...RATES, cash({ pending_rate: 26.737968 })]);
+
+        await Rate.upsertFromScrape(SOURCE, [{ currency: 'ZWG', rate: 31, name: 'cash rate' }]);
+
+        expect(batched.update).toEqual([{ id: 'cash', data: { pending_rate: 31 } }]);
+    });
+
+    it('stores an ordinary move at once, and clears a stale held value', async () => {
+        useRates([...RATES, cash({ pending_rate: 26.737968 })]);
+
+        await Rate.upsertFromScrape(SOURCE, [{ currency: 'ZWG', rate: 40, name: 'cash rate' }]);
+
+        expect(batched.update[0].data).toMatchObject({ rate: 40, pending_rate: null });
+    });
+});
+
+describe('consensus window', () => {
+
+    it('ignores rates not scraped in the last 48 hours', async () => {
+        vi.mocked(getFirestore).mockReturnValue({
+            collection: vi.fn(name => (name === 'sources' ? makeQuery(SOURCES) : makeQuery([
+                ...RATES,
+                // CABS's EUR, stored the wrong way up and frozen since.
+                { ...RATES[0], id: 'eur-frozen', rate_currency: 'EUR', source_id: 'source2', rate: 1.0868,
+                    updated_at: ago({ days: 3 }) },
+                { ...RATES[0], id: 'eur-live', rate_currency: 'EUR', source_id: 'source3', rate: 0.868,
+                    updated_at: ago({ hours: 1 }) },
+            ])))
+        });
+
+        expect((await Rate.consensus()).EUR).toBe(0.868);
+    });
+});
+
+// =============================================================================
+// Rates a successfully scraped source no longer returns
+// =============================================================================
+
+describe('rates missing from a source that scrapes fine', () => {
+
+    const rate = (id, hoursAgo) => ({
+        id, rate_currency: 'ZWG', rate_name: id, source_id: 'site', source_url: '', rate: 30, last_rate: 30,
+        enabled: true, updated_at: ago({ hours: hoursAgo }), rate_updated_at: ago({ hours: hoursAgo })
+    });
+
+    const withSource = (lastSuccess) => vi.mocked(getFirestore).mockReturnValue({
+        collection: vi.fn(name => (name === 'sources'
+            ? makeQuery([...SOURCES, { id: 'site', enabled: true, last_success: lastSuccess }])
+            : makeQuery([...RATES, rate('renamed-away', 30), rate('missed-a-few', 5), rate('current', 0.1)]))),
+        batch: vi.fn(makeBatch)
+    });
+
+    it('stop being served after a day of successful scrapes without them', async () => {
+        withSource(ago({ minutes: 5 }));
+        const ids = idsOf(await Rate.findAll({ enabled: true }));
+
+        expect(ids).not.toContain('renamed-away');
+        expect(ids).toContain('missed-a-few');
+        expect(ids).toContain('current');
+    });
+
+    it('are kept while their source is failing', async () => {
+        // Last success two days ago: nothing since says the row has gone.
+        withSource(ago({ days: 2 }));
+
+        expect(idsOf(await Rate.findAll({ enabled: true }))).toContain('renamed-away');
+    });
+
+    it('are kept for a source with no successful scrape on record', async () => {
+        withSource(undefined);
+
+        expect(idsOf(await Rate.findAll({ enabled: true }))).toContain('renamed-away');
+    });
+
+    it('do not count towards the currencies served', async () => {
+        vi.mocked(getFirestore).mockReturnValue({
+            collection: vi.fn(name => (name === 'sources'
+                ? makeQuery([...SOURCES, { id: 'site', enabled: true, last_success: ago({ minutes: 5 }) }])
+                : makeQuery([...RATES, { ...rate('renamed-away', 30), rate_currency: 'GBP' }]))),
+        });
+
         expect(await Rate.getUniqueCurrencies()).not.toContain('GBP');
     });
 });

@@ -61,26 +61,15 @@ export const KNOWN_OPTIONS: OptionDef[] = [
     fallback: 'ZWG',
   },
   {
-    key: 'rate_freshness_months',
-    label: 'Serve rates for (months)',
+    key: 'rate_freshness_days',
+    label: 'Serve rates for (days)',
     description:
       'How long a rate keeps being returned by the API after the last scrape that found it on its '
-      + 'source page. A rate missing from one scrape is not dropped — it simply stops being '
-      + 'refreshed, and consumers can see how old it is from last_updated until this window ends.',
+      + 'source page, while that source keeps failing. A source that scrapes successfully for a day '
+      + 'without a rate — the row was removed or renamed — stops serving it sooner than this.',
     group: 'Scraping',
     type: 'number',
-    fallback: '3',
-  },
-  {
-    key: 'rate_retention_months',
-    label: 'Delete rates after (months)',
-    description:
-      'How long a rate is kept in the database after it stops being seen. Deleting destroys its '
-      + 'change history, so keep this comfortably longer than the serving window — a value shorter '
-      + 'than that one is ignored rather than allowed to delete rates still being served.',
-    group: 'Scraping',
-    type: 'number',
-    fallback: '12',
+    fallback: '7',
   },
   {
     key: 'source_max_age_days',
@@ -103,6 +92,17 @@ export const KNOWN_OPTIONS: OptionDef[] = [
     group: 'Scraping',
     type: 'number',
     fallback: '2',
+  },
+  {
+    key: 'rate_jump_percent',
+    label: 'Hold back jumps over (%)',
+    description:
+      'A stored rate whose new reading moves further than this in one scrape keeps its old value '
+      + 'until the next scrape gives the same figure again. Catches the AI filing one row’s value '
+      + 'under another’s label; a genuine move is stored an hour late.',
+    group: 'Scraping',
+    type: 'number',
+    fallback: '20',
   },
   {
     key: 'probation_days',

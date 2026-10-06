@@ -15,7 +15,7 @@ vi.mock('../models/Option.js', () => ({
 
 import { DateTime } from 'luxon';
 import {
-    normaliseCurrency, tidyLabel, restorePrecision, llmProviders, isStale, dropConflicts, ScrapingService
+    normaliseCurrency, tidyLabel, restorePrecision, llmProviders, isStale, dropConflicts, toMidRates, ScrapingService
 } from '../services/ScrapingService.js';
 import Rate from '../models/Rate.js';
 
@@ -188,6 +188,88 @@ describe('dropConflicts', () => {
         ]);
         expect(conflicts).toHaveLength(0);
         expect(kept).toHaveLength(2);
+    });
+});
+
+describe('toMidRates', () => {
+
+    const zwg = (name, rate) => ({ currency: 'ZWG', name, rate, updated_at: null, page_date: '2026-10-06' });
+    const byName = (rates) => Object.fromEntries(rates.map(r => [r.name, r.rate]));
+
+    it('replaces a bank\'s buy and sell with their midpoint', () => {
+        // CABS, 6 October 2026
+        const rates = toMidRates([
+            zwg('Buy', 25.974026), zwg('Buy Cash', 25.906736),
+            zwg('Sell', 27.472527), zwg('Sell Cash', 27.548209),
+        ]);
+
+        expect(byName(rates)).toEqual({ 'Mid': 26.723277, 'Mid Cash': 26.727473 });
+    });
+
+    it('keeps the page\'s own middle rate and drops the two sides', () => {
+        // FBC's columns
+        const rates = toMidRates([
+            { ...zwg('Buying Rate', 16.23), currency: 'ZAR' },
+            { ...zwg('Middle Rate', 16.9), currency: 'ZAR' },
+            { ...zwg('Selling Rate', 17.58), currency: 'ZAR' },
+        ]);
+
+        expect(byName(rates)).toEqual({ 'Middle Rate': 16.9 });
+    });
+
+    it('leaves rows with no side, and sides without a partner, as they are', () => {
+        // Zim Price Check: Street Value and Street Cost are different rows.
+        const page = [
+            zwg('Official', 26.7583), zwg('cash rate', 40),
+            zwg('Street Value (Sell USD)', 30), zwg('Street Cost (Buy USD)', 33),
+        ];
+
+        expect(byName(toMidRates(page))).toEqual(byName(page));
+    });
+
+    it('pairs sides the model marked, however the site words them', () => {
+        // The same CABS quote after a redesign that dropped "Buy" and "Sell".
+        const rates = toMidRates([
+            { ...zwg('We pay you', 25.974026), side: 'buy', row: 'transfer' },
+            { ...zwg('You pay us', 27.472527), side: 'sell', row: 'transfer' },
+        ]);
+
+        expect(byName(rates)).toEqual({ 'We pay you / You pay us': 26.723277 });
+    });
+
+    it('names a midpoint the same whichever side the model called buy', () => {
+        // Zim Price Check's street pair: the side words do not line up, so the
+        // name is both labels, in an order that does not depend on the model.
+        const street = (costSide, valueSide) => toMidRates([
+            { ...zwg('Street Cost (Buy USD)', 33), side: costSide, row: 'street' },
+            { ...zwg('Street Value (Sell USD)', 30), side: valueSide, row: 'street' },
+        ]);
+
+        expect(byName(street('buy', 'sell'))).toEqual({ 'Street Cost (Buy USD) / Street Value (Sell USD)': 31.5 });
+        expect(byName(street('sell', 'buy'))).toEqual(byName(street('buy', 'sell')));
+    });
+
+    it('keeps the CABS names when the model marks the sides itself', () => {
+        const rates = toMidRates([
+            { ...zwg('Buy', 25.974026), side: 'buy', row: 'standard' },
+            { ...zwg('Sell', 27.472527), side: 'sell', row: 'standard' },
+            { ...zwg('Buy Cash', 25.906736), side: 'buy', row: 'cash' },
+            { ...zwg('Sell Cash', 27.548209), side: 'sell', row: 'cash' },
+        ]);
+
+        expect(byName(rates)).toEqual({ 'Mid': 26.723277, 'Mid Cash': 26.727473 });
+    });
+
+    it('leaves a range alone when the model marks no sides', () => {
+        const page = [zwg('lowest informal-sector rate', 33), zwg('highest informal-sector rate', 30)];
+
+        expect(byName(toMidRates(page))).toEqual(byName(page));
+    });
+
+    it('pairs only within a currency', () => {
+        const rates = toMidRates([zwg('Buy', 25.97), { ...zwg('Sell', 16.52), currency: 'ZAR' }]);
+
+        expect(byName(rates)).toEqual({ Buy: 25.97, Sell: 16.52 });
     });
 });
 

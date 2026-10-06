@@ -138,6 +138,7 @@ export default function SourcesPage() {
             c.merged ? `${c.merged} duplicates merged` : '',
             c.rejected ? `${c.rejected} refused as implausible` : '',
             c.conflict ? `${c.conflict} dropped as contradicted by the page` : '',
+            c.held ? `${c.held} held back until the next scrape confirms them` : '',
             c.promoted ? 'promoted out of probation' : '',
           ].filter(Boolean);
           finish('success', parts.join(', '));

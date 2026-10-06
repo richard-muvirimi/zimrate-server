@@ -7,6 +7,7 @@ import Source from '../models/Source.js';
 import Rate from '../models/Rate.js';
 import { ScrapingService } from './ScrapingService.js';
 import { runActor } from '../utils/apify.js';
+import { numberSetting } from '../utils/settings.js';
 
 const DEFAULT_QUERIES = [
     'ZiG exchange rate today',
@@ -31,12 +32,7 @@ const DEFAULT_BLOCKED_DOMAINS = [
 /** Query-string noise added by Google and trackers; never part of a page's identity. */
 const TRACKING_PARAMS = /^(utm_|srsltid$|gclid$|fbclid$|ved$|usg$)/;
 
-const lines = (text) => String(text ?? '').split('\n').map(line => line.trim()).filter(Boolean);
-
-async function numberOption(key, fallback) {
-    const stored = Number(await Option.getValue(key, fallback));
-    return Number.isFinite(stored) && stored > 0 ? stored : fallback;
-}
+const lines = (text) => _.compact(_.map(String(text ?? '').split('\n'), _.trim));
 
 /**
  * A URL with its fragment and tracking parameters removed — the address a
@@ -104,7 +100,7 @@ export class DiscoveryService {
         const [rawQueries, rawBlocked, maxCandidates] = await Promise.all([
             Option.getValue('discovery_queries', DEFAULT_QUERIES.join('\n')),
             Option.getValue('discovery_blocked_domains', DEFAULT_BLOCKED_DOMAINS.join('\n')),
-            numberOption('discovery_max_candidates', 10),
+            numberSetting('discovery_max_candidates', 10),
         ]);
         const queries = lines(rawQueries);
         const blocked = lines(rawBlocked).map(domain => domain.toLowerCase());
