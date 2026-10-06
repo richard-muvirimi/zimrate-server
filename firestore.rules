@@ -58,6 +58,16 @@ service cloud.firestore {
                     && request.resource.data.status in ['approved', 'rejected'];
     }
 
+    // Retests requested from the admin Candidates page. Creating one starts the
+    // zimrate_candidate_retest trigger, which updates the candidate itself and
+    // deletes the request, so the client never needs to read it.
+    match /candidate_retests/{retestId} {
+      allow create: if isAdmin()
+                    && request.resource.data.keys().hasOnly(['candidate_id', 'created_at'])
+                    && request.resource.data.candidate_id is string
+                    && request.resource.data.candidate_id.size() < 128;
+    }
+
     // Discovery runs requested from the admin Candidates page. Creating one
     // starts the zimrate_discover_request trigger, which alone writes the outcome.
     match /discovery_runs/{runId} {

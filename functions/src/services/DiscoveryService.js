@@ -6,6 +6,7 @@ import Option from '../models/Option.js';
 import Source from '../models/Source.js';
 import Rate from '../models/Rate.js';
 import { ScrapingService } from './ScrapingService.js';
+import { runActor } from '../utils/apify.js';
 
 const DEFAULT_QUERIES = [
     'ZiG exchange rate today',
@@ -163,30 +164,18 @@ export class DiscoveryService {
      * @returns {Promise<Array<{url, title, description, query}>>} organic results
      */
     static async search(queries) {
-        const token = process.env.APIFY_TOKEN;
-        if (!token) throw new Error('APIFY_TOKEN environment variable is not set');
-
-        const actorId = process.env.APIFY_SEARCH_ACTOR_ID || 'apify~google-search-scraper';
-        const apiUrl = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items` +
-            `?token=${token}&timeout=240&memory=1024`;
-
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+        // Allowed 150s, not the 240s it had: waiting for a free run slot can
+        // take up to two minutes of the trigger's 300 before this even starts.
+        const pages = await runActor(
+            process.env.APIFY_SEARCH_ACTOR_ID || 'apify~google-search-scraper',
+            {
                 queries: queries.join('\n'),
                 countryCode: 'zw',
                 maxPagesPerQuery: 1,
                 mobileResults: false,
-            }),
-        });
-
-        if (!response.ok) {
-            const body = await response.text();
-            throw new Error(`Apify search error ${response.status}: ${body.substring(0, 200)}`);
-        }
-
-        const pages = await response.json();
+            },
+            { timeout: 150, memory: 1024 }
+        );
         if (!Array.isArray(pages)) throw new Error('Apify search returned an unexpected response');
 
         return pages.flatMap(page => (page.organicResults || []).map(result => ({

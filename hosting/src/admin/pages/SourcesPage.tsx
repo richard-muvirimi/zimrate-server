@@ -11,7 +11,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import {
-  collection, getDocs, getDoc, deleteDoc, doc, addDoc, onSnapshot, serverTimestamp,
+  collection, getDocs, getDoc, deleteDoc, doc, addDoc, onSnapshot, serverTimestamp, updateDoc,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useArrayPage } from '../hooks/useArrayPage';
@@ -76,6 +76,19 @@ export default function SourcesPage() {
   useEffect(() => {
     load();
   }, []);
+
+  // A disabled source is skipped by the hourly scrape and its rates leave the
+  // API (within the five minutes the enabled-source list is cached); enabling
+  // it again brings them back as they were.
+  const handleToggle = async (source: Source) => {
+    const enabled = source.enabled === false;
+    try {
+      await updateDoc(doc(db, 'sources', source.id), { enabled, updated_at: serverTimestamp() });
+      setSources((prev) => prev.map((s) => (s.id === source.id ? { ...s, enabled } : s)));
+    } catch (e) {
+      setError(String(e));
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this source and all the rates it has scraped?')) return;
@@ -270,12 +283,17 @@ export default function SourcesPage() {
                     )}
                   </TableCell>
                   <TableCell align="center">
-                    <Chip
-                      label={source.enabled === false ? 'Disabled' : 'Active'}
-                      color={source.enabled === false ? 'default' : 'success'}
-                      size="small"
-                      variant="outlined"
-                    />
+                    <Tooltip title={source.enabled === false
+                      ? 'Click to scrape and serve this source again'
+                      : 'Click to stop scraping this source and serving its rates'}>
+                      <Chip
+                        label={source.enabled === false ? 'Disabled' : 'Active'}
+                        color={source.enabled === false ? 'default' : 'success'}
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleToggle(source)}
+                      />
+                    </Tooltip>
                     {source.probation && (
                       <Tooltip title={`Scraped but not served until it has a clean record for the probation period. Clean since ${
                         source.clean_since?.toDate?.()?.toLocaleString() ?? 'its next scrape'

@@ -27,6 +27,7 @@ interface Candidate {
   page_date?: string | null;
   rates?: { currency: string; name: string | null; rate: number; refused: boolean }[];
   found_at?: { toDate?: () => Date } | null;
+  tested_at?: { toMillis?: () => number } | null;
 }
 
 type View = 'review' | 'approved' | 'rejected' | 'all';
@@ -53,6 +54,9 @@ function suggestName(c: Candidate): string {
   return parts.length > 1 ? parts[parts.length - 1] : (c.domain ?? c.url);
 }
 
+/** Identifies one test of a candidate, so a retest request can tell when it has been picked up. */
+const testStamp = (c: Candidate) => c.tested_at?.toMillis?.() ?? 0;
+
 function summary(c: Candidate): string {
   const rates = c.rates ?? [];
   if (rates.length === 0) return '';
@@ -74,6 +78,9 @@ export default function CandidatesPage() {
   const [discovering, setDiscovering] = useState(false);
   const [approving, setApproving] = useState<{ candidate: Candidate; name: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  // Candidate id → the test it had when Retest was clicked. Pending until the
+  // trigger marks it testing or writes a newer test.
+  const [retests, setRetests] = useState<Record<string, number>>({});
   const stopRun = useRef<(() => void) | null>(null);
   const { perPage } = usePerPage();
 
@@ -178,6 +185,20 @@ export default function CandidatesPage() {
     }
   };
 
+  // Writing a candidate_retests doc starts the zimrate_candidate_retest
+  // trigger, which vets the candidate again; this row updates live as it does.
+  const handleRetest = async (candidate: Candidate) => {
+    try {
+      await addDoc(collection(db, 'candidate_retests'), {
+        candidate_id: candidate.id,
+        created_at: serverTimestamp(),
+      });
+      setRetests((prev) => ({ ...prev, [candidate.id]: testStamp(candidate) }));
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
   const handleReject = async (candidate: Candidate) => {
     try {
       await updateDoc(doc(db, 'source_candidates', candidate.id), {
@@ -234,8 +255,9 @@ export default function CandidatesPage() {
             </TableHead>
             <TableBody>
               {pager.rows.map((c) => {
-                const status = STATUS[c.status] ?? STATUS.new;
-                const reviewable = c.status === 'passed' || c.status === 'failed';
+                const queued = c.id in retests && c.status !== 'testing' && retests[c.id] === testStamp(c);
+                const status = queued ? STATUS.new : (STATUS[c.status] ?? STATUS.new);
+                const reviewable = !queued && (c.status === 'passed' || c.status === 'failed');
                 return (
                   <TableRow key={c.id} hover>
                     <TableCell>
@@ -274,6 +296,9 @@ export default function CandidatesPage() {
                           onClick={() => setApproving({ candidate: c, name: suggestName(c) })}
                         >
                           Approve
+                        </Button>
+                        <Button size="small" color="inherit" disabled={!reviewable} onClick={() => handleRetest(c)}>
+                          {queued ? 'Queued…' : 'Retest'}
                         </Button>
                         <Button size="small" color="inherit" disabled={!reviewable} onClick={() => handleReject(c)}>
                           Reject

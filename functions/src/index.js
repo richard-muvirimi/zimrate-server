@@ -14,7 +14,7 @@ import { runPurge } from './jobs/purge.js';
 import { runSourceTest } from './jobs/testSource.js';
 import { runSourceScrape } from './jobs/scrapeSource.js';
 import { runSourceRatesDelete } from './jobs/deleteSourceRates.js';
-import { runScheduledDiscovery, runDiscoveryRequest, runCandidateTest } from './jobs/discover.js';
+import { runScheduledDiscovery, runDiscoveryRequest, runCandidateTest, runCandidateRetest } from './jobs/discover.js';
 
 const app = express();
 
@@ -96,10 +96,20 @@ export const zimrate_discover_request = onDocumentCreated({
     timeoutSeconds: 300,
 }, runDiscoveryRequest);
 
-// timeoutSeconds 300: the same two-fetch dry run as zimrate_source_test
+// timeoutSeconds 540: the same two-fetch dry run as zimrate_source_test, but a
+// run's candidates all start together and queue for Apify's five run slots
+// (see utils/apify.js), so each fetch may first wait up to two minutes.
 export const zimrate_candidate_test = onDocumentCreated({
     document: 'source_candidates/{candidateId}',
     region: 'us-central1',
     memory: '512MiB',
-    timeoutSeconds: 300,
+    timeoutSeconds: 540,
 }, runCandidateTest);
+
+// timeoutSeconds 540: the same vetting as zimrate_candidate_test
+export const zimrate_candidate_retest = onDocumentCreated({
+    document: 'candidate_retests/{retestId}',
+    region: 'us-central1',
+    memory: '512MiB',
+    timeoutSeconds: 540,
+}, runCandidateRetest);

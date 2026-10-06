@@ -8,6 +8,7 @@ import pLimit from 'p-limit';
 import _ from 'lodash';
 import Decimal from 'decimal.js';
 import { DateTime } from 'luxon';
+import { runActor } from '../utils/apify.js';
 
 /**
  * The OpenAI SDK wants a base URL and appends /chat/completions itself, but the
@@ -404,34 +405,16 @@ export class ScrapingService {
      * @returns {string} page content
      */
     static async fetchPage(url, requiresJavascript = false) {
-        const apifyToken = process.env.APIFY_TOKEN;
-        if (!apifyToken) {
-            throw new Error('APIFY_TOKEN environment variable is not set');
-        }
-
         const actorId = process.env.APIFY_ACTOR_ID;
         if (!actorId) {
             throw new Error('APIFY_ACTOR_ID environment variable is not set');
         }
 
-        const apiUrl = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items` +
-            `?token=${apifyToken}&timeout=60&memory=512`;
-
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                url,
-                javascript: requiresJavascript
-            })
-        });
-
-        if (!response.ok) {
-            const body = await response.text();
-            throw new Error(`Apify API error ${response.status}: ${body.substring(0, 200)}`);
-        }
-
-        const items = await response.json();
+        const items = await runActor(
+            actorId,
+            { url, javascript: requiresJavascript },
+            { timeout: 60, memory: 512 }
+        );
 
         if (!Array.isArray(items) || items.length === 0) {
             throw new Error('Apify returned no items for this URL');
