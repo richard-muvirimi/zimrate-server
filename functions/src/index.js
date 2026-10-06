@@ -4,7 +4,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { setGlobalOptions } from 'firebase-functions';
 import { onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { onDocumentCreated, onDocumentDeleted } from 'firebase-functions/v2/firestore';
 import apiRoutes from './routes/api.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { logAnalytics } from './middleware/analytics.js';
@@ -12,6 +12,9 @@ import cors from 'cors';
 import { runScrape } from './jobs/scrape.js';
 import { runPurge } from './jobs/purge.js';
 import { runSourceTest } from './jobs/testSource.js';
+import { runSourceScrape } from './jobs/scrapeSource.js';
+import { runSourceRatesDelete } from './jobs/deleteSourceRates.js';
+import { runScheduledDiscovery, runDiscoveryRequest, runCandidateTest } from './jobs/discover.js';
 
 const app = express();
 
@@ -59,3 +62,44 @@ export const zimrate_source_test = onDocumentCreated({
     memory: '512MiB',
     timeoutSeconds: 300,
 }, runSourceTest);
+
+// ── Source scrape (one source on demand, from the admin Sources page) ─────────
+// timeoutSeconds 300: one Apify fetch + LLM (with its backup) + Firestore
+export const zimrate_source_scrape = onDocumentCreated({
+    document: 'source_scrapes/{scrapeId}',
+    region: 'us-central1',
+    memory: '512MiB',
+    timeoutSeconds: 300,
+}, runSourceScrape);
+
+// ── Source deletion takes its rates with it ───────────────────────────────────
+export const zimrate_source_deleted = onDocumentDeleted({
+    document: 'sources/{sourceId}',
+    region: 'us-central1',
+}, runSourceRatesDelete);
+
+// ── Source discovery ──────────────────────────────────────────────────────────
+// Weekly, and only when discovery_enabled is on; see jobs/discover.js.
+export const zimrate_discover = onSchedule({
+    schedule: '0 5 * * 1',
+    timeZone: 'Africa/Harare',
+    region: 'us-central1', // Cloud Scheduler is not available in africa-south1
+    memory: '512MiB',
+    timeoutSeconds: 300,
+}, runScheduledDiscovery);
+
+// timeoutSeconds 300: one Apify search run (allowed 240s) + Firestore
+export const zimrate_discover_request = onDocumentCreated({
+    document: 'discovery_runs/{runId}',
+    region: 'us-central1',
+    memory: '512MiB',
+    timeoutSeconds: 300,
+}, runDiscoveryRequest);
+
+// timeoutSeconds 300: the same two-fetch dry run as zimrate_source_test
+export const zimrate_candidate_test = onDocumentCreated({
+    document: 'source_candidates/{candidateId}',
+    region: 'us-central1',
+    memory: '512MiB',
+    timeoutSeconds: 300,
+}, runCandidateTest);

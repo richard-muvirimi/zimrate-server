@@ -9,6 +9,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange';
 import SourceIcon from '@mui/icons-material/Source';
+import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 import PeopleIcon from '@mui/icons-material/People';
 import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -29,6 +30,7 @@ const navItems = [
   { label: 'Dashboard', path: '/admin', icon: <DashboardIcon /> },
   { label: 'Rates', path: '/admin/rates', icon: <CurrencyExchangeIcon /> },
   { label: 'Sources', path: '/admin/sources', icon: <SourceIcon /> },
+  { label: 'Candidates', path: '/admin/candidates', icon: <TravelExploreIcon /> },
   { label: 'Users', path: '/admin/users', icon: <PeopleIcon /> },
   { label: 'App users', path: '/admin/app-users', icon: <PhoneAndroidIcon /> },
   { label: 'Options', path: '/admin/options', icon: <SettingsIcon /> },

@@ -17,6 +17,7 @@ interface SourceForm {
   url: string;
   enabled: boolean;
   javascript: boolean;
+  probation: boolean;
 }
 
 /** One fetch mode tried by ScrapingService.testSource. */
@@ -42,6 +43,8 @@ const EMPTY: SourceForm = {
   url: '',
   enabled: true,
   javascript: false,
+  // A new source proves itself before it is served; switch off to trust it now.
+  probation: true,
 };
 
 export default function SourceFormPage() {
@@ -54,6 +57,7 @@ export default function SourceFormPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [savedUrl, setSavedUrl] = useState('');
+  const [savedProbation, setSavedProbation] = useState(false);
   const [testing, setTesting] = useState(false);
   const [test, setTest] = useState<{ url: string; result: TestResult } | null>(null);
   const stopTest = useRef<(() => void) | null>(null);
@@ -71,8 +75,10 @@ export default function SourceFormPage() {
             url: d.url ?? '',
             enabled: d.enabled !== false,
             javascript: d.javascript === true,
+            probation: d.probation === true,
           });
           setSavedUrl(d.url ?? '');
+          setSavedProbation(d.probation === true);
         }
       })
       .finally(() => setLoading(false));
@@ -149,6 +155,10 @@ export default function SourceFormPage() {
         url: form.url.trim(),
         enabled: form.enabled,
         javascript: form.javascript,
+        probation: form.probation,
+        // Going onto probation starts the clean run from now. Its rates follow
+        // the source's setting at its next scrape.
+        ...(form.probation && (isNew || !savedProbation) ? { clean_since: serverTimestamp() } : {}),
         updated_at: serverTimestamp(),
       };
 
@@ -284,6 +294,22 @@ export default function SourceFormPage() {
               }
               label="Enabled"
             />
+            <Box>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={form.probation}
+                    onChange={handleChange('probation')}
+                  />
+                }
+                label="On probation"
+              />
+              <Typography variant="caption" color="text.secondary" display="block">
+                Scraped but not served until it has gone the probation period (Options → Scraping)
+                without a failed scrape or a rate refused for disagreeing with the other sources.
+                Switch off to serve its rates straight away.
+              </Typography>
+            </Box>
             <Accordion variant="outlined" disableGutters>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography variant="body2">Advanced</Typography>

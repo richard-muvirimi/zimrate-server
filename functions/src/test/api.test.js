@@ -200,11 +200,16 @@ beforeAll(() => {
 
     ratesQuery = makeChainableQuery(ratesSnap);
     const optionsQuery = makeChainableQuery(optionsSnap);
+    const sourcesQuery = makeChainableQuery(makeSnapshot([
+        { id: 'source1', enabled: true },
+        { id: 'source2', enabled: true },
+    ]));
 
     firestore = {
         collection: vi.fn(name => {
             if (name === 'rates') return ratesQuery;
             if (name === 'options') return optionsQuery;
+            if (name === 'sources') return sourcesQuery;
             return makeChainableQuery(emptySnap);
         }),
         batch: vi.fn(() => ({

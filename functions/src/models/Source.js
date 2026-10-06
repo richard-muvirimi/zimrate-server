@@ -11,6 +11,11 @@ class Source {
         this.last_scraped = data.last_scraped || null;
         this.status = data.status !== undefined ? data.status : false;
         this.status_message = data.status_message || '';
+        // A source on probation is scraped, but its rates are not served until
+        // it has gone probation_days without a reading refused or a scrape
+        // failing; clean_since is when the current clean run began.
+        this.probation = data.probation === true;
+        this.clean_since = data.clean_since || null;
         this.created_at = data.created_at || null;
         this.updated_at = data.updated_at || null;
     }
@@ -33,6 +38,7 @@ class Source {
         };
 
         data.last_scraped = toTimestamp(this.last_scraped);
+        data.clean_since = toTimestamp(this.clean_since);
         data.created_at = toTimestamp(this.created_at);
         data.updated_at = toTimestamp(this.updated_at);
 
@@ -46,6 +52,7 @@ class Source {
         const toDate = (val) => (val && val.toDate) ? val.toDate() : val;
 
         data.last_scraped = toDate(data.last_scraped);
+        data.clean_since = toDate(data.clean_since);
         data.created_at = toDate(data.created_at);
         data.updated_at = toDate(data.updated_at);
 

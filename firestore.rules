@@ -37,6 +37,34 @@ service cloud.firestore {
                     && request.resource.data.url.size() < 2048;
     }
 
+    // On-demand scrapes requested from the admin Sources page. Creating one
+    // starts the zimrate_source_scrape trigger, which alone writes the outcome.
+    match /source_scrapes/{scrapeId} {
+      allow read, delete: if isAdmin();
+      allow create: if isAdmin()
+                    && request.resource.data.keys().hasOnly(['source_id', 'created_at'])
+                    && request.resource.data.source_id is string
+                    && request.resource.data.source_id.size() < 128;
+    }
+
+    // Candidate sources filed by discovery. Only the server creates them; an
+    // admin reviews them, which changes nothing but the review fields. They are
+    // kept after rejection so a site turned down is never proposed again.
+    match /source_candidates/{candidateId} {
+      allow read, delete: if isAdmin();
+      allow update: if isAdmin()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'source_id', 'reviewed_at'])
+                    && request.resource.data.status in ['approved', 'rejected'];
+    }
+
+    // Discovery runs requested from the admin Candidates page. Creating one
+    // starts the zimrate_discover_request trigger, which alone writes the outcome.
+    match /discovery_runs/{runId} {
+      allow read, delete: if isAdmin();
+      allow create: if isAdmin() && request.resource.data.keys().hasOnly(['created_at']);
+    }
+
     // SMTP credentials and branding. Denied to every client, including admins:
     // reachable only via the Admin SDK behind /api/admin/**, so the SMTP
     // password can never be read out of Firestore by a browser.

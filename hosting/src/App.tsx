@@ -27,6 +27,7 @@ const RatesPage = lazy(() => import('./admin/pages/RatesPage'));
 const RateFormPage = lazy(() => import('./admin/pages/RateFormPage'));
 const SourcesPage = lazy(() => import('./admin/pages/SourcesPage'));
 const SourceFormPage = lazy(() => import('./admin/pages/SourceFormPage'));
+const CandidatesPage = lazy(() => import('./admin/pages/CandidatesPage'));
 const UsersPage = lazy(() => import('./admin/pages/UsersPage'));
 const AppUsersPage = lazy(() => import('./admin/pages/AppUsersPage'));
 const OptionsPage = lazy(() => import('./admin/pages/OptionsPage'));
@@ -124,6 +125,7 @@ function App() {
               <Route path="sources" element={<SourcesPage />} />
               <Route path="sources/new" element={<SourceFormPage />} />
               <Route path="sources/:id" element={<SourceFormPage />} />
+              <Route path="candidates" element={<CandidatesPage />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="app-users" element={<AppUsersPage />} />
               <Route path="options" element={<OptionsPage />} />

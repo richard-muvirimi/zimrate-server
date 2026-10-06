@@ -8,8 +8,16 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 vi.mock('firebase-functions', () => ({
     logger: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn(), warn: vi.fn() }
 }));
+// Every setting reads as unset, so the built-in defaults apply.
+vi.mock('../models/Option.js', () => ({
+    default: { getValue: vi.fn(async (_key, fallback) => fallback) }
+}));
 
-import { normaliseCurrency, tidyLabel, restorePrecision, llmProviders, ScrapingService } from '../services/ScrapingService.js';
+import { DateTime } from 'luxon';
+import {
+    normaliseCurrency, tidyLabel, restorePrecision, llmProviders, isStale, dropConflicts, ScrapingService
+} from '../services/ScrapingService.js';
+import Rate from '../models/Rate.js';
 
 describe('normaliseCurrency', () => {
 
@@ -137,6 +145,102 @@ describe('ScrapingService.testSource', () => {
             'Apify returned no items for this URL',
         ]);
         expect(result.attempts[0].preview).toBe(PAGE);
+    });
+
+    it('fails a page whose rates are all dated too old', async () => {
+        // FBC's forex page, still listing RTGS$ cross rates dated 28-07-22.
+        const old = [{ currency: 'GBP', rate: 0.83, name: 'Middle Rate', updated_at: null, page_date: '2022-07-28' }];
+        stub({ staticPage: PAGE, browserPage: PAGE, staticRates: old, browserRates: old });
+
+        const result = await ScrapingService.testSource('https://example.com');
+
+        expect(result.ok).toBe(false);
+        expect(result.attempts[0].error).toMatch(/dates its rates 2022-07-28, more than 7 days ago/);
+    });
+});
+
+describe('dropConflicts', () => {
+
+    it('drops a row the page gives twice with values that disagree', () => {
+        // CABS: BWP from the USD table (USD per BWP) and the ZiG cross table.
+        const { kept, conflicts } = dropConflicts([
+            { currency: 'BWP', rate: 0.0665, name: 'Buy' },
+            { currency: 'BWP', rate: 13.774209, name: 'Buy' },
+            { currency: 'BWP', rate: 13.378392, name: 'Sell' },
+        ]);
+
+        expect(conflicts.map(r => r.rate)).toEqual([0.0665, 13.774209]);
+        expect(kept.map(r => r.rate)).toEqual([13.378392]);
+    });
+
+    it('treats labels that differ only in currency words as the same row', () => {
+        const { conflicts } = dropConflicts([
+            { currency: 'ZWG', rate: 25.974026, name: 'USD Buy' },
+            { currency: 'ZWG', rate: 40, name: 'ZiG Buy' },
+        ]);
+        expect(conflicts).toHaveLength(2);
+    });
+
+    it('keeps repeats that agree to within rounding', () => {
+        const { kept, conflicts } = dropConflicts([
+            { currency: 'ZWG', rate: 25.974026, name: 'Buy' },
+            { currency: 'ZWG', rate: 25.974, name: 'Buy' },
+        ]);
+        expect(conflicts).toHaveLength(0);
+        expect(kept).toHaveLength(2);
+    });
+});
+
+describe('ScrapingService.advanceProbation', () => {
+
+    const daysAgo = (days) => DateTime.now().minus({ days }).toJSDate();
+
+    beforeEach(() => vi.spyOn(Rate, 'setProbation').mockResolvedValue());
+    afterEach(() => vi.restoreAllMocks());
+
+    it('promotes a source clean for the whole probation period', async () => {
+        const source = { id: 's', url: 'u', probation: true, clean_since: daysAgo(8) };
+
+        expect(await ScrapingService.advanceProbation(source, [{ action: 'updated' }])).toEqual([{ action: 'promoted' }]);
+        expect(source.probation).toBe(false);
+        expect(Rate.setProbation).toHaveBeenCalledWith('s', false);
+    });
+
+    it('waits out the rest of the period', async () => {
+        const source = { id: 's', url: 'u', probation: true, clean_since: daysAgo(3) };
+
+        expect(await ScrapingService.advanceProbation(source, [{ action: 'updated' }])).toEqual([]);
+        expect(source.probation).toBe(true);
+    });
+
+    it('restarts the clean run when a reading is refused', async () => {
+        const source = { id: 's', url: 'u', probation: true, clean_since: daysAgo(30) };
+
+        await ScrapingService.advanceProbation(source, [{ action: 'updated' }, { action: 'rejected' }]);
+
+        expect(source.probation).toBe(true);
+        expect(source.clean_since.getTime()).toBeGreaterThan(daysAgo(1).getTime());
+        expect(Rate.setProbation).not.toHaveBeenCalled();
+    });
+});
+
+describe('isStale', () => {
+
+    const now = DateTime.fromISO('2026-10-06T12:00:00');
+
+    it('judges a rate by the page date when it has no timestamp of its own', () => {
+        expect(isStale({ page_date: '2022-07-28' }, 7, now)).toBe(true);
+        expect(isStale({ page_date: '2026-10-06' }, 7, now)).toBe(false);
+    });
+
+    it('prefers the rate\'s own timestamp to the page date', () => {
+        expect(isStale({ updated_at: '2026-10-05T09:00:00', page_date: '2022-07-28' }, 7, now)).toBe(false);
+        expect(isStale({ updated_at: '2026-09-01T09:00:00', page_date: '2026-10-06' }, 7, now)).toBe(true);
+    });
+
+    it('does not judge a rate with no usable date', () => {
+        expect(isStale({}, 7, now)).toBe(false);
+        expect(isStale({ page_date: 'last week' }, 7, now)).toBe(false);
     });
 });
 

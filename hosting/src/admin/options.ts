@@ -13,7 +13,7 @@ import { db } from '../firebase';
  * option nobody had written by hand was simply unreachable.
  */
 export type OptionType = 'boolean' | 'text' | 'longtext' | 'number';
-export type OptionGroup = 'General' | 'Security' | 'Scraping' | 'Display';
+export type OptionGroup = 'General' | 'Security' | 'Scraping' | 'Discovery' | 'Display';
 
 export interface OptionDef {
   key: string;
@@ -24,7 +24,7 @@ export interface OptionDef {
   fallback: string;
 }
 
-export const OPTION_GROUPS: OptionGroup[] = ['General', 'Security', 'Scraping', 'Display'];
+export const OPTION_GROUPS: OptionGroup[] = ['General', 'Security', 'Scraping', 'Discovery', 'Display'];
 
 export const REGISTRATION_KEY = 'registration_enabled';
 export const PER_PAGE_KEY = 'admin_per_page';
@@ -81,6 +81,86 @@ export const KNOWN_OPTIONS: OptionDef[] = [
     group: 'Scraping',
     type: 'number',
     fallback: '12',
+  },
+  {
+    key: 'source_max_age_days',
+    label: 'Refuse pages older than (days)',
+    description:
+      'A scraped rate is not stored when its page dates it older than this, so an abandoned page '
+      + 'that still lists years-old figures cannot skew the aggregates. A source whose whole page is '
+      + 'that old is marked as failing with the date it gave. Pages that show no date are accepted.',
+    group: 'Scraping',
+    type: 'number',
+    fallback: '7',
+  },
+  {
+    key: 'consensus_tolerance',
+    label: 'Consensus tolerance (×)',
+    description:
+      'How far a scraped rate may sit from the consensus of the other trusted sources before it is '
+      + 'refused: 2 accepts anything from half to double the consensus. Rates quoted the wrong way '
+      + 'up (USD per EUR instead of EUR per USD) are refused regardless.',
+    group: 'Scraping',
+    type: 'number',
+    fallback: '2',
+  },
+  {
+    key: 'probation_days',
+    label: 'Probation period (days)',
+    description:
+      'A source on probation is scraped but not served. It is promoted once it has gone this many '
+      + 'days without a failed scrape or a refused rate; either restarts the count.',
+    group: 'Scraping',
+    type: 'number',
+    fallback: '7',
+  },
+  {
+    key: 'discovery_enabled',
+    label: 'Weekly source discovery',
+    description:
+      'Searches Google every Monday for pages that may publish rates and lists them under Candidates '
+      + 'for review. Each run spends Apify credit on the search and on testing every new candidate.',
+    group: 'Discovery',
+    type: 'boolean',
+    fallback: 'false',
+  },
+  {
+    key: 'discovery_queries',
+    label: 'Search queries',
+    description: 'One Google search per line. Results are searched as from Zimbabwe.',
+    group: 'Discovery',
+    type: 'longtext',
+    fallback: [
+      'ZiG exchange rate today',
+      'ZWG USD exchange rate',
+      'Zimbabwe bank exchange rates ZiG',
+      'Zimbabwe parallel market rate ZiG',
+      'RBZ interbank rate ZWG',
+    ].join('\n'),
+  },
+  {
+    key: 'discovery_blocked_domains',
+    label: 'Blocked domains',
+    description:
+      'One domain per line; its subdomains are blocked too. Crypto exchanges are listed by default '
+      + 'because a token called ZIG trades on them, and its price reads like a ZiG rate.',
+    group: 'Discovery',
+    type: 'longtext',
+    fallback: [
+      'bybit.com', 'binance.com', 'coinmarketcap.com', 'coingecko.com', 'kucoin.com', 'okx.com',
+      'mexc.com', 'gate.io', 'coinbase.com', 'google.com', 'youtube.com', 'facebook.com',
+      'instagram.com', 'tiktok.com', 'x.com', 'twitter.com', 'linkedin.com', 'reddit.com', 'wikipedia.org',
+    ].join('\n'),
+  },
+  {
+    key: 'discovery_max_candidates',
+    label: 'New candidates per run',
+    description:
+      'The most new candidates one discovery run files. Each is tested with up to two page fetches '
+      + 'and an AI extraction, so this caps what a run can cost.',
+    group: 'Discovery',
+    type: 'number',
+    fallback: '10',
   },
   {
     key: REGISTRATION_KEY,

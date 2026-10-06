@@ -10,7 +10,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import {
-  deleteDoc, doc, documentId, orderBy, where,
+  deleteDoc, doc, documentId, orderBy, updateDoc, where,
 } from 'firebase/firestore';
 import type { DocumentData, QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -27,6 +27,7 @@ interface Rate {
   rate_name: string;
   rate: number;
   enabled?: boolean;
+  probation?: boolean;
   updated_at?: { toDate: () => Date };
   source_url?: string;
 }
@@ -112,7 +113,21 @@ export default function RatesPage() {
     withTotal: true,
   });
 
-  const { dropLocal } = pager;
+  const { dropLocal, reload } = pager;
+
+  // The scraper never writes `enabled`, so a rate switched off here stays off
+  // through later scrapes until it is switched back on.
+  const handleToggle = useCallback(
+    async (rate: Rate) => {
+      try {
+        await updateDoc(doc(db, 'rates', rate.id), { enabled: rate.enabled === false });
+        reload();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    },
+    [reload],
+  );
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -226,12 +241,20 @@ export default function RatesPage() {
                   <Typography fontWeight={600}>{rate.rate?.toLocaleString()}</Typography>
                 </TableCell>
                 <TableCell align="center">
-                  <Chip
-                    size="small"
-                    variant="outlined"
-                    label={rate.enabled === false ? 'Disabled' : 'Enabled'}
-                    color={rate.enabled === false ? 'default' : 'success'}
-                  />
+                  <Tooltip title={rate.enabled === false ? 'Click to serve this rate again' : 'Click to stop serving this rate'}>
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={rate.enabled === false ? 'Disabled' : 'Enabled'}
+                      color={rate.enabled === false ? 'default' : 'success'}
+                      onClick={() => handleToggle(rate)}
+                    />
+                  </Tooltip>
+                  {rate.probation && (
+                    <Tooltip title="Its source is on probation, so the API does not serve this rate yet">
+                      <Chip size="small" variant="outlined" color="warning" label="Probation" sx={{ ml: 0.5 }} />
+                    </Tooltip>
+                  )}
                 </TableCell>
                 <TableCell align="center">
                   {(() => {

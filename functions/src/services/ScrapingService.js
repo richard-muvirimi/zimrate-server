@@ -2,11 +2,12 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions';
 import OpenAI from 'openai';
 import Source from '../models/Source.js';
-import Rate from '../models/Rate.js';
+import Rate, { labelKey } from '../models/Rate.js';
 import Option from '../models/Option.js';
 import pLimit from 'p-limit';
 import _ from 'lodash';
 import Decimal from 'decimal.js';
+import { DateTime } from 'luxon';
 
 /**
  * The OpenAI SDK wants a base URL and appends /chat/completions itself, but the
@@ -117,6 +118,75 @@ export const restorePrecision = (rate, computed) => {
 };
 
 /**
+ * Whether the page dates a rate older than `maxAgeDays`. The rate's own
+ * timestamp wins over the page's date; a rate with neither, or with one that
+ * does not parse, is not judged stale — there is nothing to judge it by.
+ *
+ * Guards against pages nobody maintains any more: FBC's forex page still lists
+ * RTGS$ and cross rates dated 28-07-22, which read fine to the model and would
+ * otherwise be published as today's.
+ */
+export const isStale = (rate, maxAgeDays, now = DateTime.now()) => {
+    const stamp = rate.updated_at || rate.page_date;
+    if (!stamp) return false;
+
+    const date = DateTime.fromISO(stamp);
+    return date.isValid && date < now.minus({ days: maxAgeDays });
+};
+
+/** The age limit from settings, with a typo falling back to the default. */
+async function maxAgeDays() {
+    const stored = Number(await Option.getValue('source_max_age_days', 7));
+    return Number.isFinite(stored) && stored > 0 ? stored : 7;
+}
+
+/**
+ * Drop the rates a page dates too old, throwing when that leaves nothing so the
+ * source is reported as failing with the date its page gave.
+ */
+export async function withoutStale(rates, url) {
+    const limit = await maxAgeDays();
+    const [stale, fresh] = _.partition(rates, rate => isStale(rate, limit));
+
+    if (stale.length > 0 && fresh.length === 0) {
+        const dated = stale[0].updated_at || stale[0].page_date;
+        throw new Error(`The page dates its rates ${dated}, more than ${limit} days ago, so they were not stored`);
+    }
+
+    if (stale.length > 0) {
+        logger.warn(`[ScrapingService] ${url}: dropped ${stale.length} rate(s) dated more than ${limit} days ago`);
+    }
+
+    return fresh;
+}
+
+/**
+ * Split out the rates a page gives twice with values that disagree.
+ *
+ * The same row can reach the model by two routes: CABS lists BWP both in its
+ * USD table and, as a cross rate, in its ZiG table, and both come back as
+ * "BWP Buy". When the two agree they are one rate; when they do not, at least
+ * one is a misreading — the USD table quotes some currencies per USD and others
+ * per unit — and nothing on the page says which. Keeping either would publish a
+ * coin toss, so every reading of that row is dropped. Agreement is to within 1%,
+ * which absorbs the model's rounding.
+ *
+ * @returns {{kept: Array, conflicts: Array}}
+ */
+export const dropConflicts = (rates, tolerance = 0.01) => {
+    const kept = [];
+    const conflicts = [];
+
+    for (const group of Object.values(_.groupBy(rates, r => `${r.currency}::${labelKey(r.name, r.currency)}`))) {
+        const values = group.map(r => r.rate);
+        const disagree = Math.max(...values) / Math.min(...values) - 1 > tolerance;
+        (disagree ? conflicts : kept).push(...group);
+    }
+
+    return { kept, conflicts };
+};
+
+/**
  * ScrapingService
  *
  * Orchestrates web scraping using Apify (page fetching) and an LLM (rate extraction).
@@ -183,16 +253,31 @@ export class ScrapingService {
             }
 
             // Step 2: Extract rates via the LLM
-            const extractedRates = await ScrapingService.extractRates(content, source.url);
+            const knownLabels = await Rate.knownLabels(source);
+            const extracted = await ScrapingService.extractRates(content, source.url, knownLabels);
 
-            if (extractedRates.length === 0) {
+            if (extracted.length === 0) {
                 throw new Error('The LLM could not find any currency rates on this page');
             }
 
-            logger.log(`[ScrapingService] ${source.url}: found ${extractedRates.length} rate(s)`);
+            const { kept, conflicts } = dropConflicts(await withoutStale(extracted, source.url));
+
+            if (kept.length === 0) {
+                throw new Error('Every rate on this page was given twice with different values, so none were stored');
+            }
+            if (conflicts.length > 0) {
+                logger.warn(`[ScrapingService] ${source.url}: dropped ${conflicts.length} reading(s) the page contradicts`);
+            }
+
+            logger.log(`[ScrapingService] ${source.url}: found ${kept.length} rate(s)`);
 
             // Step 3: Upsert rates into Firestore
-            const results = await Rate.upsertFromScrape(source, extractedRates);
+            const results = await Rate.upsertFromScrape(source, kept);
+            results.push(...conflicts.map(r => ({ action: 'conflict', currency: r.currency })));
+
+            if (source.probation) {
+                results.push(...await ScrapingService.advanceProbation(source, results));
+            }
 
             // Step 4: Update source status
             source.status = true;
@@ -205,7 +290,9 @@ export class ScrapingService {
         } catch (err) {
             logger.error(`[ScrapingService] Error scraping ${source.url}:`, err.message);
 
-            // Update source with failure status
+            // Update source with failure status. A source on probation has to
+            // stay clean for the whole period, and failing to scrape is not clean.
+            if (source.probation) source.clean_since = Timestamp.now().toDate();
             source.status = false;
             source.status_message = err.message;
             source.last_scraped = Timestamp.now().toDate();
@@ -213,6 +300,38 @@ export class ScrapingService {
 
             throw err; // Re-throw so scrapeAll() can track failures
         }
+    }
+
+    /**
+     * Move a source on probation along after a successful scrape: a refused
+     * reading restarts its clean run, and a clean run of probation_days promotes
+     * it. Promotion takes its rates off probation at once rather than at the
+     * next scrape. Mutates `source`; the caller saves it.
+     *
+     * Rates no other source quotes cannot be refused, so a source quoting only
+     * those is promoted on time alone — there is nothing to check it against.
+     *
+     * @returns {Promise<Array<{action}>>} a 'promoted' result, if it was
+     */
+    static async advanceProbation(source, results) {
+        const now = DateTime.now();
+
+        if (results.some(r => r.action === 'rejected') || !source.clean_since) {
+            source.clean_since = now.toJSDate();
+            return [];
+        }
+
+        const stored = Number(await Option.getValue('probation_days', 7));
+        const days = Number.isFinite(stored) && stored > 0 ? stored : 7;
+
+        if (DateTime.fromJSDate(new Date(source.clean_since)) > now.minus({ days })) return [];
+
+        source.probation = false;
+        source.clean_since = null;
+        await Rate.setProbation(source.id, false);
+        logger.log(`[ScrapingService] ${source.url}: promoted after ${days} clean days on probation`);
+
+        return [{ action: 'promoted' }];
     }
 
     /**
@@ -232,7 +351,7 @@ export class ScrapingService {
         const attempts = [];
 
         for (const javascript of [false, true]) {
-            const attempt = { javascript, content_length: 0, preview: '', rates: [], error: null };
+            const attempt = { javascript, content_length: 0, preview: '', rates: [], conflicts: 0, error: null };
             attempts.push(attempt);
 
             try {
@@ -248,6 +367,14 @@ export class ScrapingService {
 
                 if (attempt.rates.length === 0) {
                     throw new Error('No currency rates were found on this page');
+                }
+
+                const { kept, conflicts } = dropConflicts(await withoutStale(attempt.rates, url));
+                attempt.rates = kept;
+                attempt.conflicts = conflicts.length;
+
+                if (kept.length === 0) {
+                    throw new Error('Every rate on this page was given twice with different values');
                 }
             } catch (err) {
                 attempt.error = err.message;
@@ -328,14 +455,15 @@ export class ScrapingService {
      *
      * @param {string} content - page content (markdown, text, or HTML)
      * @param {string} url - source URL (context hint for the model)
-     * @returns {Array<{currency, rate, name, updated_at}>}
+     * @param {Array<{currency, name}>} knownLabels - labels this page's rates are stored under
+     * @returns {Array<{currency, rate, name, updated_at, page_date}>}
      */
-    static async extractRates(content, url) {
+    static async extractRates(content, url, knownLabels = []) {
         const failures = [];
 
         for (const provider of llmProviders()) {
             try {
-                return await ScrapingService.extractRatesWith(provider, content, url);
+                return await ScrapingService.extractRatesWith(provider, content, url, knownLabels);
             } catch (err) {
                 logger.warn(`[LLM] ${provider.label} (${provider.model}) failed: ${err.message}`);
                 failures.push(`${provider.label} LLM (${provider.model}): ${err.message}`);
@@ -356,9 +484,10 @@ export class ScrapingService {
      * @param {{label, model, apiKey, baseURL, extraBody}} provider - one entry of llmProviders()
      * @param {string} content - page content (markdown, text, or HTML)
      * @param {string} url - source URL (context hint for the model)
-     * @returns {Array<{currency, rate, name, updated_at}>}
+     * @param {Array<{currency, name}>} knownLabels - labels this page's rates are stored under
+     * @returns {Array<{currency, rate, name, updated_at, page_date}>}
      */
-    static async extractRatesWith({ model, apiKey, baseURL, extraBody }, content, url) {
+    static async extractRatesWith({ model, apiKey, baseURL, extraBody }, content, url, knownLabels = []) {
         // Bounded so a hung main provider leaves the backup time to run inside
         // the function's 300s timeout; the SDK default is 10 minutes, 2 retries.
         const client = new OpenAI({ apiKey, baseURL, timeout: 60_000, maxRetries: 1 });
@@ -407,6 +536,25 @@ export class ScrapingService {
                         required: ['currency', 'zwg_per_usd']
                     }
                 }
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'invert_rate',
+                    description:
+                        `Turn an inverse quote ("1 ${localCurrency} = 0.0385 USD") into ${localCurrency} per 1 USD. ` +
+                        `Use this rather than dividing yourself, so the result is the same on every run.`,
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            value: {
+                                type: 'number',
+                                description: `USD per 1 ${localCurrency}, as printed on the page`
+                            }
+                        },
+                        required: ['value']
+                    }
+                }
             }
         ];
 
@@ -441,19 +589,32 @@ Step 2 — call convert_cross_rate_to_usd for ALL ${localCurrency}-based cross-r
      include it as a tool call in the batch.
   c. Skip rates that involve neither USD nor ${localCurrency}.
   d. Skip ZWL, ZWD, and zero/negative rates.
-  e. Skip inverse quotes. A row saying how much USD one ${localCurrency} buys ("1 ${localCurrency} to USD = US$0.0376")
-     is the USD/${localCurrency} rate upside down, not a separate rate — every entry you return must be units per 1 USD.
+  e. Inverse quotes. A row saying how much USD one ${localCurrency} buys ("1 ${localCurrency} to USD = US$0.0376")
+     is a USD/${localCurrency} rate upside down — every entry you return must be units per 1 USD.
+     If the page also gives that rate the direct way, skip the inverse: it is not a separate rate.
+     If the inverse is the only form the rate appears in (e.g. a bank's ${localCurrency} table with a USD row
+     under Buy / Sell columns), call invert_rate on it, in the same batch as the cross-rates, and return its result.
 
-Step 3 — once all conversions are done, return {"rates": [...]} where each element has:
+Step 3 — once all conversions are done, return {"page_date": ..., "rates": [...]}.
+"page_date": the date the page says its rates are for or were last updated (e.g. "Date : 28-07-22",
+  "rates on 6 October 2026") as an ISO 8601 date, or null if the page shows none. Zimbabwean pages write
+  numeric dates day first: 06/10/26 is 6 October 2026.
+Each element of "rates" has:
 - "currency": 3-letter ISO code (USD is never included — it is always the implied base; the local currency is ${localCurrency})
 - "rate": how many units of that currency per 1 USD
 - "name": the page's own label for that row, copied verbatim and trimmed (Official, Cash Rate, OK Supermarket, etc.).
   Do not paraphrase, expand or re-word it: the same row must produce the same label on every run, because the label
-  is part of how a rate is identified between scrapes.
-- "updated_at": ISO 8601 datetime if visible, else null
+  is part of how a rate is identified between scrapes. Where a rate is one cell of a table, its label is the
+  column header that tells it apart from its neighbours (Buy, Sell Cash) — not the table title or the row's
+  currency, which "currency" already carries.
+- "updated_at": ISO 8601 datetime if visible for that row, else null
 
 Each (currency, name) pair from the same page must be unique.
-
+${knownLabels.length === 0 ? '' : `
+Labels this page's rates were stored under on earlier runs:
+${knownLabels.map(l => `- ${l.currency}: ${l.name}`).join('\n')}
+When a row is one of these, return that label exactly, so it is recognised as the same rate.
+`}
 Page URL: ${url}
 
 Page content:
@@ -522,6 +683,16 @@ ${truncatedContent}`;
                         } else {
                             content = JSON.stringify({ error: 'Provide either zwg_per_foreign or foreign_per_zwg' });
                         }
+                    } else if (call.function.name === 'invert_rate') {
+                        const { value } = args;
+
+                        if (!value || value <= 0) {
+                            content = JSON.stringify({ error: 'value must be a positive number' });
+                        } else {
+                            const rate = new Decimal(1).div(value).toDecimalPlaces(6).toNumber();
+                            computedRates.push(rate);
+                            content = JSON.stringify({ rate });
+                        }
                     } else {
                         content = JSON.stringify({ error: `Unknown tool: ${call.function.name}` });
                     }
@@ -538,7 +709,7 @@ ${truncatedContent}`;
         // ── Dedicated JSON-only final call ────────────────────────────────────
         // All tool calls are done. Make one clean call with no tools and
         // response_format: json_object so the model is forced to return valid JSON.
-        messages.push({ role: 'user', content: 'Return the {"rates": [...]} JSON now.' });
+        messages.push({ role: 'user', content: 'Return the {"page_date": ..., "rates": [...]} JSON now.' });
 
         const finalResult = await client.chat.completions.create({
             model,
@@ -563,6 +734,7 @@ ${truncatedContent}`;
         }
 
         const rawRates = Array.isArray(parsed) ? parsed : (parsed.rates || []);
+        const pageDate = typeof parsed.page_date === 'string' ? parsed.page_date : null;
 
         // Demonetized Zimbabwe currencies — always excluded regardless of what the AI returns
         const demonetized = new Set(['ZWL', 'ZWD']);
@@ -578,7 +750,8 @@ ${truncatedContent}`;
                 currency: normaliseCurrency(r.currency.toUpperCase()),
                 rate: restorePrecision(parseFloat(r.rate), computedRates),
                 name: typeof r.name === 'string' && r.name.trim() ? tidyLabel(r.name.trim()) : null,
-                updated_at: r.updated_at || null
+                updated_at: r.updated_at || null,
+                page_date: pageDate
             }));
     }
 }

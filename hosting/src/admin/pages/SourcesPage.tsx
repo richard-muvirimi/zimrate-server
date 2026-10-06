@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box, Typography, Button, Paper, Table, TableBody, TableCell,
@@ -9,7 +9,10 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import {
+  collection, getDocs, getDoc, deleteDoc, doc, addDoc, onSnapshot, serverTimestamp,
+} from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useArrayPage } from '../hooks/useArrayPage';
 import { usePerPage } from '../hooks/usePerPage';
@@ -25,6 +28,8 @@ interface Source {
   javascript?: boolean;
   status?: boolean;
   status_message?: string;
+  probation?: boolean;
+  clean_since?: { toDate?: () => Date } | null;
   last_scraped?: { toDate?: () => Date } | null;
 }
 
@@ -44,6 +49,14 @@ export default function SourcesPage() {
   const [search, setSearch] = useState('');
   const [state, setState] = useState<StateFilter>('any');
   const { perPage } = usePerPage();
+  const [scraping, setScraping] = useState<Record<string, boolean>>({});
+  const [notice, setNotice] = useState<{ severity: 'success' | 'error'; text: string } | null>(null);
+  const stopScrapes = useRef(new Map<string, () => void>());
+
+  useEffect(() => {
+    const stops = stopScrapes.current;
+    return () => stops.forEach((stop) => stop());
+  }, []);
 
   const load = async () => {
     try {
@@ -65,12 +78,76 @@ export default function SourcesPage() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this source?')) return;
+    if (!confirm('Delete this source and all the rates it has scraped?')) return;
     try {
       await deleteDoc(doc(db, 'sources', id));
       setSources((prev) => prev.filter((s) => s.id !== id));
     } catch (e) {
       setError(String(e));
+    }
+  };
+
+  // Writing a source_scrapes doc starts the zimrate_source_scrape trigger, which
+  // writes the outcome back to the same doc — the same pattern as Test source,
+  // and for the same reason: Hosting cuts an API call off at 60s.
+  const handleScrape = async (source: Source) => {
+    const label = source.name || source.url || source.id;
+    setNotice(null);
+    setScraping((prev) => ({ ...prev, [source.id]: true }));
+
+    const finish = async (severity: 'success' | 'error', text: string) => {
+      stopScrapes.current.get(source.id)?.();
+      setScraping((prev) => ({ ...prev, [source.id]: false }));
+      setNotice({ severity, text: `${label}: ${text}` });
+      try {
+        const snap = await getDoc(doc(db, 'sources', source.id));
+        if (snap.exists()) {
+          setSources((prev) => prev.map((s) => (s.id === source.id ? { id: snap.id, ...snap.data() } as Source : s)));
+        }
+      } catch {
+        // The row keeps its old status; the notice already says what happened.
+      }
+    };
+
+    try {
+      const ref = await addDoc(collection(db, 'source_scrapes'), {
+        source_id: source.id,
+        created_at: serverTimestamp(),
+      });
+
+      const unsubscribe = onSnapshot(ref, (snap) => {
+        const d = snap.data();
+        if (d?.status === 'done') {
+          const c: Record<string, number> = d.counts ?? {};
+          const parts = [
+            `${c.updated ?? 0} updated`,
+            `${c.created ?? 0} new`,
+            c.merged ? `${c.merged} duplicates merged` : '',
+            c.rejected ? `${c.rejected} refused as implausible` : '',
+            c.conflict ? `${c.conflict} dropped as contradicted by the page` : '',
+            c.promoted ? 'promoted out of probation' : '',
+          ].filter(Boolean);
+          finish('success', parts.join(', '));
+          deleteDoc(ref).catch(() => {});
+        } else if (d?.status === 'failed') {
+          finish('error', d.error ?? 'Scrape failed');
+          deleteDoc(ref).catch(() => {});
+        }
+      }, (e) => finish('error', String(e)));
+
+      // The trigger is killed at 300s and leaves the doc "running".
+      const timer = setTimeout(() => finish(
+        'error',
+        'No result after 5 minutes. Check that the zimrate_source_scrape function is deployed, and its logs.',
+      ), 330_000);
+
+      stopScrapes.current.set(source.id, () => {
+        unsubscribe();
+        clearTimeout(timer);
+        stopScrapes.current.delete(source.id);
+      });
+    } catch (e) {
+      finish('error', String(e));
     }
   };
 
@@ -104,6 +181,11 @@ export default function SourcesPage() {
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {notice && (
+        <Alert severity={notice.severity} sx={{ mb: 2 }} onClose={() => setNotice(null)}>
+          {notice.text}
+        </Alert>
+      )}
 
       <ListFilterBar
         activeCount={activeCount}
@@ -194,6 +276,13 @@ export default function SourcesPage() {
                       size="small"
                       variant="outlined"
                     />
+                    {source.probation && (
+                      <Tooltip title={`Scraped but not served until it has a clean record for the probation period. Clean since ${
+                        source.clean_since?.toDate?.()?.toLocaleString() ?? 'its next scrape'
+                      }.`}>
+                        <Chip label="Probation" color="warning" size="small" variant="outlined" sx={{ ml: 0.5 }} />
+                      </Tooltip>
+                    )}
                   </TableCell>
                   <TableCell align="center">
                     <Tooltip title={source.status_message || (source.status ? 'Last scrape succeeded' : 'No successful scrape recorded')}>
@@ -211,6 +300,20 @@ export default function SourcesPage() {
                   </TableCell>
                   <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                     <Stack direction="row" justifyContent="flex-end">
+                      <Tooltip title={source.enabled === false ? 'Enable the source to scrape it' : 'Scrape now'}>
+                        {/* A span so the tooltip still shows on a disabled button */}
+                        <span>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleScrape(source)}
+                            disabled={scraping[source.id] || source.enabled === false || !source.url}
+                          >
+                            {scraping[source.id]
+                              ? <CircularProgress size={18} />
+                              : <RefreshIcon fontSize="small" />}
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                       <Tooltip title="Edit">
                         <IconButton component={RouterLink} to={`/admin/sources/${source.id}`} size="small">
                           <EditIcon fontSize="small" />

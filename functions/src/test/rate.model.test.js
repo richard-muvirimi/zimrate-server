@@ -38,7 +38,7 @@ vi.mock('firebase-admin/database', () => {
 });
 
 import { getFirestore } from 'firebase-admin/firestore';
-import Rate from '../models/Rate.js';
+import Rate, { labelKey } from '../models/Rate.js';
 
 // ── Test data ─────────────────────────────────────────────────────────────────
 
@@ -95,6 +95,13 @@ const RATES = [
         source_url: 'https://off.co.zw', rate: 55.0, last_rate: 55.0, enabled: false,
         updated_at: ago({ hours: 1 }), rate_updated_at: ago({ hours: 1 })
     }
+];
+
+/** Every source the fixtures name, enabled, plus one switched off. */
+const SOURCES = [
+    ...['source1', 'source2', 'source3', 'source4', 'source5', 'source6', 'source7', 'new', 'noisy', 'cabs']
+        .map(id => ({ id, enabled: true })),
+    { id: 'source-off', enabled: false },
 ];
 
 // ── Firestore mock that honours where() ───────────────────────────────────────
@@ -164,7 +171,7 @@ beforeEach(() => {
     const live = RATES.map(r => ({ ...r }));
 
     vi.mocked(getFirestore).mockReturnValue({
-        collection: vi.fn(() => makeQuery(live)),
+        collection: vi.fn(name => (name === 'sources' ? makeQuery(SOURCES) : makeQuery(live))),
         batch: vi.fn(makeBatch)
     });
 });
@@ -253,7 +260,7 @@ describe('getAggregatedRates', () => {
             { ...RATES[0], id: 'b', rate: 30.0, updated_at: ago({ hours: 2 }) },
             { ...RATES[0], id: 'c', rate: 30.0, updated_at: ago({ hours: 3 }) }
         ];
-        vi.mocked(getFirestore).mockReturnValue({ collection: vi.fn(() => makeQuery(repeated)) });
+        vi.mocked(getFirestore).mockReturnValue({ collection: vi.fn(name => (name === 'sources' ? makeQuery(SOURCES) : makeQuery(repeated))) });
 
         const rates = await Rate.getAggregatedRates('mode', { enabled: true });
 
@@ -275,30 +282,108 @@ describe('getAggregatedRates', () => {
 
 describe('screenRate', () => {
 
-    const band = { min: 26.5, max: 32 };   // accepts 18.55 … 41.6
-
-    it('accepts a value inside the band', () => {
-        expect(Rate.screenRate(27, band)).toBe(27);
+    // The ZWG consensus is near 29; a factor of 2 accepts 14.5 … 58.
+    it('accepts a value within the tolerance, however far apart real rates are', () => {
+        expect(Rate.screenRate(27, 29)).toBe(27);
+        // The cash rate sits well above the official one, and is real.
+        expect(Rate.screenRate(40, 29)).toBe(40);
     });
 
     it('corrects a value read in cents', () => {
-        expect(Rate.screenRate(2900, band)).toBe(29);
+        expect(Rate.screenRate(2900, 29)).toBe(29);
     });
 
     it('refuses a value that is wrong even after the cents correction', () => {
-        expect(Rate.screenRate(50000, band)).toBeNull();
-        expect(Rate.screenRate(0.4, band)).toBeNull();
+        expect(Rate.screenRate(50000, 29)).toBeNull();
+        expect(Rate.screenRate(0.4, 29)).toBeNull();
+        // FBC's RTGS$ figure, read as ZWG
+        expect(Rate.screenRate(405.88, 29)).toBeNull();
+    });
+
+    it('refuses a rate quoted the wrong way up', () => {
+        // CABS: EUR 1.0868 is USD per EUR. Within a factor of 2 of the EUR
+        // consensus, but its inverse, 0.92, is closer still.
+        expect(Rate.screenRate(1.0868, 0.868)).toBeNull();
+        expect(Rate.screenRate(0.0665, 13.44)).toBeNull();  // BWP
+        expect(Rate.screenRate(0.893, 0.868)).toBe(0.893);  // EUR the right way up
+    });
+
+    it('does not suspect an inversion near parity', () => {
+        // 1.02 and its inverse 0.98 are both near a 0.99 consensus.
+        expect(Rate.screenRate(1.02, 0.99)).toBe(1.02);
     });
 
     it('accepts anything for a currency with nothing to compare against', () => {
         expect(Rate.screenRate(5000, undefined)).toBe(5000);
     });
 
-    it('builds a band per currency from the rates being served', async () => {
-        const bands = await Rate.currencyBands();
+    it('takes the consensus from the other sources\' medians', async () => {
+        const consensus = await Rate.consensus('source1');
 
-        expect(bands.ZWG).toEqual({ min: 26.5, max: 32 });
-        expect(bands.ZAR).toEqual({ min: 18.5, max: 18.5 });
+        // source1's own 26.5 is left out: the median of 28, 30 and 32.
+        expect(consensus.ZWG).toBe(30);
+        expect(consensus.ZAR).toBe(18.5);
+        // Stale and disabled rates never count.
+        expect((await Rate.consensus()).ZWG).toBe(29);
+    });
+
+    it('gives a source one vote however many rows it quotes', async () => {
+        const many = [
+            ...RATES,
+            ...[90, 91, 92, 93, 94].map((rate, i) => ({
+                ...RATES[0], id: `noisy-${i}`, source_id: 'noisy', rate_name: `Noisy - ${i}`, rate
+            }))
+        ];
+        vi.mocked(getFirestore).mockReturnValue({ collection: vi.fn(name => (name === 'sources' ? makeQuery(SOURCES) : makeQuery(many))) });
+
+        // Sources at 26.5, 28, 30, 32 and 92: the median is 30, not dragged to 90.
+        expect((await Rate.consensus()).ZWG).toBe(30);
+    });
+});
+
+// =============================================================================
+// Probation
+// =============================================================================
+
+describe('probation', () => {
+
+    const onProbation = {
+        id: 'zwg-new', rate_currency: 'ZWG', rate_name: 'New - ZWG', source_id: 'new',
+        source_url: 'https://new.co.zw', rate: 500, last_rate: 500, enabled: true, probation: true,
+        updated_at: ago({ minutes: 5 }), rate_updated_at: ago({ minutes: 5 })
+    };
+
+    beforeEach(() => {
+        vi.mocked(getFirestore).mockReturnValue({
+            collection: vi.fn(name => (name === 'sources' ? makeQuery(SOURCES) : makeQuery([...RATES, onProbation]))),
+            batch: vi.fn(makeBatch)
+        });
+    });
+
+    it('keeps a source on probation out of what the API serves', async () => {
+        expect(idsOf(await Rate.findAll({ enabled: true }))).not.toContain('zwg-new');
+        expect(await Rate.getAggregatedRates('max', { enabled: true }))
+            .toContainEqual(expect.objectContaining({ rate_currency: 'ZWG', rate: 32 }));
+    });
+
+    it('keeps it out of the consensus', async () => {
+        expect((await Rate.consensus()).ZWG).toBe(29);
+    });
+
+    it('writes the source\'s probation onto every rate it scrapes', async () => {
+        await Rate.upsertFromScrape(
+            { id: 'new', name: 'New', url: 'https://new.co.zw', probation: true },
+            [{ currency: 'ZWG', rate: 30 }, { currency: 'ZAR', rate: 18.4 }]
+        );
+
+        expect(batched.update.find(u => u.id === 'zwg-new').data.probation).toBe(true);
+        expect(batched.set[0].data.probation).toBe(true);
+    });
+
+    it('writes trusted sources\' rates as not on probation', async () => {
+        await Rate.upsertFromScrape({ id: 'source1', name: 'RBZ', url: 'https://rbz.co.zw' }, [{ currency: 'ZWG', rate: 26.6 }]);
+
+        expect(batched.update.find(u => u.id === 'zwg-rbz').data.probation).toBe(false);
     });
 });
 
@@ -367,7 +452,7 @@ describe('upsertFromScrape renames', () => {
             updated_at: ago({ hours: 1 }), rate_updated_at: ago({ hours: 1 })
         }];
         vi.mocked(getFirestore).mockReturnValue({
-            collection: vi.fn(() => makeQuery(two)),
+            collection: vi.fn(name => (name === 'sources' ? makeQuery(SOURCES) : makeQuery(two))),
             batch: vi.fn(makeBatch)
         });
 
@@ -411,5 +496,138 @@ describe('upsertFromScrape retention', () => {
 
         // Six months: out of the API, but well inside the year it is kept for.
         expect(batched.deleted).not.toContain('zwg-stale');
+    });
+});
+
+// =============================================================================
+// Label keys — matching a row to its record despite the model's label drift
+// =============================================================================
+
+describe('labelKey', () => {
+
+    it.each([
+        // One CABS row, as the model labelled it on successive runs
+        ['ZiG USD Buy Cash', 'USD ZiG Buy Cash', 'ZiG Buy Cash', 'USD Buy Cash', 'Buy Cash'],
+        // Zim Price Check rows that gained a currency suffix
+        ['cash rate', 'cash rate ZiG'],
+        ['Maximum rate businesses can use', 'Maximum rate businesses can use ZiG'],
+    ])('gives every wording of one row the same key: %s', (...labels) => {
+        const keys = labels.map(label => labelKey(label, 'ZWG'));
+        expect(new Set(keys).size).toBe(1);
+    });
+
+    it('keeps genuinely different rows apart', () => {
+        const labels = ['Buy', 'Buy Cash', 'Sell', 'Sell Cash', 'Street Value (Sell USD)', 'Street Cost (Buy USD)',
+            'lowest informal-sector rate', 'highest informal-sector rate', 'OK Supermarket', 'Pick N Pay'];
+        const keys = labels.map(label => labelKey(label, 'ZWG'));
+        expect(new Set(keys).size).toBe(labels.length);
+    });
+
+    it('reduces a label that is only a currency to the same key as no label', () => {
+        // A rate stored without a label of its own is named after its currency.
+        expect(labelKey('ZWG', 'ZWG')).toBe('');
+        expect(labelKey('ZiG', 'ZWG')).toBe('');
+        expect(labelKey(null, 'ZWG')).toBe('');
+        expect(labelKey('ZAR', 'ZAR')).toBe('');
+    });
+});
+
+describe('upsertFromScrape label drift', () => {
+
+    const SOURCE = { id: 'cabs', name: 'CABS', url: 'https://www.cabs.co.zw/exchange-rates' };
+
+    const stored = (id, name, rate, hoursAgo) => ({
+        id, rate_currency: 'ZWG', rate_name: `CABS - ${name}`, source_id: 'cabs',
+        source_url: SOURCE.url, rate, last_rate: rate, enabled: true,
+        updated_at: ago({ hours: hoursAgo }), rate_updated_at: ago({ hours: hoursAgo })
+    });
+
+    const useRates = (rates) => vi.mocked(getFirestore).mockReturnValue({
+        collection: vi.fn(name => (name === 'sources' ? makeQuery(SOURCES) : makeQuery(rates))),
+        batch: vi.fn(makeBatch)
+    });
+
+    it('updates the stored rate when the row comes back reworded', async () => {
+        useRates([...RATES, stored('buy-cash', 'Buy Cash', 25.90674, 1)]);
+
+        await Rate.upsertFromScrape(SOURCE, [{ currency: 'ZWG', rate: 25.9, name: 'ZiG USD Buy Cash' }]);
+
+        expect(batched.set).toHaveLength(0);
+        expect(batched.update).toContainEqual(
+            expect.objectContaining({ id: 'buy-cash', data: expect.objectContaining({ rate: 25.9 }) })
+        );
+        // Matched, not renamed: the stored label stays put.
+        expect(batched.update.some(u => u.data.rate_name)).toBe(false);
+    });
+
+    it('merges stored duplicates into the most recently seen one', async () => {
+        useRates([
+            ...RATES,
+            stored('old', 'USD ZiG Buy Cash', 25.90674, 5),
+            stored('newest', 'Buy Cash', 25.90674, 1),
+            stored('older', 'ZiG Buy Cash', 25.907, 3),
+            stored('sell', 'Sell', 27.47253, 1),
+        ]);
+
+        const results = await Rate.upsertFromScrape(SOURCE, [
+            { currency: 'ZWG', rate: 25.90674, name: 'USD Buy Cash' },
+            { currency: 'ZWG', rate: 27.47253, name: 'Sell' },
+        ]);
+
+        expect(batched.deleted.sort()).toEqual(['old', 'older']);
+        expect(results.filter(r => r.action === 'merged')).toHaveLength(2);
+        expect(batched.update.map(u => u.id).sort()).toEqual(['newest', 'sell']);
+        expect(batched.set).toHaveLength(0);
+    });
+
+    it('collapses one row returned twice in the same scrape', async () => {
+        useRates([...RATES]);
+
+        await Rate.upsertFromScrape(SOURCE, [
+            { currency: 'ZWG', rate: 25.974, name: 'ZiG Buy' },
+            { currency: 'ZWG', rate: 25.974, name: 'USD Buy' },
+        ]);
+
+        expect(batched.set).toHaveLength(1);
+    });
+});
+
+// =============================================================================
+// Disabled and deleted sources
+// =============================================================================
+
+describe('rates of a source that is switched off', () => {
+
+    const rate = (id, source_id, rate_currency = 'ZWG') => ({
+        id, rate_currency, rate_name: id, source_id, source_url: '', rate: 99, last_rate: 99,
+        enabled: true, updated_at: ago({ minutes: 5 }), rate_updated_at: ago({ minutes: 5 })
+    });
+
+    beforeEach(() => {
+        vi.mocked(getFirestore).mockReturnValue({
+            collection: vi.fn(name => (name === 'sources' ? makeQuery(SOURCES) : makeQuery([
+                ...RATES,
+                rate('from-off', 'source-off'),
+                rate('from-deleted', 'gone-source'),
+                rate('by-hand', null),
+                rate('only-off', 'source-off', 'GBP'),
+            ]))),
+            batch: vi.fn(makeBatch)
+        });
+    });
+
+    it('are not served, nor are those of a deleted source', async () => {
+        const ids = idsOf(await Rate.findAll({ enabled: true }));
+
+        expect(ids).not.toContain('from-off');
+        expect(ids).not.toContain('from-deleted');
+    });
+
+    it('do not hide a rate added by hand, which has no source', async () => {
+        expect(idsOf(await Rate.findAll({ enabled: true }))).toContain('by-hand');
+    });
+
+    it('do not count towards the currencies served', async () => {
+        expect(await Rate.getUniqueCurrencies()).not.toContain('GBP');
     });
 });
