@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box, Typography, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, CircularProgress, Alert, Chip, Stack, TextField, MenuItem, Link,
-  Dialog, DialogTitle, DialogContent, DialogActions,
+  Dialog, DialogTitle, DialogContent, DialogActions, Checkbox,
 } from '@mui/material';
 import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 import {
@@ -11,8 +11,10 @@ import {
 import { db } from '../../firebase';
 import { useArrayPage } from '../hooks/useArrayPage';
 import { usePerPage } from '../hooks/usePerPage';
+import { useSelection } from '../hooks/useSelection';
 import PaginationBar from '../components/PaginationBar';
 import ListFilterBar from '../components/ListFilterBar';
+import SelectionBar from '../components/SelectionBar';
 
 /** Mirrors what functions/src/services/DiscoveryService.js writes. */
 interface Candidate {
@@ -108,6 +110,51 @@ export default function CandidatesPage() {
   }), [candidates, view]);
 
   const pager = useArrayPage(filtered, perPage, view);
+
+  // Pending until the trigger marks it testing or writes a newer test.
+  const isQueued = (c: Candidate) => c.id in retests && c.status !== 'testing' && retests[c.id] === testStamp(c);
+  const isReviewable = (c: Candidate) => !isQueued(c) && (c.status === 'passed' || c.status === 'failed');
+
+  // Only reviewable rows can be ticked: the bulk actions are the per-row
+  // Retest and Reject, which are disabled on every other row.
+  const selection = useSelection(pager.rows.filter(isReviewable).map((c) => c.id));
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const handleBulkReject = async () => {
+    setBulkBusy(true);
+    try {
+      const batch = writeBatch(db);
+      selection.selected.forEach((id) => batch.update(doc(db, 'source_candidates', id), {
+        status: 'rejected',
+        reviewed_at: serverTimestamp(),
+      }));
+      await batch.commit();
+      selection.clear();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleBulkRetest = async () => {
+    const picked = pager.rows.filter((c) => selection.selected.includes(c.id));
+    setBulkBusy(true);
+    try {
+      const batch = writeBatch(db);
+      picked.forEach((c) => batch.set(doc(collection(db, 'candidate_retests')), {
+        candidate_id: c.id,
+        created_at: serverTimestamp(),
+      }));
+      await batch.commit();
+      setRetests((prev) => ({ ...prev, ...Object.fromEntries(picked.map((c) => [c.id, testStamp(c)])) }));
+      selection.clear();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   // Writing a discovery_runs doc starts the zimrate_discover_request trigger,
   // the same pattern as Test source, because Hosting cuts API calls off at 60s.
@@ -234,7 +281,15 @@ export default function CandidatesPage() {
         <Alert severity={notice.severity} sx={{ mb: 2 }} onClose={() => setNotice(null)}>{notice.text}</Alert>
       )}
 
-      <ListFilterBar activeCount={view !== 'review' ? 1 : 0} onClear={() => setView('review')}>
+      <ListFilterBar
+        active={[
+          view !== 'review' && {
+            label: `Showing: ${VIEWS.find((v) => v.value === view)?.label}`,
+            onDelete: () => setView('review'),
+          },
+        ]}
+        onClear={() => setView('review')}
+      >
         <TextField select value={view} onChange={(e) => setView(e.target.value as View)} size="small" sx={{ minWidth: 190 }}>
           {VIEWS.map((v) => <MenuItem key={v.value} value={v.value}>{v.label}</MenuItem>)}
         </TextField>
@@ -243,10 +298,29 @@ export default function CandidatesPage() {
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}><CircularProgress /></Box>
       ) : (
+        <>
+        <SelectionBar count={selection.selected.length} onClear={selection.clear}>
+          <Button size="small" variant="outlined" disabled={bulkBusy} onClick={handleBulkRetest}>
+            Retest
+          </Button>
+          <Button size="small" variant="outlined" disabled={bulkBusy} onClick={handleBulkReject}>
+            Reject
+          </Button>
+        </SelectionBar>
         <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    size="small"
+                    checked={selection.allTicked}
+                    indeterminate={selection.someTicked}
+                    disabled={!pager.rows.some(isReviewable)}
+                    onChange={selection.toggleAll}
+                    slotProps={{ input: { 'aria-label': 'Select all reviewable candidates on this page' } }}
+                  />
+                </TableCell>
                 <TableCell sx={{ width: '38%' }}>Page</TableCell>
                 <TableCell align="center" sx={{ width: '10%' }}>Test</TableCell>
                 <TableCell sx={{ width: '36%' }}>Findings</TableCell>
@@ -255,11 +329,20 @@ export default function CandidatesPage() {
             </TableHead>
             <TableBody>
               {pager.rows.map((c) => {
-                const queued = c.id in retests && c.status !== 'testing' && retests[c.id] === testStamp(c);
+                const queued = isQueued(c);
                 const status = queued ? STATUS.new : (STATUS[c.status] ?? STATUS.new);
-                const reviewable = !queued && (c.status === 'passed' || c.status === 'failed');
+                const reviewable = isReviewable(c);
                 return (
-                  <TableRow key={c.id} hover>
+                  <TableRow key={c.id} hover selected={selection.isSelected(c.id)}>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        size="small"
+                        checked={selection.isSelected(c.id)}
+                        disabled={!reviewable}
+                        onChange={() => selection.toggle(c.id)}
+                        slotProps={{ input: { 'aria-label': `Select ${c.title || c.domain || c.url}` } }}
+                      />
+                    </TableCell>
                     <TableCell>
                       <Typography fontWeight={600} sx={{ wordBreak: 'break-word' }}>{c.title || c.domain}</Typography>
                       <Link
@@ -310,7 +393,7 @@ export default function CandidatesPage() {
               })}
               {pager.rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} align="center">
+                  <TableCell colSpan={5} align="center">
                     <Typography color="text.secondary" py={3}>
                       {view === 'review' ? 'Nothing awaiting review' : 'No candidates'}
                     </Typography>
@@ -333,6 +416,7 @@ export default function CandidatesPage() {
             label="candidates"
           />
         </TableContainer>
+        </>
       )}
 
       <Dialog open={approving !== null} onClose={() => !saving && setApproving(null)} fullWidth maxWidth="sm">

@@ -3,7 +3,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import {
   Box, Typography, Button, Paper, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, IconButton, CircularProgress,
-  Alert, Tooltip, Chip, Stack, TextField, InputAdornment, MenuItem,
+  Alert, Tooltip, Chip, Stack, TextField, InputAdornment, MenuItem, Checkbox,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -11,13 +11,15 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import {
-  collection, getDocs, getDoc, deleteDoc, doc, addDoc, onSnapshot, serverTimestamp, updateDoc,
+  collection, getDocs, getDoc, deleteDoc, doc, addDoc, onSnapshot, serverTimestamp, updateDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useArrayPage } from '../hooks/useArrayPage';
 import { usePerPage } from '../hooks/usePerPage';
+import { useSelection } from '../hooks/useSelection';
 import PaginationBar from '../components/PaginationBar';
 import ListFilterBar from '../components/ListFilterBar';
+import SelectionBar from '../components/SelectionBar';
 
 /** Mirrors functions/src/models/Source.js — the fields the scraper actually reads. */
 interface Source {
@@ -183,7 +185,41 @@ export default function SourcesPage() {
   }, [sources, search, state]);
 
   const pager = useArrayPage(filtered, perPage, `${search.trim()}|${state}`);
-  const activeCount = (search.trim() ? 1 : 0) + (state !== 'any' ? 1 : 0);
+  const selection = useSelection(pager.rows.map((s) => s.id));
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const handleBulkEnabled = async (enabled: boolean) => {
+    const ids = selection.selected;
+    setBulkBusy(true);
+    try {
+      const batch = writeBatch(db);
+      ids.forEach((id) => batch.update(doc(db, 'sources', id), { enabled, updated_at: serverTimestamp() }));
+      await batch.commit();
+      setSources((prev) => prev.map((s) => (ids.includes(s.id) ? { ...s, enabled } : s)));
+      selection.clear();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = selection.selected;
+    if (!confirm(`Delete ${ids.length} source(s) and all the rates they have scraped?`)) return;
+    setBulkBusy(true);
+    try {
+      const batch = writeBatch(db);
+      ids.forEach((id) => batch.delete(doc(db, 'sources', id)));
+      await batch.commit();
+      setSources((prev) => prev.filter((s) => !ids.includes(s.id)));
+      selection.clear();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   return (
     <Box>
@@ -202,7 +238,13 @@ export default function SourcesPage() {
       )}
 
       <ListFilterBar
-        activeCount={activeCount}
+        active={[
+          search.trim() && { label: `Name or URL contains: ${search.trim()}`, onDelete: () => setSearch('') },
+          state !== 'any' && {
+            label: `State: ${STATE_OPTIONS.find((o) => o.value === state)?.label}`,
+            onDelete: () => setState('any'),
+          },
+        ]}
         onClear={() => {
           setSearch('');
           setState('any');
@@ -238,10 +280,32 @@ export default function SourcesPage() {
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}><CircularProgress /></Box>
       ) : (
+        <>
+        <SelectionBar count={selection.selected.length} onClear={selection.clear}>
+          <Button size="small" variant="outlined" disabled={bulkBusy} onClick={() => handleBulkEnabled(true)}>
+            Enable
+          </Button>
+          <Button size="small" variant="outlined" disabled={bulkBusy} onClick={() => handleBulkEnabled(false)}>
+            Disable
+          </Button>
+          <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} disabled={bulkBusy} onClick={handleBulkDelete}>
+            Delete
+          </Button>
+        </SelectionBar>
         <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    size="small"
+                    checked={selection.allTicked}
+                    indeterminate={selection.someTicked}
+                    disabled={pager.rows.length === 0}
+                    onChange={selection.toggleAll}
+                    slotProps={{ input: { 'aria-label': 'Select all sources on this page' } }}
+                  />
+                </TableCell>
                 <TableCell sx={{ width: '24%' }}>Name</TableCell>
                 <TableCell sx={{ width: '34%' }}>URL</TableCell>
                 <TableCell align="center" sx={{ width: '12%' }}>Enabled</TableCell>
@@ -254,7 +318,15 @@ export default function SourcesPage() {
             </TableHead>
             <TableBody>
               {pager.rows.map((source) => (
-                <TableRow key={source.id} hover>
+                <TableRow key={source.id} hover selected={selection.isSelected(source.id)}>
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      size="small"
+                      checked={selection.isSelected(source.id)}
+                      onChange={() => selection.toggle(source.id)}
+                      slotProps={{ input: { 'aria-label': `Select ${source.name || source.url || 'source'}` } }}
+                    />
+                  </TableCell>
                   <TableCell>
                     <Typography fontWeight={600}>{source.name || '(unnamed)'}</Typography>
                   </TableCell>
@@ -349,7 +421,7 @@ export default function SourcesPage() {
               ))}
               {pager.rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} align="center">
+                  <TableCell colSpan={7} align="center">
                     <Typography color="text.secondary" py={3}>No sources found</Typography>
                   </TableCell>
                 </TableRow>
@@ -370,6 +442,7 @@ export default function SourcesPage() {
             label="sources"
           />
         </TableContainer>
+        </>
       )}
     </Box>
   );

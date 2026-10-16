@@ -50,6 +50,8 @@ function formatDate(value?: string | null) {
   return parsed.isValid ? parsed.toLocaleString(DateTime.DATE_SHORT) : '—';
 }
 
+const ROLE_LABELS = { admin: 'Admins', standard: 'Standard', disabled: 'Disabled' } as const;
+
 export default function UsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -226,7 +228,6 @@ export default function UsersPage() {
   }, [users, search, role]);
 
   const pager = useArrayPage(filtered, perPage, `${search.trim()}|${role}`);
-  const activeCount = (search.trim() ? 1 : 0) + (role !== 'any' ? 1 : 0);
 
   return (
     <Box>
@@ -269,7 +270,10 @@ export default function UsersPage() {
       )}
 
       <ListFilterBar
-        activeCount={activeCount}
+        active={[
+          search.trim() && { label: `Name or email contains: ${search.trim()}`, onDelete: () => setSearch('') },
+          role !== 'any' && { label: `Role: ${ROLE_LABELS[role]}`, onDelete: () => setRole('any') },
+        ]}
         onClear={() => {
           setSearch('');
           setRole('any');

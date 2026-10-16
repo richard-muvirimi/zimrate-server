@@ -3,23 +3,27 @@ import { Link as RouterLink } from 'react-router-dom';
 import {
   Box, Typography, Button, Paper, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, IconButton, CircularProgress,
-  Alert, Tooltip, TextField, InputAdornment, MenuItem, Chip,
+  Alert, Tooltip, TextField, InputAdornment, MenuItem, Chip, Checkbox,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import {
-  deleteDoc, doc, documentId, orderBy, updateDoc, where,
+  deleteDoc, doc, documentId, orderBy, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
 import type { DocumentData, QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useCursorPage } from '../hooks/useCursorPage';
 import { usePerPage } from '../hooks/usePerPage';
+import { useSelection } from '../hooks/useSelection';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import PaginationBar from '../components/PaginationBar';
 import { DateTime, Duration } from 'luxon';
 import ListFilterBar from '../components/ListFilterBar';
+import FilterTextField from '../components/FilterTextField';
+import type { MatchMode } from '../components/FilterTextField';
+import SelectionBar from '../components/SelectionBar';
 
 interface Rate {
   id: string;
@@ -75,14 +79,17 @@ function mapRate(d: QueryDocumentSnapshot<DocumentData>): Rate {
 export default function RatesPage() {
   const { perPage, ready } = usePerPage();
   const [currency, setCurrency] = useState('');
+  const [matchMode, setMatchMode] = useState<MatchMode>('prefix');
   const [state, setState] = useState<StateFilter>('any');
   const [error, setError] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const debouncedCurrency = useDebouncedValue(currency.trim().toUpperCase(), 300);
 
   // Sort is fixed to rate_currency so the currency box can be a range query on
   // the same field — which costs no extra index. Adding a sort selector or a
   // second simultaneous filter would multiply the composite indexes needed.
+  // An exact match is the closed range [X, X], so it reuses the same index.
   const constraints = useMemo(() => {
     const parts: QueryConstraint[] = [];
 
@@ -91,7 +98,8 @@ export default function RatesPage() {
 
     if (debouncedCurrency) {
       parts.push(where('rate_currency', '>=', debouncedCurrency));
-      parts.push(where('rate_currency', '<', `${debouncedCurrency}`));
+      if (matchMode === 'exact') parts.push(where('rate_currency', '<=', debouncedCurrency));
+      else parts.push(where('rate_currency', '<', `${debouncedCurrency}`));
     }
 
     parts.push(orderBy('rate_currency', 'asc'));
@@ -99,9 +107,9 @@ export default function RatesPage() {
     // every composite index anyway, so this is free.
     parts.push(orderBy(documentId(), 'asc'));
     return parts;
-  }, [state, debouncedCurrency]);
+  }, [state, debouncedCurrency, matchMode]);
 
-  const resetKey = `${state}|${debouncedCurrency}`;
+  const resetKey = `${state}|${debouncedCurrency}|${matchMode}`;
 
   const pager = useCursorPage<Rate>({
     path: 'rates',
@@ -142,7 +150,40 @@ export default function RatesPage() {
     [dropLocal],
   );
 
-  const activeCount = (state !== 'any' ? 1 : 0) + (currency ? 1 : 0);
+  const selection = useSelection(pager.rows.map((r) => r.id));
+
+  const handleBulkEnabled = async (enabled: boolean) => {
+    setBulkBusy(true);
+    try {
+      const batch = writeBatch(db);
+      selection.selected.forEach((id) => batch.update(doc(db, 'rates', id), { enabled }));
+      await batch.commit();
+      selection.clear();
+      reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = selection.selected;
+    if (!confirm(`Delete ${ids.length} rate(s)?`)) return;
+    setBulkBusy(true);
+    try {
+      const batch = writeBatch(db);
+      ids.forEach((id) => batch.delete(doc(db, 'rates', id)));
+      await batch.commit();
+      dropLocal((r) => ids.includes(r.id));
+      selection.clear();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const message = error || pager.error;
 
   return (
@@ -157,16 +198,28 @@ export default function RatesPage() {
       {message && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{message}</Alert>}
 
       <ListFilterBar
-        activeCount={activeCount}
+        active={[
+          currency.trim() && {
+            label: matchMode === 'prefix' ? `Currency starts with: ${currency.trim().toUpperCase()}` : `Currency: ${currency.trim().toUpperCase()}`,
+            onDelete: () => setCurrency(''),
+          },
+          state !== 'any' && {
+            label: `State: ${STATE_OPTIONS.find((o) => o.value === state)?.label}`,
+            onDelete: () => setState('any'),
+          },
+        ]}
         onClear={() => {
           setCurrency('');
+          setMatchMode('prefix');
           setState('any');
         }}
       >
-        <TextField
-          placeholder="Currency starts with…"
+        <FilterTextField
+          placeholder={matchMode === 'prefix' ? 'Currency starts with…' : 'Exact currency…'}
           value={currency}
           onChange={(e) => setCurrency(e.target.value)}
+          matchMode={matchMode}
+          onMatchModeChange={setMatchMode}
           size="small"
           slotProps={{
             input: {
@@ -190,10 +243,32 @@ export default function RatesPage() {
         </TextField>
       </ListFilterBar>
 
+      <SelectionBar count={selection.selected.length} onClear={selection.clear}>
+        <Button size="small" variant="outlined" disabled={bulkBusy} onClick={() => handleBulkEnabled(true)}>
+          Enable
+        </Button>
+        <Button size="small" variant="outlined" disabled={bulkBusy} onClick={() => handleBulkEnabled(false)}>
+          Disable
+        </Button>
+        <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} disabled={bulkBusy} onClick={handleBulkDelete}>
+          Delete
+        </Button>
+      </SelectionBar>
+
       <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
         <Table>
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  size="small"
+                  checked={selection.allTicked}
+                  indeterminate={selection.someTicked}
+                  disabled={pager.rows.length === 0}
+                  onChange={selection.toggleAll}
+                  slotProps={{ input: { 'aria-label': 'Select all rates on this page' } }}
+                />
+              </TableCell>
               <TableCell sx={{ width: '12%' }}>Currency</TableCell>
               <TableCell sx={{ width: '32%' }}>Name / Source</TableCell>
               <TableCell align="right" sx={{ width: '13%' }}>Rate</TableCell>
@@ -208,7 +283,7 @@ export default function RatesPage() {
           <TableBody>
             {pager.loading && pager.rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={8} align="center">
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                     <CircularProgress />
                   </Box>
@@ -217,7 +292,15 @@ export default function RatesPage() {
             )}
 
             {pager.rows.map((rate) => (
-              <TableRow key={rate.id} hover sx={{ opacity: pager.loading ? 0.6 : 1 }}>
+              <TableRow key={rate.id} hover selected={selection.isSelected(rate.id)} sx={{ opacity: pager.loading ? 0.6 : 1 }}>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    size="small"
+                    checked={selection.isSelected(rate.id)}
+                    onChange={() => selection.toggle(rate.id)}
+                    slotProps={{ input: { 'aria-label': `Select ${rate.rate_currency} ${rate.rate_name}` } }}
+                  />
+                </TableCell>
                 <TableCell><Typography fontWeight={700}>{rate.rate_currency}</Typography></TableCell>
                 <TableCell>
                   <Typography variant="body2">{rate.rate_name}</Typography>
@@ -290,7 +373,7 @@ export default function RatesPage() {
 
             {!pager.loading && pager.rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={8} align="center">
                   <Typography color="text.secondary" py={3}>No rates found</Typography>
                 </TableCell>
               </TableRow>
