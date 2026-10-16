@@ -20,47 +20,34 @@ function resolveBaseUrl(raw) {
 }
 
 /**
- * The OpenAI-compatible endpoints to extract with, in the order to try them:
- * LLM_* is the main one and is required, LLM_BACKUP_* is optional and only
- * used when the main one fails.
+ * The models to extract with, in the order to try them, all behind the one
+ * OpenAI-compatible endpoint (the LiteLLM proxy). Each later model is only
+ * used when the ones before it fail.
  *
- * *_EXTRA_BODY is an optional JSON object merged into that provider's requests,
- * for parameters outside the OpenAI schema — e.g. DeepSeek's
- * {"thinking":{"type":"disabled"}}, without which its reasoning tokens use up
- * max_tokens before any JSON is written.
+ * Models run with their default thinking: no per-model parameters are sent,
+ * so LiteLLM's model config, shared with other projects, stays as it is.
  */
 export function llmProviders() {
-    const providers = [];
+    const apiKey = process.env.LLM_API_KEY;
+    const apiUrl = process.env.LLM_API_URL;
+    const models = (process.env.LLM_MODELS || '').split(',').map(m => m.trim()).filter(Boolean);
 
-    for (const [label, prefix] of [['main', 'LLM_'], ['backup', 'LLM_BACKUP_']]) {
-        const apiKey = process.env[`${prefix}API_KEY`];
-        const apiUrl = process.env[`${prefix}API_URL`];
-        const model = process.env[`${prefix}MODEL`];
-
-        if (!apiKey && !apiUrl && !model && label === 'backup') continue;
-
-        if (!apiKey || !apiUrl || !model) {
-            throw new Error(`${prefix}API_KEY, ${prefix}API_URL and ${prefix}MODEL must all be set`);
-        }
-
-        let extraBody = {};
-        const rawExtraBody = process.env[`${prefix}EXTRA_BODY`];
-        if (rawExtraBody) {
-            try {
-                extraBody = JSON.parse(rawExtraBody);
-            } catch {
-                throw new Error(`${prefix}EXTRA_BODY must be a JSON object`);
-            }
-            if (!_.isPlainObject(extraBody)) {
-                throw new Error(`${prefix}EXTRA_BODY must be a JSON object`);
-            }
-        }
-
-        providers.push({ label, model, apiKey, baseURL: resolveBaseUrl(apiUrl), extraBody });
+    if (!apiKey || !apiUrl || models.length === 0) {
+        throw new Error('LLM_API_KEY, LLM_API_URL and LLM_MODELS must all be set');
     }
 
-    return providers;
+    const baseURL = resolveBaseUrl(apiUrl);
+    return models.map(model => ({ model, apiKey, baseURL }));
 }
+
+// Thinking models spend reasoning tokens from this same budget, so it has to
+// leave room for the answer after them.
+const MAX_TOKENS = 16000;
+
+// LiteLLM retries a call that the model's provider rejected (e.g. a free-tier
+// 429) before the next model in LLM_MODELS, which may be a paid one, is tried.
+// Sent per request so the shared LiteLLM config stays as it is.
+const NUM_RETRIES = 2;
 
 /**
  * Pages write the local currency as "ZiG" and give its ISO code as ZWG in the
@@ -507,10 +494,10 @@ export class ScrapingService {
     // =========================================================================
 
     /**
-     * Extract all currency exchange rates from page content with the main LLM,
-     * falling back to the backup LLM if the main one fails.
+     * Extract all currency exchange rates from page content with the first LLM
+     * in LLM_MODELS, falling back to the next one each time a model fails.
      *
-     * The backup reruns the whole extraction rather than resuming the main one's
+     * A fallback reruns the whole extraction rather than resuming the failed
      * conversation: tool call ids and message shapes differ between providers.
      *
      * @param {string} content - page content (markdown, text, or HTML)
@@ -525,8 +512,8 @@ export class ScrapingService {
             try {
                 return await ScrapingService.extractRatesWith(provider, content, url, knownLabels);
             } catch (err) {
-                logger.warn(`[LLM] ${provider.label} (${provider.model}) failed: ${err.message}`);
-                failures.push(`${provider.label} LLM (${provider.model}): ${err.message}`);
+                logger.warn(`[LLM] ${provider.model} failed: ${err.message}`);
+                failures.push(`LLM (${provider.model}): ${err.message}`);
             }
         }
 
@@ -541,16 +528,17 @@ export class ScrapingService {
      * the model calls convert_cross_rate_to_usd to convert them to USD base before
      * returning the final JSON. This avoids the model guessing the conversion.
      *
-     * @param {{label, model, apiKey, baseURL, extraBody}} provider - one entry of llmProviders()
+     * @param {{model, apiKey, baseURL}} provider - one entry of llmProviders()
      * @param {string} content - page content (markdown, text, or HTML)
      * @param {string} url - source URL (context hint for the model)
      * @param {Array<{currency, name}>} knownLabels - labels this page's rates are stored under
      * @returns {Array<{currency, rate, name, updated_at, page_date}>}
      */
-    static async extractRatesWith({ model, apiKey, baseURL, extraBody }, content, url, knownLabels = []) {
+    static async extractRatesWith({ model, apiKey, baseURL }, content, url, knownLabels = []) {
         // Bounded so a hung main provider leaves the backup time to run inside
         // the function's 300s timeout; the SDK default is 10 minutes, 2 retries.
-        const client = new OpenAI({ apiKey, baseURL, timeout: 60_000, maxRetries: 1 });
+        // No SDK retries: LiteLLM does them (NUM_RETRIES), inside this timeout.
+        const client = new OpenAI({ apiKey, baseURL, timeout: 60_000, maxRetries: 0 });
 
         // Read current local currency code from options — configurable without redeployment
         const localCurrency = await Option.getValue('local_currency_code', 'ZWG');
@@ -705,8 +693,8 @@ ${truncatedContent}`;
                 tools,
                 tool_choice: 'auto',
                 temperature: 0.1,
-                max_tokens: 3000,
-                ...extraBody
+                max_tokens: MAX_TOKENS,
+                num_retries: NUM_RETRIES
             });
 
             // The SDK throws APIError on a non-2xx, so there is no status check
@@ -782,8 +770,8 @@ ${truncatedContent}`;
             messages,
             response_format: { type: 'json_object' },
             temperature: 0.1,
-            max_tokens: 3000,
-            ...extraBody
+            max_tokens: MAX_TOKENS,
+            num_retries: NUM_RETRIES
         });
 
         const finalContent = finalResult.choices?.[0]?.message?.content;

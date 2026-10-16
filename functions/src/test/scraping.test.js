@@ -328,54 +328,39 @@ describe('isStale', () => {
 
 describe('llmProviders', () => {
 
-    const MAIN = { LLM_API_KEY: 'g-key', LLM_API_URL: 'https://gemini.test/v1beta/openai/chat/completions', LLM_MODEL: 'gemini-x' };
-    const BACKUP = { LLM_BACKUP_API_KEY: 'd-key', LLM_BACKUP_API_URL: 'https://deepseek.test', LLM_BACKUP_MODEL: 'deepseek-x' };
+    const ENV = { LLM_API_KEY: 'l-key', LLM_API_URL: 'https://litellm.test/chat/completions', LLM_MODELS: 'gemini-x, deepseek-x' };
 
     afterEach(() => vi.unstubAllEnvs());
 
     const stubEnv = (vars) => {
-        for (const name of [...Object.keys(MAIN), ...Object.keys(BACKUP), 'LLM_EXTRA_BODY', 'LLM_BACKUP_EXTRA_BODY']) {
+        for (const name of Object.keys(ENV)) {
             vi.stubEnv(name, vars[name] ?? '');
         }
     };
 
-    it('lists main then backup, with the chat-completions path stripped', () => {
-        stubEnv({ ...MAIN, ...BACKUP });
+    it('lists the models in order on the one endpoint, with the chat-completions path stripped', () => {
+        stubEnv(ENV);
 
         expect(llmProviders()).toEqual([
-            { label: 'main', model: 'gemini-x', apiKey: 'g-key', baseURL: 'https://gemini.test/v1beta/openai', extraBody: {} },
-            { label: 'backup', model: 'deepseek-x', apiKey: 'd-key', baseURL: 'https://deepseek.test', extraBody: {} },
+            { model: 'gemini-x', apiKey: 'l-key', baseURL: 'https://litellm.test' },
+            { model: 'deepseek-x', apiKey: 'l-key', baseURL: 'https://litellm.test' },
         ]);
     });
 
-    it('runs without a backup when none is configured', () => {
-        stubEnv(MAIN);
-        expect(llmProviders().map(p => p.label)).toEqual(['main']);
+    it('runs with a single model', () => {
+        stubEnv({ ...ENV, LLM_MODELS: 'gemini-x' });
+        expect(llmProviders().map(p => p.model)).toEqual(['gemini-x']);
     });
 
-    it('refuses a missing or half-configured provider', () => {
-        stubEnv(BACKUP);
-        expect(() => llmProviders()).toThrow(/LLM_API_KEY, LLM_API_URL and LLM_MODEL/);
-
-        stubEnv({ ...MAIN, LLM_BACKUP_API_KEY: 'd-key' });
-        expect(() => llmProviders()).toThrow(/LLM_BACKUP_API_KEY, LLM_BACKUP_API_URL and LLM_BACKUP_MODEL/);
+    it.each(['LLM_API_KEY', 'LLM_API_URL', 'LLM_MODELS'])('refuses a missing %s', (name) => {
+        stubEnv({ ...ENV, [name]: '' });
+        expect(() => llmProviders()).toThrow(/LLM_API_KEY, LLM_API_URL and LLM_MODELS/);
     });
 
-    it('parses extra body params for the provider they are set on only', () => {
-        stubEnv({ ...MAIN, ...BACKUP, LLM_BACKUP_EXTRA_BODY: '{"thinking":{"type":"disabled"}}' });
-
-        const [main, backup] = llmProviders();
-        expect(main.extraBody).toEqual({});
-        expect(backup.extraBody).toEqual({ thinking: { type: 'disabled' } });
+    it('refuses a model list with no names in it', () => {
+        stubEnv({ ...ENV, LLM_MODELS: ' , ' });
+        expect(() => llmProviders()).toThrow(/LLM_MODELS/);
     });
-
-    it.each(['{thinking: disabled}', '["thinking"]', '"disabled"'])(
-        'refuses extra body that is not a JSON object: %s',
-        (raw) => {
-            stubEnv({ ...MAIN, LLM_EXTRA_BODY: raw });
-            expect(() => llmProviders()).toThrow('LLM_EXTRA_BODY must be a JSON object');
-        },
-    );
 });
 
 describe('ScrapingService.extractRates', () => {
@@ -383,12 +368,9 @@ describe('ScrapingService.extractRates', () => {
     const RATES = [{ currency: 'ZWG', rate: 26.5, name: 'Official', updated_at: null }];
 
     beforeEach(() => {
-        vi.stubEnv('LLM_API_KEY', 'g-key');
-        vi.stubEnv('LLM_API_URL', 'https://gemini.test');
-        vi.stubEnv('LLM_MODEL', 'gemini-x');
-        vi.stubEnv('LLM_BACKUP_API_KEY', 'd-key');
-        vi.stubEnv('LLM_BACKUP_API_URL', 'https://deepseek.test');
-        vi.stubEnv('LLM_BACKUP_MODEL', 'deepseek-x');
+        vi.stubEnv('LLM_API_KEY', 'l-key');
+        vi.stubEnv('LLM_API_URL', 'https://litellm.test');
+        vi.stubEnv('LLM_MODELS', 'gemini-x,deepseek-x');
     });
 
     afterEach(() => {
@@ -396,14 +378,14 @@ describe('ScrapingService.extractRates', () => {
         vi.restoreAllMocks();
     });
 
-    it('uses the main provider alone when it succeeds', async () => {
+    it('uses the first model alone when it succeeds', async () => {
         const run = vi.spyOn(ScrapingService, 'extractRatesWith').mockResolvedValue(RATES);
 
         expect(await ScrapingService.extractRates('page', 'https://example.com')).toEqual(RATES);
-        expect(run.mock.calls.map(([p]) => p.label)).toEqual(['main']);
+        expect(run.mock.calls.map(([p]) => p.model)).toEqual(['gemini-x']);
     });
 
-    it('reruns with the backup when the main provider fails', async () => {
+    it('reruns with the next model when the first fails', async () => {
         const run = vi.spyOn(ScrapingService, 'extractRatesWith')
             .mockRejectedValueOnce(new Error('429 quota exceeded'))
             .mockResolvedValueOnce(RATES);
@@ -412,13 +394,13 @@ describe('ScrapingService.extractRates', () => {
         expect(run.mock.calls.map(([p]) => p.model)).toEqual(['gemini-x', 'deepseek-x']);
     });
 
-    it('reports both failures when the backup fails too', async () => {
+    it('reports every failure when all models fail', async () => {
         vi.spyOn(ScrapingService, 'extractRatesWith')
             .mockRejectedValueOnce(new Error('503 high demand'))
             .mockRejectedValueOnce(new Error('401 invalid key'));
 
         await expect(ScrapingService.extractRates('page', 'https://example.com')).rejects.toThrow(
-            'main LLM (gemini-x): 503 high demand | backup LLM (deepseek-x): 401 invalid key'
+            'LLM (gemini-x): 503 high demand | LLM (deepseek-x): 401 invalid key'
         );
     });
 

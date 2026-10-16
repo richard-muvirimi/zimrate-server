@@ -100,40 +100,26 @@ this file; it is gitignored.
 | --- | --- |
 | `APIFY_TOKEN` | Apify API token for the page fetcher |
 | `APIFY_ACTOR_ID` | actor id, e.g. `tyganeutronics~zimrate-page-fetcher` |
-| `LLM_API_KEY` | API key for the main extraction model |
-| `LLM_API_URL` | main chat-completions endpoint |
-| `LLM_MODEL` | main model name |
-| `LLM_BACKUP_API_KEY` | API key for the backup model; optional |
-| `LLM_BACKUP_API_URL` | backup chat-completions endpoint; optional |
-| `LLM_BACKUP_MODEL` | backup model name; optional |
-| `LLM_EXTRA_BODY` / `LLM_BACKUP_EXTRA_BODY` | JSON object merged into that provider's requests; optional |
+| `LLM_API_KEY` | LiteLLM virtual key |
+| `LLM_API_URL` | LiteLLM proxy URL |
+| `LLM_MODELS` | comma-separated LiteLLM model names, in the order to try them |
 | `APPCHECK_ENFORCE` | `true` to enforce App Check on `/api/admin/**`. Leave unset while rolling out |
 
 ### Swapping the LLM provider
 
-Rate extraction uses the official `openai` SDK against OpenAI-format endpoints, so switching
-provider is only environment variables. `LLM_*` is the main provider and must be set.
-`LLM_BACKUP_*` is optional: when set, any failure from the main provider (outage, quota, invalid
-JSON) reruns the whole extraction against the backup. The `*_API_URL` vars accept either the base
-URL or the full chat-completions path.
+Rate extraction uses the official `openai` SDK against a [LiteLLM](https://docs.litellm.ai)
+proxy, so switching provider or model is LiteLLM config plus `LLM_MODELS`. The models in
+`LLM_MODELS` are tried in order: any failure from one (outage, quota, invalid JSON) reruns the
+whole extraction on the next. `LLM_API_URL` accepts either the base URL or the full
+chat-completions path.
 
-There are no built-in defaults. This deployment runs Gemini as main, through its OpenAI-compatible
-endpoint, and DeepSeek as backup:
+There are no built-in defaults. List free models first so paid ones only run as a fallback:
 
 ```bash
-LLM_API_KEY=<google-ai-studio-key>
-LLM_API_URL=https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
-LLM_MODEL=gemini-3.5-flash-lite
-
-LLM_BACKUP_API_KEY=<deepseek-key>
-LLM_BACKUP_API_URL=https://api.deepseek.com/chat/completions
-LLM_BACKUP_MODEL=deepseek-flash
-LLM_BACKUP_EXTRA_BODY={"thinking":{"type":"disabled"}}
+LLM_API_KEY=<litellm-virtual-key>
+LLM_API_URL=https://llm-router.tyganeutronics.com
+LLM_MODELS=gemini/gemini-3.5-flash-lite,deepseek-flash
 ```
-
-`*_EXTRA_BODY` carries parameters outside the OpenAI schema. DeepSeek needs thinking disabled:
-its models reason by default, and the reasoning tokens use up `max_tokens` before any JSON is
-written.
 
 Pin a dated model name rather than a `*-latest` alias: a silent model swap can reword rate
 labels, and a reworded label reads as a different rate.
