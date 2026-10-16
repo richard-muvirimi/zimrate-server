@@ -310,7 +310,7 @@ export default function UsersPage() {
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}><CircularProgress /></Box>
       ) : (
-        <TableContainer component={Paper} sx={{ border: '1px solid', borderColor: 'divider' }}>
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
           <Table>
             <TableHead>
               <TableRow>

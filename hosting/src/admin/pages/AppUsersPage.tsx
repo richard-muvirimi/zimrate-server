@@ -97,7 +97,7 @@ export default function AppUsersPage() {
       {pager.loading && pager.rows.length === 0 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}><CircularProgress /></Box>
       ) : (
-        <TableContainer component={Paper} sx={{ border: '1px solid', borderColor: 'divider' }}>
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
           <Table>
             <TableHead>
               <TableRow>
@@ -183,23 +183,23 @@ export default function AppUsersPage() {
               )}
             </TableBody>
           </Table>
+
+          <PaginationBar
+            page={pager.page}
+            rangeStart={pager.rangeStart}
+            rangeEnd={pager.rangeEnd}
+            // Auth only offers a forward token, so there is no count to show.
+            total={null}
+            hasPrev={pager.hasPrev}
+            hasNext={pager.hasNext}
+            loading={pager.loading}
+            onFirst={pager.first}
+            onPrev={pager.prev}
+            onNext={pager.next}
+            label="app users"
+          />
         </TableContainer>
       )}
-
-      <PaginationBar
-        page={pager.page}
-        rangeStart={pager.rangeStart}
-        rangeEnd={pager.rangeEnd}
-        // Auth only offers a forward token, so there is no count to show.
-        total={null}
-        hasPrev={pager.hasPrev}
-        hasNext={pager.hasNext}
-        loading={pager.loading}
-        onFirst={pager.first}
-        onPrev={pager.prev}
-        onNext={pager.next}
-        label="app users"
-      />
 
       <Dialog open={wallet !== null} onClose={() => setWallet(null)} maxWidth="md" fullWidth>
         <DialogTitle>
