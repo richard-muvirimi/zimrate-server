@@ -18,10 +18,8 @@ export const mean = (values) =>
     values.reduce((total, value) => total.plus(value), new Decimal(0)).div(values.length);
 
 /**
- * The middle value, averaging the two middle ones on an even-sized set — what the
- * Laravel `preferred('median')` scope did by feeding an even split back through
- * its MEAN aggregate. Taking the upper-middle value instead skews every even
- * group upward.
+ * The middle value, averaging the two middle ones on an even-sized set. Taking
+ * the upper-middle value instead skews every even group upward.
  */
 export const median = (values) => {
     const sorted = _.sortBy(values);

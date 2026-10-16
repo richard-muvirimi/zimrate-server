@@ -123,9 +123,9 @@ export class RatesController {
     }
 
     /**
-     * Answers an unrecognised `currency` with a 422, as Laravel's
-     * `exists:rates,rate_currency` rule did. An empty 200 left a client no way to
-     * tell a typo from a currency that genuinely has no rates at the moment.
+     * Answers an unrecognised `currency` with a 422. An empty 200 left a client
+     * no way to tell a typo from a currency that genuinely has no rates at the
+     * moment.
      *
      * Joi has already uppercased the value by the time this runs.
      *

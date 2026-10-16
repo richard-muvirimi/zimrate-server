@@ -1,6 +1,6 @@
 /**
  * Rate model unit tests — mirrors the legacy PHP RateScopeTest, plus the value
- * screening and median rules that came back from the Laravel scraper.
+ * screening and median rules.
  *
  * api.test.js drives the HTTP surface through a Firestore mock that deliberately
  * ignores where() clauses. These tests are about the queries themselves, so the

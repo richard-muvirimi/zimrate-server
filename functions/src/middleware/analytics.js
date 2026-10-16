@@ -46,9 +46,8 @@ function normaliseEndpoint(path) {
  * Express middleware that logs each API request to GA4 via the Measurement
  * Protocol. Fires and forgets — never delays or fails the request.
  *
- * Derived from the legacy Laravel LogApiAnalytics middleware, but deliberately
- * no longer a mirror of it: that one sent the caller's raw IP as the client id,
- * set user_id for anonymous callers, and reported every API call as a page_view.
+ * Deliberately does not send the caller's raw IP as the client id, set user_id
+ * for anonymous callers, or report every API call as a page_view.
  *
  * Sent during the request rather than on res 'finish'. That costs the response
  * status and the matched route pattern, but a Cloud Functions instance can be

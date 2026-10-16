@@ -14,7 +14,7 @@ const isBoolean = Joi.alternatives().try(
     booleanString
 );
 
-// Laravel validated `before:now` per request. A plain .max(DateTime.now()) freezes
+// Checked per request: a plain .max(DateTime.now()) freezes
 // the ceiling at module load, so a warm instance rejects timestamps that are
 // genuinely in the past — and which instance you land on decides whether your
 // request works.

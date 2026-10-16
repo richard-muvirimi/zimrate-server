@@ -232,8 +232,7 @@ class Rate {
     // API representation
     //
     // The GraphQL schema declares currency, last_checked, last_updated, rate and
-    // last_rate non-null — as the Laravel backend's columns were — so none of them
-    // may be null here: a null under a non-null field blanks out the whole rate
+    // last_rate non-null, so none of them may be null here: a null under a non-null field blanks out the whole rate
     // list. Timestamps fall back to the record's other timestamps, and last_rate
     // falls back to the current rate, which is what a first scrape stores when
     // there is no previous reading; it leaves deltas at zero rather than dividing
@@ -763,8 +762,8 @@ class Rate {
                     };
                     if (pending !== undefined && pending !== null) changes.pending_rate = null;
 
-                    // last_rate holds the previous *different* reading, as it did in the
-                    // Laravel scraper. Shifting on every scrape would overwrite the real
+                    // last_rate holds the previous *different* reading. Shifting on
+                    // every scrape would overwrite the real
                     // previous value with the current one on the next hourly run, so a
                     // rate that holds steady for a day — most of them, most days — would
                     // show a zero delta instead of its last actual move.
