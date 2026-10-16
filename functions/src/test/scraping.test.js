@@ -404,6 +404,44 @@ describe('ScrapingService.extractRates', () => {
         );
     });
 
+    describe('when a model is rate-limited', () => {
+        const rateLimited = () => Object.assign(new Error('429 rate limit'), { status: 429 });
+
+        beforeEach(() => vi.useFakeTimers());
+        afterEach(() => vi.useRealTimers());
+
+        it('waits and retries the same model rather than falling back', async () => {
+            const run = vi.spyOn(ScrapingService, 'extractRatesWith')
+                .mockRejectedValueOnce(rateLimited())
+                .mockResolvedValueOnce(RATES);
+
+            const result = ScrapingService.extractRates('page', 'https://example.com', [], { rateLimitWait: 60_000 });
+            await vi.advanceTimersByTimeAsync(30_000);
+
+            expect(await result).toEqual(RATES);
+            expect(run.mock.calls.map(([p]) => p.model)).toEqual(['gemini-x', 'gemini-x']);
+        });
+
+        it('falls back once the wait budget would be overrun', async () => {
+            const run = vi.spyOn(ScrapingService, 'extractRatesWith')
+                .mockRejectedValueOnce(rateLimited())
+                .mockResolvedValueOnce(RATES);
+
+            // 20s is shorter than the shortest pause, so no retry fits.
+            expect(await ScrapingService.extractRates('page', 'https://example.com', [], { rateLimitWait: 20_000 })).toEqual(RATES);
+            expect(run.mock.calls.map(([p]) => p.model)).toEqual(['gemini-x', 'deepseek-x']);
+        });
+
+        it('does not wait out errors other than a rate limit', async () => {
+            const run = vi.spyOn(ScrapingService, 'extractRatesWith')
+                .mockRejectedValueOnce(Object.assign(new Error('503 overloaded'), { status: 503 }))
+                .mockResolvedValueOnce(RATES);
+
+            expect(await ScrapingService.extractRates('page', 'https://example.com', [], { rateLimitWait: 180_000 })).toEqual(RATES);
+            expect(run.mock.calls.map(([p]) => p.model)).toEqual(['gemini-x', 'deepseek-x']);
+        });
+    });
+
     it('does not fall back on an empty result', async () => {
         // No rates is an answer, not a failure: testSource relies on it to try
         // the browser fetch, and the backup reading the same page would agree.

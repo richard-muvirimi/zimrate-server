@@ -5,7 +5,7 @@ import _ from 'lodash';
 import Option from '../models/Option.js';
 import Source from '../models/Source.js';
 import Rate from '../models/Rate.js';
-import { ScrapingService } from './ScrapingService.js';
+import { ScrapingService, RATE_LIMIT_WAIT_LONG_MS } from './ScrapingService.js';
 import { runActor } from '../utils/apify.js';
 import { numberSetting } from '../utils/settings.js';
 
@@ -194,7 +194,7 @@ export class DiscoveryService {
      * @returns {Promise<object>} the fields to write onto the candidate
      */
     static async vet(url) {
-        const test = await ScrapingService.testSource(url);
+        const test = await ScrapingService.testSource(url, { rateLimitWait: RATE_LIMIT_WAIT_LONG_MS });
         const attempt = test.ok ? test.attempts.find(a => !a.error) : null;
 
         if (!attempt) {

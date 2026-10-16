@@ -49,6 +49,20 @@ const MAX_TOKENS = 16000;
 // Sent per request so the shared LiteLLM config stays as it is.
 const NUM_RETRIES = 2;
 
+// LiteLLM's retries land within seconds, inside the same rate-limit minute. On
+// a 429 the extractor waits this long, jittered so jobs refused together do not
+// retry together, and tries the same model again until its budget runs out.
+const RATE_LIMIT_PAUSE_MS = 20_000;
+const RATE_LIMIT_JITTER_MS = 10_000;
+
+// How long one extraction may keep waiting out a model's rate limit. The admin
+// scrape and test run under a 300s function timeout; the hourly scrape and the
+// candidate tests, where bursts come from, run under 540s.
+export const RATE_LIMIT_WAIT_SHORT_MS = 60_000;
+export const RATE_LIMIT_WAIT_LONG_MS = 180_000;
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 /**
  * Pages write the local currency as "ZiG" and give its ISO code as ZWG in the
  * same breath. Every measured run answered ZWG, but the prompt is the only thing
@@ -274,7 +288,7 @@ export class ScrapingService {
 
         const limit = pLimit(5);
         const tasks = sources.map(source =>
-            limit(() => ScrapingService.scrapeSource(source))
+            limit(() => ScrapingService.scrapeSource(source, { rateLimitWait: RATE_LIMIT_WAIT_LONG_MS }))
         );
 
         const results = await Promise.allSettled(tasks);
@@ -301,9 +315,10 @@ export class ScrapingService {
      * Updates source.status and source.last_scraped on completion.
      *
      * @param {Source} source
+     * @param {{rateLimitWait?: number}} [options] - see extractRates
      * @returns {Array<{action, currency}>} list of rate upsert results
      */
-    static async scrapeSource(source) {
+    static async scrapeSource(source, { rateLimitWait } = {}) {
         logger.log(`[ScrapingService] Scraping: ${source.url}`);
 
         try {
@@ -318,7 +333,7 @@ export class ScrapingService {
             // A midpoint's name is ours, not a page label, and the model must
             // keep returning the two sides it was computed from.
             const knownLabels = (await Rate.knownLabels(source)).filter(l => !isComputedMid(l.name));
-            const extracted = await ScrapingService.extractRates(content, source.url, knownLabels);
+            const extracted = await ScrapingService.extractRates(content, source.url, knownLabels, { rateLimitWait });
 
             if (extracted.length === 0) {
                 throw new Error('The LLM could not find any currency rates on this page');
@@ -410,9 +425,10 @@ export class ScrapingService {
      * of the static text could give as reliably.
      *
      * @param {string} url
+     * @param {{rateLimitWait?: number}} [options] - see extractRates
      * @returns {{ok: boolean, javascript: boolean|null, attempts: Array<{javascript, content_length, preview, rates, error}>}}
      */
-    static async testSource(url) {
+    static async testSource(url, { rateLimitWait } = {}) {
         const attempts = [];
 
         for (const javascript of [false, true]) {
@@ -428,7 +444,7 @@ export class ScrapingService {
                     throw new Error('The page returned too little text to read rates from');
                 }
 
-                attempt.rates = await ScrapingService.extractRates(content, url);
+                attempt.rates = await ScrapingService.extractRates(content, url, [], { rateLimitWait });
 
                 if (attempt.rates.length === 0) {
                     throw new Error('No currency rates were found on this page');
@@ -500,20 +516,37 @@ export class ScrapingService {
      * A fallback reruns the whole extraction rather than resuming the failed
      * conversation: tool call ids and message shapes differ between providers.
      *
+     * A rate-limited model (429) is waited out and retried for up to
+     * `rateLimitWait` before falling back, so a burst of extractions is spread
+     * over the next minutes rather than sent to the next model, which may be paid.
+     *
      * @param {string} content - page content (markdown, text, or HTML)
      * @param {string} url - source URL (context hint for the model)
      * @param {Array<{currency, name}>} knownLabels - labels this page's rates are stored under
+     * @param {{rateLimitWait?: number}} [options] - ms to keep waiting out one model's rate limit
      * @returns {Array<{currency, rate, name, updated_at, page_date}>}
      */
-    static async extractRates(content, url, knownLabels = []) {
+    static async extractRates(content, url, knownLabels = [], { rateLimitWait = RATE_LIMIT_WAIT_SHORT_MS } = {}) {
         const failures = [];
 
         for (const provider of llmProviders()) {
-            try {
-                return await ScrapingService.extractRatesWith(provider, content, url, knownLabels);
-            } catch (err) {
-                logger.warn(`[LLM] ${provider.model} failed: ${err.message}`);
-                failures.push(`LLM (${provider.model}): ${err.message}`);
+            const deadline = Date.now() + rateLimitWait;
+
+            for (;;) {
+                try {
+                    return await ScrapingService.extractRatesWith(provider, content, url, knownLabels);
+                } catch (err) {
+                    const pause = RATE_LIMIT_PAUSE_MS + Math.random() * RATE_LIMIT_JITTER_MS;
+                    if (err.status === 429 && Date.now() + pause < deadline) {
+                        logger.warn(`[LLM] ${provider.model} rate-limited, retrying in ${Math.round(pause / 1000)}s`);
+                        await sleep(pause);
+                        continue;
+                    }
+
+                    logger.warn(`[LLM] ${provider.model} failed: ${err.message}`);
+                    failures.push(`LLM (${provider.model}): ${err.message}`);
+                    break;
+                }
             }
         }
 
