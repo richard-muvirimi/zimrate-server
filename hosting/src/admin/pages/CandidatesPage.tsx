@@ -15,6 +15,7 @@ import { useSelection } from '../hooks/useSelection';
 import PaginationBar from '../components/PaginationBar';
 import ListFilterBar from '../components/ListFilterBar';
 import SelectionBar from '../components/SelectionBar';
+import LinkifiedText from '../../components/LinkifiedText';
 
 /** Mirrors what functions/src/services/DiscoveryService.js writes. */
 interface Candidate {
@@ -276,9 +277,9 @@ export default function CandidatesPage() {
         one is never proposed again. Searches and the weekly schedule are under Options → Discovery.
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}><LinkifiedText>{error}</LinkifiedText></Alert>}
       {notice && (
-        <Alert severity={notice.severity} sx={{ mb: 2 }} onClose={() => setNotice(null)}>{notice.text}</Alert>
+        <Alert severity={notice.severity} sx={{ mb: 2 }} onClose={() => setNotice(null)}><LinkifiedText>{notice.text}</LinkifiedText></Alert>
       )}
 
       <ListFilterBar
@@ -367,7 +368,7 @@ export default function CandidatesPage() {
                         <Typography variant="caption" color="text.secondary" display="block">Page dated {c.page_date}</Typography>
                       )}
                       {c.error && (
-                        <Typography variant="caption" color="error" display="block">{c.error}</Typography>
+                        <Typography variant="caption" color="error" display="block"><LinkifiedText>{c.error}</LinkifiedText></Typography>
                       )}
                     </TableCell>
                     <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>

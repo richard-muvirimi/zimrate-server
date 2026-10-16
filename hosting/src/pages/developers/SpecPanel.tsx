@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Box, CircularProgress, Paper, Typography } from '@mui/material';
 import type { RestVersion } from './types';
+import LinkifiedText from '../../components/LinkifiedText';
 
 /** Brand blue, readable on Redoc's white canvas. */
 const REDOC_PRIMARY = '#0B6FD0';
@@ -93,7 +94,7 @@ export default function SpecPanel({
         {error ? (
           <Box sx={{ p: 4 }}>
             <Typography color="error" gutterBottom>
-              The specification could not be loaded ({error}).
+              The specification could not be loaded (<LinkifiedText>{error}</LinkifiedText>).
             </Typography>
             <Box component="a" href={openApiUrl} target="_blank" rel="noopener" sx={{ color: REDOC_PRIMARY }}>
               Open the raw specification file

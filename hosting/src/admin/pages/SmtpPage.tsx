@@ -8,6 +8,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import SaveIcon from '@mui/icons-material/Save';
 import BoltIcon from '@mui/icons-material/Bolt';
 import { adminFetch } from '../adminFetch';
+import LinkifiedText from '../../components/LinkifiedText';
 
 interface SmtpConfig {
   host: string;
@@ -122,7 +123,7 @@ export default function SmtpPage() {
         never sent back to this page.
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}><LinkifiedText>{error}</LinkifiedText></Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
       <Paper sx={{ p: 3, border: '1px solid', borderColor: 'divider' }}>

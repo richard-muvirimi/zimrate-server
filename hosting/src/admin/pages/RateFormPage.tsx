@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
+import LinkifiedText from '../../components/LinkifiedText';
 
 interface RateForm {
   rate_currency: string;
@@ -102,7 +103,7 @@ export default function RateFormPage() {
         {isNew ? 'Add Rate' : 'Edit Rate'}
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }}><LinkifiedText>{error}</LinkifiedText></Alert>}
 
       <Paper sx={{ p: 3 }}>
         <Box component="form" onSubmit={handleSubmit}>

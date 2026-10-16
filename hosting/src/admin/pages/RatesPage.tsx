@@ -24,6 +24,7 @@ import ListFilterBar from '../components/ListFilterBar';
 import FilterTextField from '../components/FilterTextField';
 import type { MatchMode } from '../components/FilterTextField';
 import SelectionBar from '../components/SelectionBar';
+import LinkifiedText from '../../components/LinkifiedText';
 
 interface Rate {
   id: string;
@@ -195,7 +196,7 @@ export default function RatesPage() {
         </Button>
       </Box>
 
-      {message && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{message}</Alert>}
+      {message && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}><LinkifiedText>{message}</LinkifiedText></Alert>}
 
       <ListFilterBar
         active={[

@@ -11,6 +11,7 @@ import { adminFetch } from '../adminFetch';
 import { useTokenPage } from '../hooks/useTokenPage';
 import { usePerPage } from '../hooks/usePerPage';
 import PaginationBar from '../components/PaginationBar';
+import LinkifiedText from '../../components/LinkifiedText';
 
 interface AppUser {
   uid: string;
@@ -92,7 +93,7 @@ export default function AppUsersPage() {
         </Tooltip>
       </Stack>
 
-      {pager.error && <Alert severity="error" sx={{ mb: 2 }}>{pager.error}</Alert>}
+      {pager.error && <Alert severity="error" sx={{ mb: 2 }}><LinkifiedText>{pager.error}</LinkifiedText></Alert>}
 
       {pager.loading && pager.rows.length === 0 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}><CircularProgress /></Box>
@@ -209,7 +210,7 @@ export default function AppUsersPage() {
           </Typography>
         </DialogTitle>
         <DialogContent dividers>
-          {walletError && <Alert severity="error" sx={{ mb: 2 }}>{walletError}</Alert>}
+          {walletError && <Alert severity="error" sx={{ mb: 2 }}><LinkifiedText>{walletError}</LinkifiedText></Alert>}
           {wallet?.data === null && !walletError && (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
           )}

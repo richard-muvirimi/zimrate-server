@@ -12,6 +12,7 @@ import { auth, getAppCheckToken } from '../firebase';
 import { API_BASE_URL } from '../config';
 import PageHero from '../components/PageHero';
 import SiteLayout from '../components/SiteLayout';
+import LinkifiedText from '../components/LinkifiedText';
 
 /**
  * Self-service account deletion, for Google Play's requirement that the option stay reachable
@@ -128,7 +129,7 @@ export default function DeleteAccountPage() {
 
       <Box sx={{ px: { xs: 2, md: 6 }, py: { xs: 6, md: 8 } }}>
         <Box sx={{ maxWidth: 640, mx: 'auto' }}>
-          {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+          {error && <Alert severity="error" sx={{ mb: 3 }}><LinkifiedText>{error}</LinkifiedText></Alert>}
 
           {stage === 'signIn' && (
             <Stack

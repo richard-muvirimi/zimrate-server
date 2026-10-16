@@ -9,6 +9,7 @@ import { ref, uploadBytes } from 'firebase/storage';
 import { storage } from '../../firebase';
 import { adminFetch } from '../adminFetch';
 import { BRANDING_STORAGE_KEY } from '../../branding';
+import LinkifiedText from '../../components/LinkifiedText';
 
 interface BrandingConfig {
   app_name: string;
@@ -146,7 +147,7 @@ export default function BrandingPage() {
         The name and imagery used across the public site, the admin area and social previews.
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}><LinkifiedText>{error}</LinkifiedText></Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
       <Paper sx={{ p: 3, border: '1px solid', borderColor: 'divider' }}>

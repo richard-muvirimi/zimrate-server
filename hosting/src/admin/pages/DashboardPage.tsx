@@ -27,6 +27,7 @@ import {
   biggestMoves, freshnessBuckets, isLive, quoteSpread, sourceState, toDateTime,
   type RateDoc, type SourceDoc, type SourceState,
 } from '../components/dashboard/rateStats';
+import LinkifiedText from '../../components/LinkifiedText';
 
 /** Mirrors DEFAULT_FRESHNESS_DAYS in functions/src/models/Rate.js. */
 const DEFAULT_FRESHNESS_DAYS = 7;
@@ -125,7 +126,7 @@ export default function DashboardPage() {
     };
   }, [data]);
 
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (error) return <Alert severity="error"><LinkifiedText>{error}</LinkifiedText></Alert>;
 
   if (!data || !view) {
     return (

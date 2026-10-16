@@ -23,6 +23,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import UploadIcon from '@mui/icons-material/Upload';
 import { ref, uploadBytes } from 'firebase/storage';
 import { storage } from '../../firebase';
+import LinkifiedText from '../../components/LinkifiedText';
 
 interface AdminUser {
   uid: string;
@@ -258,7 +259,7 @@ export default function UsersPage() {
         </Stack>
       </Stack>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}><LinkifiedText>{error}</LinkifiedText></Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
       {!registrationEnabled && (

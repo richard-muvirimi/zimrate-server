@@ -15,6 +15,7 @@ import StatTile from './dashboard/StatTile';
 import ChartCard from './dashboard/ChartCard';
 import SectionHeading from './dashboard/SectionHeading';
 import { CoinFlowChart, GrantTypesChart } from './dashboard/CoinCharts';
+import LinkifiedText from '../../components/LinkifiedText';
 
 interface Window {
   last24h: number;
@@ -67,7 +68,7 @@ export default function EconomySection() {
 
   const heading = <SectionHeading title="In-app coins" />;
 
-  if (error) return <>{heading}<Alert severity="error" sx={{ mb: 4 }}>{error}</Alert></>;
+  if (error) return <>{heading}<Alert severity="error" sx={{ mb: 4 }}><LinkifiedText>{error}</LinkifiedText></Alert></>;
 
   if (!data) {
     return (

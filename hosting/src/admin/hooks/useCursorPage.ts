@@ -88,9 +88,10 @@ export function useCursorPage<T>({
   withTotal = false,
 }: CursorPageOptions<T>): PageResult<T> {
   const [fetched, setFetched] = useState<Fetched<T> | null>(null);
-  const [totalState, setTotalState] = useState<{ key: string; value: number | null }>({
+  const [totalState, setTotalState] = useState<{ key: string; value: number | null; error: string }>({
     key: resetKey,
     value: null,
+    error: '',
   });
   const [stored, setStored] = useState<Position>({ key: resetKey, perPage, page: 1, tick: 0 });
 
@@ -107,6 +108,7 @@ export function useCursorPage<T>({
 
   // A stale total belongs to the previous filter, so treat it as unknown.
   const total = totalState.key === resetKey ? totalState.value : null;
+  const totalError = totalState.key === resetKey ? totalState.error : '';
 
   // stack[n] is the last document of page n, used as the cursor for page n+1.
   // Never cleared: page always resets to 1 on a filter change, and each entry
@@ -166,10 +168,10 @@ export function useCursorPage<T>({
     let active = true;
     getCountFromServer(query(collection(db, path), ...constraintsRef.current))
       .then((snap) => {
-        if (active) setTotalState({ key: resetKey, value: snap.data().count });
+        if (active) setTotalState({ key: resetKey, value: snap.data().count, error: '' });
       })
-      .catch(() => {
-        if (active) setTotalState({ key: resetKey, value: null });
+      .catch((e) => {
+        if (active) setTotalState({ key: resetKey, value: null, error: e instanceof Error ? e.message : String(e) });
       });
     return () => {
       active = false;
@@ -202,7 +204,7 @@ export function useCursorPage<T>({
   return {
     rows,
     loading: enabled && !fresh,
-    error: fresh ? fetched.error : '',
+    error: (fresh ? fetched.error : '') || totalError,
     page,
     hasPrev: page > 1,
     hasNext: fresh ? fetched.hasNext : false,

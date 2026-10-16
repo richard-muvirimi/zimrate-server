@@ -7,6 +7,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import UploadIcon from '@mui/icons-material/Upload';
 import { DateTime } from 'luxon';
 import { adminFetch } from '../adminFetch';
+import LinkifiedText from '../../components/LinkifiedText';
 
 export default function ImportExportPage() {
   const [exporting, setExporting] = useState(false);
@@ -62,7 +63,7 @@ export default function ImportExportPage() {
     <Box maxWidth={700}>
       <Typography variant="h5" fontWeight={700} gutterBottom>Import / Export</Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }}><LinkifiedText>{error}</LinkifiedText></Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
       <Stack spacing={3}>

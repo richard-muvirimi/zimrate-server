@@ -20,6 +20,7 @@ import { useSelection } from '../hooks/useSelection';
 import PaginationBar from '../components/PaginationBar';
 import ListFilterBar from '../components/ListFilterBar';
 import SelectionBar from '../components/SelectionBar';
+import LinkifiedText from '../../components/LinkifiedText';
 
 /** Mirrors functions/src/models/Source.js — the fields the scraper actually reads. */
 interface Source {
@@ -230,10 +231,10 @@ export default function SourcesPage() {
         </Button>
       </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }}><LinkifiedText>{error}</LinkifiedText></Alert>}
       {notice && (
         <Alert severity={notice.severity} sx={{ mb: 2 }} onClose={() => setNotice(null)}>
-          {notice.text}
+          <LinkifiedText>{notice.text}</LinkifiedText>
         </Alert>
       )}
 

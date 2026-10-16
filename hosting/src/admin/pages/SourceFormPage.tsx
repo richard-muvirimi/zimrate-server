@@ -11,6 +11,7 @@ import {
   doc, getDoc, setDoc, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
+import LinkifiedText from '../../components/LinkifiedText';
 
 interface SourceForm {
   name: string;
@@ -195,7 +196,7 @@ export default function SourceFormPage() {
         {isNew ? 'Add Source' : 'Edit Source'}
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }}><LinkifiedText>{error}</LinkifiedText></Alert>}
 
       <Paper sx={{ p: 3 }}>
         <Box component="form" onSubmit={handleSubmit}>
@@ -241,9 +242,9 @@ export default function SourceFormPage() {
                   ) : (
                     <Alert severity="error">
                       No rates could be read from this page.
-                      {shownTest.error && <Box>{shownTest.error}</Box>}
+                      {shownTest.error && <Box><LinkifiedText>{shownTest.error}</LinkifiedText></Box>}
                       {shownTest.attempts.map((a) => (
-                        <Box key={String(a.javascript)}>{modeLabel(a.javascript)}: {a.error}</Box>
+                        <Box key={String(a.javascript)}>{modeLabel(a.javascript)}: <LinkifiedText>{a.error}</LinkifiedText></Box>
                       ))}
                     </Alert>
                   )}

@@ -19,6 +19,7 @@ import {
   type OptionDef,
   type OptionGroup,
 } from '../options';
+import LinkifiedText from '../../components/LinkifiedText';
 
 interface Row extends OptionDef {
   /** Absent until the option has been written to Firestore at least once. */
@@ -262,7 +263,7 @@ export default function OptionsPage() {
         automatically.
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}><LinkifiedText>{error}</LinkifiedText></Alert>}
 
       <Stack spacing={3}>
         {groups.map((group) => {

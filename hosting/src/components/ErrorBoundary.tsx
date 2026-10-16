@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Box, Typography, Button, Paper } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import LinkifiedText from './LinkifiedText';
 
 interface Props {
   children: ReactNode;
@@ -73,7 +74,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {isChunkError
               ? 'Part of the app failed to download. Check your connection and reload.'
-              : this.state.error?.message ?? 'An unexpected error occurred.'}
+              : <LinkifiedText>{this.state.error?.message ?? 'An unexpected error occurred.'}</LinkifiedText>}
           </Typography>
 
           {import.meta.env.DEV && this.state.errorInfo && (

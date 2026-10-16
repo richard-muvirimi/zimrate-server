@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../firebase';
+import LinkifiedText from '../../components/LinkifiedText';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -55,7 +56,7 @@ export default function LoginPage() {
           Sign in to manage rates, sources, and settings.
         </Typography>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}><LinkifiedText>{error}</LinkifiedText></Alert>}
 
         <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <TextField

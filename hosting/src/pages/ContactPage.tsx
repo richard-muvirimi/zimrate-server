@@ -8,6 +8,7 @@ import PageHero from '../components/PageHero';
 import SafeEmail from '../components/SafeEmail';
 import { API_BASE_URL } from '../config';
 import { useBranding } from '../useBranding';
+import LinkifiedText from '../components/LinkifiedText';
 
 interface FormState {
   name: string;
@@ -111,7 +112,7 @@ export default function ContactPage() {
             >
               {error && (
                 <Alert severity="error" sx={{ mb: 3 }}>
-                  {error}
+                  <LinkifiedText>{error}</LinkifiedText>
                 </Alert>
               )}
 
