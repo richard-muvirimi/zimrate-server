@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
-  Alert, Box, Button, Chip, CircularProgress, Divider, Grid, Paper, Stack,
-  Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography,
+  Alert, Box, Button, Chip, CircularProgress, Grid, Tooltip,
 } from '@mui/material';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
@@ -12,6 +11,10 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { DateTime } from 'luxon';
 import { adminFetch } from '../adminFetch';
+import StatTile from './dashboard/StatTile';
+import ChartCard from './dashboard/ChartCard';
+import SectionHeading from './dashboard/SectionHeading';
+import { CoinFlowChart, GrantTypesChart } from './dashboard/CoinCharts';
 
 interface Window {
   last24h: number;
@@ -34,6 +37,14 @@ interface Economy {
 
 const n = (value?: number) => (value ?? 0).toLocaleString();
 
+/** Grant types are the app's own identifiers; these read better to a person. */
+function grantLabel(type: string) {
+  if (type === 'purchase') return 'Bought in the app';
+  if (type === 'unknown') return 'Not recorded';
+  const words = type.replace(/[_-]+/g, ' ').trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /**
  * Coin economy overview.
  *
@@ -54,22 +65,29 @@ export default function EconomySection() {
     return () => { active = false; };
   }, []);
 
-  if (error) return <Alert severity="error" sx={{ mb: 4 }}>{error}</Alert>;
+  const heading = <SectionHeading title="In-app coins" />;
+
+  if (error) return <>{heading}<Alert severity="error" sx={{ mb: 4 }}>{error}</Alert></>;
 
   if (!data) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-        <CircularProgress size={28} />
-      </Box>
+      <>
+        {heading}
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress size={28} />
+        </Box>
+      </>
     );
   }
 
   if (data.computedAt === null) {
     return (
-      <Alert severity="info" sx={{ mb: 4 }}>
-        No economy snapshot yet. It is written by the nightly wallet sweep, so these figures
-        appear after its first run.
-      </Alert>
+      <>
+        {heading}
+        <Alert severity="info" sx={{ mb: 4 }}>
+          Coin figures are tallied once a night, so they will appear here after the first nightly run.
+        </Alert>
+      </>
     );
   }
 
@@ -79,141 +97,97 @@ export default function EconomySection() {
     ? Math.round((data.accounts.anonymous / data.accounts.total) * 100)
     : 0;
 
-  const cards = [
+  const bought30d = data.purchases?.last30dCoins ?? 0;
+  // Purchases are grants too, so they are taken out of the granted total to be shown on their own.
+  const earned30d = Math.max((data.granted?.last30d ?? 0) - bought30d, 0);
+
+  const grantTypes = Object.entries(data.grantsByType ?? {})
+    .map(([type, { count, coins }]) => ({ label: grantLabel(type), count, coins }))
+    .sort((a, b) => b.coins - a.coins);
+
+  const tiles = [
     {
-      label: 'Coins outstanding',
+      label: 'Coins held by users',
       value: n(data.coinsOutstanding),
-      caption: `${n(data.usersWithBalance)} accounts holding coins`,
-      icon: <MonetizationOnIcon sx={{ color: 'primary.main', fontSize: 30 }} />,
+      caption: `${n(data.usersWithBalance)} people have coins to spend`,
+      icon: <MonetizationOnIcon />,
     },
     {
-      label: 'Accounts',
+      label: 'App users',
       value: n(data.accounts?.total),
-      caption: `${anonymousShare}% anonymous · ${n(data.accounts?.newLast7d)} new this week`,
-      icon: <PhoneAndroidIcon sx={{ color: 'primary.main', fontSize: 30 }} />,
+      caption: `${n(data.accounts?.newLast7d)} joined this week · ${anonymousShare}% not signed in`,
+      icon: <PhoneAndroidIcon />,
       to: '/admin/app-users',
     },
     {
-      label: 'Granted (30d)',
+      label: 'Coins given out',
       value: n(data.granted?.last30d),
-      caption: `${n(data.granted?.last24h)} in the last day`,
-      icon: <TrendingUpIcon sx={{ color: 'success.main', fontSize: 30 }} />,
+      caption: `Last 30 days · ${n(data.granted?.last24h)} in the last day`,
+      icon: <TrendingUpIcon />,
     },
     {
-      label: 'Spent (30d)',
+      label: 'Coins spent',
       value: n(data.spent?.last30d),
-      caption: `${n(data.spent?.last24h)} in the last day`,
-      icon: <TrendingDownIcon sx={{ color: 'primary.main', fontSize: 30 }} />,
+      caption: `Last 30 days · ${n(data.spent?.last24h)} in the last day`,
+      icon: <TrendingDownIcon />,
     },
     {
-      label: 'Purchased (30d)',
-      value: n(data.purchases?.last30dCoins),
-      caption: `${n(data.purchases?.last30dCount)} purchases`,
-      icon: <ShoppingCartIcon sx={{ color: 'primary.main', fontSize: 30 }} />,
+      label: 'Coins bought',
+      value: n(bought30d),
+      caption: `Last 30 days · ${n(data.purchases?.last30dCount)} purchases`,
+      icon: <ShoppingCartIcon />,
     },
     {
-      label: 'Overdrawn',
+      label: 'Balances below zero',
       value: n(overdrawn),
       // Not a fault: a wallet goes negative when two handsets draw on the same grant before
       // they sync. Worth watching, not worth alarming over.
-      caption: overdrawn ? 'Spent on two devices before syncing' : 'No negative balances',
-      icon: (
-        <WarningAmberIcon
-          sx={{ color: overdrawn ? 'warning.main' : 'success.main', fontSize: 30 }}
-        />
-      ),
-      tone: overdrawn ? 'warning' : undefined,
+      caption: overdrawn
+        ? 'Coins spent on two phones before they synced. Worth watching, not a fault'
+        : 'No negative balances',
+      icon: <WarningAmberIcon />,
+      tone: overdrawn ? 'warning' as const : 'good' as const,
     },
   ];
 
-  const byType = Object.entries(data.grantsByType ?? {})
-    .sort(([, a], [, b]) => b.coins - a.coins);
-
   return (
     <Box sx={{ mb: 4 }}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        alignItems={{ sm: 'center' }}
-        justifyContent="space-between"
-        spacing={1}
-        sx={{ mb: 1.5 }}
-      >
-        <Typography variant="subtitle2" fontWeight={700} color="text.secondary">
-          COIN ECONOMY
-        </Typography>
-        <Tooltip title={computed.toLocaleString(DateTime.DATETIME_MED)}>
-          <Chip
-            size="small"
-            variant="outlined"
-            label={`Snapshot ${computed.toRelative()}`}
-          />
+      <SectionHeading title="In-app coins">
+        <Tooltip title={`Tallied ${computed.toLocaleString(DateTime.DATETIME_MED)}. Coin figures are counted once a night, not live.`}>
+          <Chip size="small" variant="outlined" label={`Counted ${computed.toRelative()}`} />
         </Tooltip>
-      </Stack>
+      </SectionHeading>
 
-      <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        {cards.map(({ label, value, caption, icon, to, tone }) => (
-          <Grid key={label} size={{ xs: 6, md: 4, lg: 2 }}>
-            <Paper
-              {...(to ? { component: RouterLink, to } : {})}
-              sx={{
-                p: 2.5,
-                height: '100%',
-                display: 'block',
-                textDecoration: 'none',
-                border: '1px solid',
-                borderColor: tone === 'warning' ? 'warning.main' : 'divider',
-                transition: 'border-color 0.2s, transform 0.2s',
-                ...(to && {
-                  '&:hover': { borderColor: 'primary.main', transform: 'translateY(-2px)' },
-                }),
-              }}
-            >
-              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 0.5 }}>
-                {icon}
-                <Typography variant="h5" fontWeight={700}>{value}</Typography>
-              </Stack>
-              <Typography variant="body2" color="text.secondary">{label}</Typography>
-              <Typography variant="caption" color="text.secondary">{caption}</Typography>
-            </Paper>
+      <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
+        {tiles.map((tile) => (
+          <Grid key={tile.label} size={{ xs: 6, md: 4 }}>
+            <StatTile {...tile} />
           </Grid>
         ))}
       </Grid>
 
-      {byType.length > 0 && (
-        <Paper sx={{ border: '1px solid', borderColor: 'divider' }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" fontWeight={700}>Where coins come from</Typography>
-            <Button component={RouterLink} to="/admin/app-users" size="small">App users</Button>
-          </Stack>
-          <Divider />
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Type</TableCell>
-                <TableCell align="right">Grants</TableCell>
-                <TableCell align="right">Coins</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {byType.map(([type, { count, coins }]) => (
-                <TableRow key={type} hover>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight={600}>{type}</Typography>
-                  </TableCell>
-                  <TableCell align="right">{n(count)}</TableCell>
-                  <TableCell align="right">{n(coins)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <Box sx={{ px: 2, py: 1.5 }}>
-            <Typography variant="caption" color="text.secondary">
-              Totals cover the retention window only — history older than that is deleted by the
-              same nightly pass that writes these figures.
-            </Typography>
-          </Box>
-        </Paper>
-      )}
+      <Grid container spacing={2.5}>
+        <Grid size={{ xs: 12, lg: grantTypes.length ? 6 : 12 }}>
+          <ChartCard
+            title="Coins in and out"
+            subtitle="Coins added to wallets against coins spent, over the last 30 days"
+          >
+            <CoinFlowChart earned={earned30d} bought={bought30d} spent={data.spent?.last30d ?? 0} />
+          </ChartCard>
+        </Grid>
+        {grantTypes.length > 0 && (
+          <Grid size={{ xs: 12, lg: 6 }}>
+            <ChartCard
+              title="Where coins come from"
+              subtitle="Coins given out, by how they were earned"
+              action={<Button component={RouterLink} to="/admin/app-users" size="small">App users</Button>}
+              footnote="Covers coin history the app still keeps. Older history is cleared each night."
+            >
+              <GrantTypesChart types={grantTypes} />
+            </ChartCard>
+          </Grid>
+        )}
+      </Grid>
     </Box>
   );
 }
