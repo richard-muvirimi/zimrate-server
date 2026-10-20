@@ -195,7 +195,6 @@ export default function AppUsersPage() {
             hasNext={pager.hasNext}
             loading={pager.loading}
             onFirst={pager.first}
-            onPrev={pager.prev}
             onNext={pager.next}
             label="app users"
           />

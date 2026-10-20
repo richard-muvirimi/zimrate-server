@@ -17,7 +17,8 @@ import { db } from '../../firebase';
 import { useCursorPage } from '../hooks/useCursorPage';
 import { usePerPage } from '../hooks/usePerPage';
 import { useSelection } from '../hooks/useSelection';
-import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { useUrlFilters } from '../hooks/useUrlFilters';
+import { useUrlSearchInput } from '../hooks/useUrlSearchInput';
 import PaginationBar from '../components/PaginationBar';
 import { DateTime, Duration } from 'luxon';
 import ListFilterBar from '../components/ListFilterBar';
@@ -77,15 +78,21 @@ function mapRate(d: QueryDocumentSnapshot<DocumentData>): Rate {
   return { id: d.id, ...d.data() } as Rate;
 }
 
+const FILTER_DEFAULTS = { currency: '', match: '', state: '' };
+
 export default function RatesPage() {
   const { perPage, ready } = usePerPage();
-  const [currency, setCurrency] = useState('');
-  const [matchMode, setMatchMode] = useState<MatchMode>('prefix');
-  const [state, setState] = useState<StateFilter>('any');
+  const [filters, setFilters, clearFilters] = useUrlFilters(FILTER_DEFAULTS);
+  const [currency, setCurrency] = useUrlSearchInput(
+    filters.currency,
+    useCallback((value: string) => setFilters({ currency: value }), [setFilters]),
+  );
+  const matchMode: MatchMode = filters.match === 'exact' ? 'exact' : 'prefix';
+  const state = STATE_OPTIONS.find((o) => o.value === filters.state)?.value ?? 'any';
   const [error, setError] = useState('');
   const [bulkBusy, setBulkBusy] = useState(false);
 
-  const debouncedCurrency = useDebouncedValue(currency.trim().toUpperCase(), 300);
+  const currencyFilter = filters.currency.trim().toUpperCase();
 
   // Sort is fixed to rate_currency so the currency box can be a range query on
   // the same field — which costs no extra index. Adding a sort selector or a
@@ -97,10 +104,10 @@ export default function RatesPage() {
     if (state === 'enabled') parts.push(where('enabled', '==', true));
     else if (state === 'disabled') parts.push(where('enabled', '==', false));
 
-    if (debouncedCurrency) {
-      parts.push(where('rate_currency', '>=', debouncedCurrency));
-      if (matchMode === 'exact') parts.push(where('rate_currency', '<=', debouncedCurrency));
-      else parts.push(where('rate_currency', '<', `${debouncedCurrency}`));
+    if (currencyFilter) {
+      parts.push(where('rate_currency', '>=', currencyFilter));
+      if (matchMode === 'exact') parts.push(where('rate_currency', '<=', currencyFilter));
+      else parts.push(where('rate_currency', '<', `${currencyFilter}`));
     }
 
     parts.push(orderBy('rate_currency', 'asc'));
@@ -108,9 +115,9 @@ export default function RatesPage() {
     // every composite index anyway, so this is free.
     parts.push(orderBy(documentId(), 'asc'));
     return parts;
-  }, [state, debouncedCurrency, matchMode]);
+  }, [state, currencyFilter, matchMode]);
 
-  const resetKey = `${state}|${debouncedCurrency}|${matchMode}`;
+  const resetKey = `${state}|${currencyFilter}|${matchMode}`;
 
   const pager = useCursorPage<Rate>({
     path: 'rates',
@@ -200,27 +207,23 @@ export default function RatesPage() {
 
       <ListFilterBar
         active={[
-          currency.trim() && {
-            label: matchMode === 'prefix' ? `Currency starts with: ${currency.trim().toUpperCase()}` : `Currency: ${currency.trim().toUpperCase()}`,
-            onDelete: () => setCurrency(''),
+          currencyFilter && {
+            label: matchMode === 'prefix' ? `Currency starts with: ${currencyFilter}` : `Currency: ${currencyFilter}`,
+            onDelete: () => setFilters({ currency: '' }),
           },
           state !== 'any' && {
             label: `State: ${STATE_OPTIONS.find((o) => o.value === state)?.label}`,
-            onDelete: () => setState('any'),
+            onDelete: () => setFilters({ state: '' }),
           },
         ]}
-        onClear={() => {
-          setCurrency('');
-          setMatchMode('prefix');
-          setState('any');
-        }}
+        onClear={clearFilters}
       >
         <FilterTextField
           placeholder={matchMode === 'prefix' ? 'Currency starts with…' : 'Exact currency…'}
           value={currency}
           onChange={(e) => setCurrency(e.target.value)}
           matchMode={matchMode}
-          onMatchModeChange={setMatchMode}
+          onMatchModeChange={(mode) => setFilters({ match: mode === 'prefix' ? '' : mode })}
           size="small"
           slotProps={{
             input: {
@@ -234,7 +237,7 @@ export default function RatesPage() {
         <TextField
           select
           value={state}
-          onChange={(e) => setState(e.target.value as StateFilter)}
+          onChange={(e) => setFilters({ state: e.target.value === 'any' ? '' : e.target.value })}
           size="small"
           sx={{ minWidth: 170 }}
         >

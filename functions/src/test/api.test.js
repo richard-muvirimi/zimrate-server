@@ -1410,7 +1410,80 @@ describe('Console roster', () => {
             .set('Authorization', 'Bearer test-token');
 
         expect(res.status).toBe(200);
-        expect(res.body.map(u => u.uid)).toEqual(['admin1']);
+        expect(res.body.users.map(u => u.uid)).toEqual(['admin1']);
+        expect(res.body.nextPageToken).toBeNull();
         expect(listUsers).toHaveBeenCalledTimes(2);
+    });
+
+    const person = (uid, extra = {}) => ({
+        uid,
+        email: `${uid}@example.com`,
+        providerData: [{ providerId: 'password' }],
+        customClaims: {},
+        metadata: { creationTime: 'Tue, 01 Sep 2026 09:00:00 GMT' },
+        ...extra,
+    });
+
+    function asAdmin(listUsers) {
+        vi.mocked(getAuth).mockReturnValue({
+            verifyIdToken: vi.fn().mockResolvedValue({ uid: 'admin1', admin: true }),
+            listUsers,
+        });
+    }
+
+    it('stops at a page and resumes from the token at the next match', async () => {
+        const batch = { users: [person('u1'), person('u2'), person('u3')], pageToken: undefined };
+        const listUsers = vi.fn().mockResolvedValue(batch);
+        asAdmin(listUsers);
+
+        const first = await request
+            .get('/api/admin/users?limit=2')
+            .set('Authorization', 'Bearer test-token');
+
+        expect(first.body.users.map(u => u.uid)).toEqual(['u1', 'u2']);
+        expect(first.body.nextPageToken).toEqual(expect.any(String));
+
+        const second = await request
+            .get(`/api/admin/users?limit=2&pageToken=${first.body.nextPageToken}`)
+            .set('Authorization', 'Bearer test-token');
+
+        expect(second.body.users.map(u => u.uid)).toEqual(['u3']);
+        expect(second.body.nextPageToken).toBeNull();
+    });
+
+    it('filters by role and by name or email before paging', async () => {
+        asAdmin(vi.fn().mockResolvedValue({
+            users: [
+                person('alice', { customClaims: { admin: true } }),
+                person('bob'),
+                person('carol', { disabled: true, displayName: 'Carol Admin' }),
+            ],
+            pageToken: undefined,
+        }));
+
+        const admins = await request
+            .get('/api/admin/users?role=admin')
+            .set('Authorization', 'Bearer test-token');
+        expect(admins.body.users.map(u => u.uid)).toEqual(['alice']);
+
+        const disabled = await request
+            .get('/api/admin/users?role=disabled')
+            .set('Authorization', 'Bearer test-token');
+        expect(disabled.body.users.map(u => u.uid)).toEqual(['carol']);
+
+        const searched = await request
+            .get('/api/admin/users?search=ADMIN')
+            .set('Authorization', 'Bearer test-token');
+        expect(searched.body.users.map(u => u.uid)).toEqual(['carol']);
+    });
+
+    it('rejects a token it did not issue', async () => {
+        asAdmin(vi.fn());
+
+        const res = await request
+            .get('/api/admin/users?pageToken=not-a-token')
+            .set('Authorization', 'Bearer test-token');
+
+        expect(res.status).toBe(400);
     });
 });

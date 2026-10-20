@@ -8,6 +8,10 @@ import _ from 'lodash';
 import { deleteCache } from '../utils/cache.js';
 import { deleteAccount } from '../utils/account.js';
 
+const ROSTER_DEFAULT_LIMIT = 25;
+const ROSTER_MAX_LIMIT = 100;
+const ROSTER_MAX_BATCHES = 50;
+
 export class AdminController {
 
     // =========================================================================
@@ -15,33 +19,69 @@ export class AdminController {
     // =========================================================================
 
     /**
-     * The console roster: accounts that can actually sign in here.
+     * The console roster: accounts that can actually sign in here, a page at a time.
      *
      * Anonymous accounts are dropped. Every app install creates one, so they now outnumber the
      * people running the console by orders of magnitude, and leaving them in buried the admins in
      * a list that also could not be paged. They have their own page — see EconomyController.
      *
-     * Filtered server-side rather than in the browser because `listUsers` returns accounts in uid
-     * order: an admin can sit anywhere in that sequence, so a client-side filter over a truncated
-     * prefix would simply lose people.
+     * Filtered here rather than in the browser because `listUsers` returns accounts in uid order
+     * and filters nothing: an admin can sit anywhere in that sequence. So the walk goes through
+     * Auth only as far as it takes to fill one page, plus one match to know there is another,
+     * and hands back where it stopped as `nextPageToken` — the Auth page it was reading and the
+     * position in it. Forward only, like the app-users list, and for the same reason.
+     *
+     * Query: `limit`, `pageToken`, `search` (in the name or email), `role` (admin, standard,
+     * disabled).
      */
-    static async listUsers(_req, res, next) {
+    static async listUsers(req, res, next) {
         try {
-            // listUsers caps at 1000 per call. Follow nextPageToken so a tenant
-            // over that limit isn't silently truncated; the cap keeps a runaway
-            // loop bounded rather than pretending to be unlimited.
-            //
-            // Raised well past the old 5 now that anonymous accounts are filtered out: the walk
-            // is the cost either way, but what comes back is a handful of rows rather than
-            // everything it looked at.
-            const MAX_PAGES = 50;
+            const requested = Number.parseInt(req.query.limit, 10);
+            const limit = Number.isFinite(requested)
+                ? Math.min(Math.max(requested, 1), ROSTER_MAX_LIMIT)
+                : ROSTER_DEFAULT_LIMIT;
+            const term = String(req.query.search ?? '').trim().toLowerCase();
+            const role = String(req.query.role ?? '');
+
+            let position = { t: undefined, i: 0 };
+            if (req.query.pageToken) {
+                try {
+                    position = JSON.parse(Buffer.from(String(req.query.pageToken), 'base64url').toString());
+                } catch {
+                    return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Invalid pageToken' });
+                }
+            }
+
+            const matches = (u) => {
+                if ((u.providerData ?? []).length === 0) return false;
+                const isAdmin = u.customClaims?.admin === true;
+                if (role === 'admin' && !isAdmin) return false;
+                if (role === 'standard' && isAdmin) return false;
+                if (role === 'disabled' && !u.disabled) return false;
+                return !term
+                    || (u.email ?? '').toLowerCase().includes(term)
+                    || (u.displayName ?? '').toLowerCase().includes(term);
+            };
+
+            // listUsers caps at 1000 per call. The batch cap keeps one request bounded; a walk
+            // that reaches it without filling the page still hands back where it got to.
             const collected = [];
-            let pageToken;
-            for (let i = 0; i < MAX_PAGES; i++) {
-                const page = await getAuth().listUsers(1000, pageToken);
-                collected.push(...page.users.filter(u => (u.providerData ?? []).length > 0));
-                pageToken = page.pageToken;
-                if (!pageToken) break;
+            let resume = null;
+            let { t, i } = position;
+            for (let batches = 0; batches < ROSTER_MAX_BATCHES && !resume; batches++) {
+                const batch = await getAuth().listUsers(1000, t || undefined);
+                for (; i < batch.users.length; i++) {
+                    if (!matches(batch.users[i])) continue;
+                    if (collected.length === limit) {
+                        resume = { t, i };
+                        break;
+                    }
+                    collected.push(batch.users[i]);
+                }
+                if (resume || !batch.pageToken) break;
+                t = batch.pageToken;
+                i = 0;
+                if (batches === ROSTER_MAX_BATCHES - 1) resume = { t, i };
             }
 
             const users = collected.map(u => ({
@@ -58,7 +98,10 @@ export class AdminController {
                 },
                 providerData: u.providerData || []
             }));
-            res.json(users);
+            res.json({
+                users,
+                nextPageToken: resume ? Buffer.from(JSON.stringify(resume)).toString('base64url') : null,
+            });
         } catch (err) {
             next(err);
         }

@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { adminFetch } from '../adminFetch';
 import { auth } from '../../firebase';
-import { useArrayPage } from '../hooks/useArrayPage';
 import { usePerPage } from '../hooks/usePerPage';
+import { useTokenPage } from '../hooks/useTokenPage';
+import { useUrlFilters } from '../hooks/useUrlFilters';
+import { useUrlSearchInput } from '../hooks/useUrlSearchInput';
 import { loadOptionValues, REGISTRATION_KEY } from '../options';
 import PaginationBar from '../components/PaginationBar';
 import ListFilterBar from '../components/ListFilterBar';
@@ -53,9 +55,9 @@ function formatDate(value?: string | null) {
 
 const ROLE_LABELS = { admin: 'Admins', standard: 'Standard', disabled: 'Disabled' } as const;
 
+const FILTER_DEFAULTS = { search: '', role: '' };
+
 export default function UsersPage() {
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -68,9 +70,22 @@ export default function UsersPage() {
 
   const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null);
 
-  const [search, setSearch] = useState('');
-  const [role, setRole] = useState<'any' | 'admin' | 'standard' | 'disabled'>('any');
-  const { perPage } = usePerPage();
+  const [filters, setFilters, clearFilters] = useUrlFilters(FILTER_DEFAULTS);
+  const [search, setSearch] = useUrlSearchInput(
+    filters.search,
+    useCallback((value: string) => setFilters({ search: value }), [setFilters]),
+  );
+  const role = Object.hasOwn(ROLE_LABELS, filters.role) ? (filters.role as keyof typeof ROLE_LABELS) : 'any';
+  const { perPage, ready } = usePerPage();
+
+  // Filtered and paged by the API: the roster is read out of Firebase Auth, which
+  // the browser cannot query. Forward only, like App users.
+  const query = new URLSearchParams({
+    ...(filters.search.trim() ? { search: filters.search.trim() } : {}),
+    ...(role !== 'any' ? { role } : {}),
+  }).toString();
+  const pager = useTokenPage<AdminUser>({ path: '/api/admin/users', query, perPage, enabled: ready });
+  const load = pager.reload;
 
   const avatarInput = useRef<HTMLInputElement>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -122,17 +137,6 @@ export default function UsersPage() {
   };
 
   const currentUid = auth.currentUser?.uid;
-
-  const load = useCallback(() => {
-    setLoading(true);
-    // The endpoint returns a bare array, not { users: [...] }.
-    adminFetch<AdminUser[]>('/api/admin/users')
-      .then(setUsers)
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(load, [load]);
 
   const run = async (uid: string, fn: () => Promise<unknown>, message: string) => {
     setBusy(uid);
@@ -213,23 +217,6 @@ export default function UsersPage() {
     );
   };
 
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return users.filter((u) => {
-      const isAdmin = u.customClaims?.admin === true;
-      if (role === 'admin' && !isAdmin) return false;
-      if (role === 'standard' && isAdmin) return false;
-      if (role === 'disabled' && !u.disabled) return false;
-      if (!term) return true;
-      return (
-        (u.email ?? '').toLowerCase().includes(term) ||
-        (u.displayName ?? '').toLowerCase().includes(term)
-      );
-    });
-  }, [users, search, role]);
-
-  const pager = useArrayPage(filtered, perPage, `${search.trim()}|${role}`);
-
   return (
     <Box>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
@@ -259,7 +246,9 @@ export default function UsersPage() {
         </Stack>
       </Stack>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}><LinkifiedText>{error}</LinkifiedText></Alert>}
+      {(error || pager.error) && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}><LinkifiedText>{error || pager.error}</LinkifiedText></Alert>
+      )}
       {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
       {!registrationEnabled && (
@@ -272,13 +261,13 @@ export default function UsersPage() {
 
       <ListFilterBar
         active={[
-          search.trim() && { label: `Name or email contains: ${search.trim()}`, onDelete: () => setSearch('') },
-          role !== 'any' && { label: `Role: ${ROLE_LABELS[role]}`, onDelete: () => setRole('any') },
+          filters.search.trim() && {
+            label: `Name or email contains: ${filters.search.trim()}`,
+            onDelete: () => setFilters({ search: '' }),
+          },
+          role !== 'any' && { label: `Role: ${ROLE_LABELS[role]}`, onDelete: () => setFilters({ role: '' }) },
         ]}
-        onClear={() => {
-          setSearch('');
-          setRole('any');
-        }}
+        onClear={clearFilters}
       >
         <TextField
           placeholder="Search name or email…"
@@ -297,7 +286,7 @@ export default function UsersPage() {
         <TextField
           select
           value={role}
-          onChange={(e) => setRole(e.target.value as typeof role)}
+          onChange={(e) => setFilters({ role: e.target.value === 'any' ? '' : e.target.value })}
           size="small"
           sx={{ minWidth: 170 }}
         >
@@ -308,7 +297,7 @@ export default function UsersPage() {
         </TextField>
       </ListFilterBar>
 
-      {loading ? (
+      {pager.loading && pager.rows.length === 0 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}><CircularProgress /></Box>
       ) : (
         <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
@@ -429,11 +418,12 @@ export default function UsersPage() {
             page={pager.page}
             rangeStart={pager.rangeStart}
             rangeEnd={pager.rangeEnd}
-            total={pager.total}
+            // Auth only offers a forward token, so there is no count to show.
+            total={null}
             hasPrev={pager.hasPrev}
             hasNext={pager.hasNext}
+            loading={pager.loading}
             onFirst={pager.first}
-            onPrev={pager.prev}
             onNext={pager.next}
             label="users"
           />

@@ -153,6 +153,8 @@ export default function SourceFormPage() {
     try {
       const payload = {
         name: form.name.trim(),
+        // The Sources list sorts and searches on this; see models/Source.js.
+        name_lower: form.name.trim().toLowerCase(),
         url: form.url.trim(),
         enabled: form.enabled,
         javascript: form.javascript,
@@ -164,7 +166,8 @@ export default function SourceFormPage() {
       };
 
       if (isNew) {
-        await addDoc(collection(db, 'sources'), { ...payload, created_at: serverTimestamp() });
+        // No scrape has succeeded yet; the list's Scrape failing filter needs the field.
+        await addDoc(collection(db, 'sources'), { ...payload, status: false, created_at: serverTimestamp() });
       } else {
         await setDoc(doc(db, 'sources', id!), payload, { merge: true });
       }

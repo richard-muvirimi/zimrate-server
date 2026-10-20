@@ -1,28 +1,36 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   collection,
+  doc,
+  endBefore,
   getCountFromServer,
+  getDoc,
   getDocs,
   limit as limitTo,
+  limitToLast,
+  onSnapshot,
   query,
   startAfter,
 } from 'firebase/firestore';
 import type {
   DocumentData,
+  DocumentSnapshot,
   QueryConstraint,
   QueryDocumentSnapshot,
+  QuerySnapshot,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { useUrlPage } from './useUrlPage';
 
 export interface CursorPageOptions<T> {
   /** Firestore collection path, e.g. 'rates'. */
   path: string;
-  /** where()/orderBy() constraints. Rebuilt every render — see resetKey. */
+  /** where()/orderBy() constraints, ending in a unique order. Rebuilt every render — see resetKey. */
   constraints: QueryConstraint[];
   /**
-   * Serialised identity of the current filters. Changing it resets to page 1.
-   * Required because `constraints` is a new array each render and so cannot be
-   * an effect dependency without looping.
+   * Serialised identity of the current filters. Required because `constraints` is
+   * a new array each render and so cannot be an effect dependency without looping.
+   * The filters themselves live in the URL, whose change already drops the page.
    */
   resetKey: string;
   perPage: number;
@@ -31,6 +39,8 @@ export interface CursorPageOptions<T> {
   enabled?: boolean;
   /** Run one count query per resetKey to show "of N". */
   withTotal?: boolean;
+  /** Follow the page's documents as they change, rather than reading them once. */
+  live?: boolean;
 }
 
 export interface PageResult<T> {
@@ -51,27 +61,25 @@ export interface PageResult<T> {
   dropLocal: (predicate: (row: T) => boolean) => void;
 }
 
-interface Position {
-  key: string;
-  perPage: number;
-  page: number;
-  tick: number;
-}
-
-interface Fetched<T> extends Position {
+interface Fetched<T> {
+  stamp: string;
   rows: T[];
+  /** The page actually shown: 1 when the URL's cursor no longer exists. */
+  page: number;
   hasNext: boolean;
+  firstId: string | null;
+  lastId: string | null;
   error: string;
 }
 
-const stamp = (p: Position) => `${p.key}|${p.perPage}|${p.page}|${p.tick}`;
-
 /**
- * Cursor pagination over a Firestore collection.
+ * Cursor pagination over a Firestore collection, reading only the rows shown.
  *
- * Keeps a stack of page-boundary snapshots so `previous` and `first` are free —
- * no backwards query, no endBefore/limitToLast. Whether a next page exists is
- * known by fetching perPage + 1 rows and trimming, which avoids a count query
+ * The position is in the URL (see useUrlPage): Next puts the id of the page's last
+ * document in `after`, Prev the id of its first in `before`, read back with
+ * endBefore/limitToLast. Opening such a link costs one extra read for that
+ * document — never a walk through the pages before it. Whether a next page exists
+ * is known by fetching perPage + 1 rows and trimming, which avoids a count query
  * per page.
  *
  * `loading` is derived by comparing the last fetched position with the current
@@ -86,34 +94,27 @@ export function useCursorPage<T>({
   map,
   enabled = true,
   withTotal = false,
+  live = false,
 }: CursorPageOptions<T>): PageResult<T> {
+  const { page: urlPage, after, before, goTo } = useUrlPage();
   const [fetched, setFetched] = useState<Fetched<T> | null>(null);
+  const [tick, setTick] = useState(0);
   const [totalState, setTotalState] = useState<{ key: string; value: number | null; error: string }>({
     key: resetKey,
     value: null,
     error: '',
   });
-  const [stored, setStored] = useState<Position>({ key: resetKey, perPage, page: 1, tick: 0 });
 
-  // Reconciled during render rather than reset in an effect, so a filter change
-  // lands on the same paint instead of triggering a cascading re-render.
-  const pos: Position =
-    stored.key === resetKey && stored.perPage === perPage
-      ? stored
-      : { key: resetKey, perPage, page: 1, tick: 0 };
-
-  const { page, tick } = pos;
-  const current = stamp(pos);
-  const fresh = fetched !== null && stamp(fetched) === current;
+  const current = `${resetKey}|${perPage}|${after}|${before}|${tick}`;
+  const fresh = fetched !== null && fetched.stamp === current;
 
   // A stale total belongs to the previous filter, so treat it as unknown.
   const total = totalState.key === resetKey ? totalState.value : null;
   const totalError = totalState.key === resetKey ? totalState.error : '';
 
-  // stack[n] is the last document of page n, used as the cursor for page n+1.
-  // Never cleared: page always resets to 1 on a filter change, and each entry
-  // is rewritten as that page loads, so a stale cursor is never read.
-  const stack = useRef<QueryDocumentSnapshot<DocumentData>[]>([]);
+  // The shown page's first and last documents. Following Prev or Next from them
+  // needs no read to resolve the cursor.
+  const edges = useRef<DocumentSnapshot[]>([]);
 
   // Held in refs so the fetch effect can use them without depending on a fresh
   // array/function identity every render. Synced in an effect rather than
@@ -133,34 +134,68 @@ export function useCursorPage<T>({
     if (!enabled) return;
 
     const id = ++reqId.current;
-    const at: Position = { key: resetKey, perPage, page, tick };
+    const stamp = `${resetKey}|${perPage}|${after}|${before}|${tick}`;
+    let stop: (() => void) | undefined;
+    let cancelled = false;
 
-    const cursor = page > 1 ? stack.current[page - 1] : undefined;
-    const parts = [...constraintsRef.current];
-    if (cursor) parts.push(startAfter(cursor));
-    parts.push(limitTo(perPage + 1));
-
-    getDocs(query(collection(db, path), ...parts))
-      .then((snap) => {
-        if (reqId.current !== id) return;
-
-        const more = snap.size > perPage;
-        const docs = more ? snap.docs.slice(0, perPage) : snap.docs;
-        if (docs.length > 0) stack.current[page] = docs[docs.length - 1];
-
-        setFetched({ ...at, rows: docs.map((d) => mapRef.current(d)), hasNext: more, error: '' });
-      })
-      .catch((e) => {
-        if (reqId.current !== id) return;
-        // A missing composite index surfaces here, not at build time.
-        setFetched({
-          ...at,
-          rows: [],
-          hasNext: false,
-          error: e instanceof Error ? e.message : String(e),
-        });
+    const fail = (e: unknown) => {
+      if (reqId.current !== id) return;
+      // A missing composite index surfaces here, not at build time.
+      setFetched({
+        stamp, rows: [], page: 1, hasNext: false, firstId: null, lastId: null,
+        error: e instanceof Error ? e.message : String(e),
       });
-  }, [path, resetKey, perPage, page, tick, enabled]);
+    };
+
+    const resolveCursor = async (cursorId: string | null): Promise<DocumentSnapshot | null> => {
+      if (!cursorId) return null;
+      const known = edges.current.find((d) => d.id === cursorId);
+      if (known) return known;
+      // Hand-edited URL: a slash would address some other document.
+      if (cursorId.includes('/')) return null;
+      const snap = await getDoc(doc(db, path, cursorId));
+      return snap.exists() ? snap : null;
+    };
+
+    resolveCursor(after ?? before)
+      .then((cursor) => {
+        if (cancelled) return;
+        const backward = cursor !== null && !after;
+        const parts = [...constraintsRef.current];
+        if (backward) parts.push(endBefore(cursor), limitToLast(perPage));
+        else {
+          if (cursor) parts.push(startAfter(cursor));
+          parts.push(limitTo(perPage + 1));
+        }
+        const q = query(collection(db, path), ...parts);
+
+        const take = (snap: QuerySnapshot<DocumentData>) => {
+          if (reqId.current !== id) return;
+          // Coming back from a later page, there is a next one by definition.
+          const more = !backward && snap.size > perPage;
+          const docs = more ? snap.docs.slice(0, perPage) : snap.docs;
+          edges.current = docs.length > 0 ? [docs[0], docs[docs.length - 1]] : [];
+          setFetched({
+            stamp,
+            rows: docs.map((d) => mapRef.current(d)),
+            page: cursor ? urlPage : 1,
+            hasNext: backward || more,
+            firstId: docs[0]?.id ?? null,
+            lastId: docs[docs.length - 1]?.id ?? null,
+            error: '',
+          });
+        };
+
+        if (live) stop = onSnapshot(q, take, fail);
+        else getDocs(q).then(take).catch(fail);
+      })
+      .catch(fail);
+
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, [path, resetKey, perPage, after, before, urlPage, tick, enabled, live]);
 
   // One count per filter change, not per page.
   useEffect(() => {
@@ -178,18 +213,6 @@ export function useCursorPage<T>({
     };
   }, [path, resetKey, enabled, withTotal]);
 
-  const move = useCallback(
-    (fn: (p: Position) => Partial<Position>) =>
-      setStored((prev) => {
-        const base: Position =
-          prev.key === resetKey && prev.perPage === perPage
-            ? prev
-            : { key: resetKey, perPage, page: 1, tick: 0 };
-        return { ...base, ...fn(base) };
-      }),
-    [resetKey, perPage],
-  );
-
   const dropLocal = useCallback(
     (predicate: (row: T) => boolean) =>
       setFetched((prev) => (prev ? { ...prev, rows: prev.rows.filter((r) => !predicate(r)) } : prev)),
@@ -198,8 +221,11 @@ export function useCursorPage<T>({
 
   // Keep the previous page's rows visible while the next one loads.
   const rows = fetched?.rows ?? [];
+  const page = fresh ? fetched.page : urlPage;
   const rangeStart = rows.length === 0 ? 0 : (page - 1) * perPage + 1;
   const rangeEnd = rows.length === 0 ? 0 : rangeStart + rows.length - 1;
+  const firstId = fresh ? fetched.firstId : null;
+  const lastId = fresh ? fetched.lastId : null;
 
   return {
     rows,
@@ -211,10 +237,16 @@ export function useCursorPage<T>({
     rangeStart,
     rangeEnd,
     total,
-    first: useCallback(() => move(() => ({ page: 1 })), [move]),
-    prev: useCallback(() => move((p) => ({ page: Math.max(1, p.page - 1) })), [move]),
-    next: useCallback(() => move((p) => ({ page: p.page + 1 })), [move]),
-    reload: useCallback(() => move((p) => ({ tick: p.tick + 1 })), [move]),
+    first: useCallback(() => goTo(1), [goTo]),
+    // Page 1 is the bare URL, which also picks up anything added at the top since.
+    prev: useCallback(
+      () => goTo(page - 1, page > 2 && firstId ? { before: firstId } : undefined),
+      [goTo, page, firstId],
+    ),
+    next: useCallback(() => {
+      if (lastId) goTo(page + 1, { after: lastId });
+    }, [goTo, page, lastId]),
+    reload: useCallback(() => setTick((t) => t + 1), []),
     dropLocal,
   };
 }

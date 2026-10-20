@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box, Typography, Button, Paper, Table, TableBody, TableCell,
@@ -11,11 +11,14 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import {
-  collection, getDocs, getDoc, deleteDoc, doc, addDoc, onSnapshot, serverTimestamp, updateDoc, writeBatch,
+  collection, deleteDoc, doc, addDoc, documentId, onSnapshot, orderBy, serverTimestamp, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
+import type { DocumentData, QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { useArrayPage } from '../hooks/useArrayPage';
+import { useCursorPage } from '../hooks/useCursorPage';
 import { usePerPage } from '../hooks/usePerPage';
+import { useUrlFilters } from '../hooks/useUrlFilters';
+import { useUrlSearchInput } from '../hooks/useUrlSearchInput';
 import { useSelection } from '../hooks/useSelection';
 import PaginationBar from '../components/PaginationBar';
 import ListFilterBar from '../components/ListFilterBar';
@@ -45,13 +48,22 @@ const STATE_OPTIONS: { value: StateFilter; label: string }[] = [
   { value: 'failing', label: 'Scrape failing' },
 ];
 
+const FILTER_DEFAULTS = { search: '', state: '' };
+
+function mapSource(d: QueryDocumentSnapshot<DocumentData>): Source {
+  return { id: d.id, ...d.data() } as Source;
+}
+
 export default function SourcesPage() {
-  const [sources, setSources] = useState<Source[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
-  const [state, setState] = useState<StateFilter>('any');
-  const { perPage } = usePerPage();
+  const { perPage, ready } = usePerPage();
+  const [filters, setFilters, clearFilters] = useUrlFilters(FILTER_DEFAULTS);
+  const [search, setSearch] = useUrlSearchInput(
+    filters.search,
+    useCallback((value: string) => setFilters({ search: value }), [setFilters]),
+  );
+  const state = STATE_OPTIONS.find((o) => o.value === filters.state)?.value ?? 'any';
+  const term = filters.search.trim().toLowerCase();
   const [scraping, setScraping] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState<{ severity: 'success' | 'error'; text: string } | null>(null);
   const stopScrapes = useRef(new Map<string, () => void>());
@@ -61,24 +73,37 @@ export default function SourcesPage() {
     return () => stops.forEach((stop) => stop());
   }, []);
 
-  const load = async () => {
-    try {
-      // Sorted client-side on purpose: Firestore's orderBy silently drops every
-      // document missing the field, which is what made this list look empty.
-      const snap = await getDocs(collection(db, 'sources'));
-      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Source);
-      rows.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
-      setSources(rows);
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Sorted and searched on name_lower, which every source carries — new writes
+  // set it, and scripts/backfill-sources.js gave it to the ones before. Firestore
+  // leaves out any document missing a field it orders or filters by, which is what
+  // once made this list look empty. A missing `enabled` has always meant enabled,
+  // and a missing `status` failing; the backfill wrote both down.
+  const constraints = useMemo(() => {
+    const parts: QueryConstraint[] = [];
+    if (state === 'enabled') parts.push(where('enabled', '==', true));
+    else if (state === 'disabled') parts.push(where('enabled', '==', false));
+    else if (state === 'failing') parts.push(where('status', '==', false));
 
-  useEffect(() => {
-    load();
-  }, []);
+    if (term) {
+      parts.push(where('name_lower', '>=', term), where('name_lower', '<=', `${term}`));
+    }
+
+    parts.push(orderBy('name_lower', 'asc'));
+    // Tiebreaker so cursors have a total order.
+    parts.push(orderBy(documentId(), 'asc'));
+    return parts;
+  }, [state, term]);
+
+  const pager = useCursorPage<Source>({
+    path: 'sources',
+    constraints,
+    resetKey: `${state}|${term}`,
+    perPage,
+    map: mapSource,
+    enabled: ready,
+    withTotal: true,
+  });
+  const { dropLocal, reload } = pager;
 
   // A disabled source is skipped by the hourly scrape and its rates leave the
   // API (within the five minutes the enabled-source list is cached); enabling
@@ -87,7 +112,7 @@ export default function SourcesPage() {
     const enabled = source.enabled === false;
     try {
       await updateDoc(doc(db, 'sources', source.id), { enabled, updated_at: serverTimestamp() });
-      setSources((prev) => prev.map((s) => (s.id === source.id ? { ...s, enabled } : s)));
+      reload();
     } catch (e) {
       setError(String(e));
     }
@@ -97,7 +122,7 @@ export default function SourcesPage() {
     if (!confirm('Delete this source and all the rates it has scraped?')) return;
     try {
       await deleteDoc(doc(db, 'sources', id));
-      setSources((prev) => prev.filter((s) => s.id !== id));
+      dropLocal((s) => s.id === id);
     } catch (e) {
       setError(String(e));
     }
@@ -115,14 +140,8 @@ export default function SourcesPage() {
       stopScrapes.current.get(source.id)?.();
       setScraping((prev) => ({ ...prev, [source.id]: false }));
       setNotice({ severity, text: `${label}: ${text}` });
-      try {
-        const snap = await getDoc(doc(db, 'sources', source.id));
-        if (snap.exists()) {
-          setSources((prev) => prev.map((s) => (s.id === source.id ? { id: snap.id, ...snap.data() } as Source : s)));
-        }
-      } catch {
-        // The row keeps its old status; the notice already says what happened.
-      }
+      // Re-read the page so the row shows the scrape's new status.
+      reload();
     };
 
     try {
@@ -168,24 +187,6 @@ export default function SourcesPage() {
     }
   };
 
-  // Filtering client-side is legitimate here: the whole collection is already
-  // in memory (tens of rows), and it avoids Firestore orderBy, which silently
-  // drops documents missing the sorted field.
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return sources.filter((s) => {
-      if (state === 'enabled' && s.enabled === false) return false;
-      if (state === 'disabled' && s.enabled !== false) return false;
-      if (state === 'failing' && s.status) return false;
-      if (!term) return true;
-      return (
-        (s.name ?? '').toLowerCase().includes(term) ||
-        (s.url ?? '').toLowerCase().includes(term)
-      );
-    });
-  }, [sources, search, state]);
-
-  const pager = useArrayPage(filtered, perPage, `${search.trim()}|${state}`);
   const selection = useSelection(pager.rows.map((s) => s.id));
   const [bulkBusy, setBulkBusy] = useState(false);
 
@@ -196,7 +197,7 @@ export default function SourcesPage() {
       const batch = writeBatch(db);
       ids.forEach((id) => batch.update(doc(db, 'sources', id), { enabled, updated_at: serverTimestamp() }));
       await batch.commit();
-      setSources((prev) => prev.map((s) => (ids.includes(s.id) ? { ...s, enabled } : s)));
+      reload();
       selection.clear();
     } catch (e) {
       setError(String(e));
@@ -213,7 +214,7 @@ export default function SourcesPage() {
       const batch = writeBatch(db);
       ids.forEach((id) => batch.delete(doc(db, 'sources', id)));
       await batch.commit();
-      setSources((prev) => prev.filter((s) => !ids.includes(s.id)));
+      dropLocal((s) => ids.includes(s.id));
       selection.clear();
     } catch (e) {
       setError(String(e));
@@ -231,7 +232,9 @@ export default function SourcesPage() {
         </Button>
       </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}><LinkifiedText>{error}</LinkifiedText></Alert>}
+      {(error || pager.error) && (
+        <Alert severity="error" sx={{ mb: 2 }}><LinkifiedText>{error || pager.error}</LinkifiedText></Alert>
+      )}
       {notice && (
         <Alert severity={notice.severity} sx={{ mb: 2 }} onClose={() => setNotice(null)}>
           <LinkifiedText>{notice.text}</LinkifiedText>
@@ -240,19 +243,16 @@ export default function SourcesPage() {
 
       <ListFilterBar
         active={[
-          search.trim() && { label: `Name or URL contains: ${search.trim()}`, onDelete: () => setSearch('') },
+          term && { label: `Name starts with: ${filters.search.trim()}`, onDelete: () => setFilters({ search: '' }) },
           state !== 'any' && {
             label: `State: ${STATE_OPTIONS.find((o) => o.value === state)?.label}`,
-            onDelete: () => setState('any'),
+            onDelete: () => setFilters({ state: '' }),
           },
         ]}
-        onClear={() => {
-          setSearch('');
-          setState('any');
-        }}
+        onClear={clearFilters}
       >
         <TextField
-          placeholder="Search name or URL…"
+          placeholder="Name starts with…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           size="small"
@@ -268,7 +268,7 @@ export default function SourcesPage() {
         <TextField
           select
           value={state}
-          onChange={(e) => setState(e.target.value as StateFilter)}
+          onChange={(e) => setFilters({ state: e.target.value === 'any' ? '' : e.target.value })}
           size="small"
           sx={{ minWidth: 170 }}
         >
@@ -278,7 +278,7 @@ export default function SourcesPage() {
         </TextField>
       </ListFilterBar>
 
-      {loading ? (
+      {pager.loading && pager.rows.length === 0 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}><CircularProgress /></Box>
       ) : (
         <>
@@ -437,6 +437,7 @@ export default function SourcesPage() {
             total={pager.total}
             hasPrev={pager.hasPrev}
             hasNext={pager.hasNext}
+            loading={pager.loading}
             onFirst={pager.first}
             onPrev={pager.prev}
             onNext={pager.next}

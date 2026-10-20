@@ -6,11 +6,13 @@ import {
 } from '@mui/material';
 import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 import {
-  collection, doc, addDoc, deleteDoc, onSnapshot, serverTimestamp, updateDoc, writeBatch,
+  collection, doc, addDoc, deleteDoc, documentId, onSnapshot, orderBy, serverTimestamp, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
+import type { DocumentData, QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { useArrayPage } from '../hooks/useArrayPage';
+import { useCursorPage } from '../hooks/useCursorPage';
 import { usePerPage } from '../hooks/usePerPage';
+import { useUrlFilters } from '../hooks/useUrlFilters';
 import { useSelection } from '../hooks/useSelection';
 import PaginationBar from '../components/PaginationBar';
 import ListFilterBar from '../components/ListFilterBar';
@@ -72,11 +74,20 @@ function summary(c: Candidate): string {
   ].filter(Boolean).join(' · ');
 }
 
+const FILTER_DEFAULTS = { view: '' };
+
+/** Every status short of a decision. */
+const AWAITING_REVIEW: Candidate['status'][] = ['new', 'testing', 'passed', 'failed'];
+
+function mapCandidate(d: QueryDocumentSnapshot<DocumentData>): Candidate {
+  return { id: d.id, ...d.data() } as Candidate;
+}
+
 export default function CandidatesPage() {
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [view, setView] = useState<View>('review');
+  const [filters, setFilters] = useUrlFilters(FILTER_DEFAULTS);
+  const view = VIEWS.find((v) => v.value === filters.view)?.value ?? 'review';
+  const setView = (next: View) => setFilters({ view: next === 'review' ? '' : next });
   const [notice, setNotice] = useState<{ severity: 'success' | 'error'; text: string } | null>(null);
   const [discovering, setDiscovering] = useState(false);
   const [approving, setApproving] = useState<{ candidate: Candidate; name: string } | null>(null);
@@ -85,32 +96,32 @@ export default function CandidatesPage() {
   // trigger marks it testing or writes a newer test.
   const [retests, setRetests] = useState<Record<string, number>>({});
   const stopRun = useRef<(() => void) | null>(null);
-  const { perPage } = usePerPage();
+  const { perPage, ready } = usePerPage();
+
+  useEffect(() => () => stopRun.current?.(), []);
+
+  // found_at is set when discovery files a candidate, so ordering on it leaves none out.
+  const constraints = useMemo(() => {
+    const parts: QueryConstraint[] = [];
+    if (view === 'review') parts.push(where('status', 'in', AWAITING_REVIEW));
+    else if (view !== 'all') parts.push(where('status', '==', view));
+    parts.push(orderBy('found_at', 'desc'));
+    // Tiebreaker so cursors have a total order.
+    parts.push(orderBy(documentId(), 'desc'));
+    return parts;
+  }, [view]);
 
   // Live, so a candidate moves from Testing to Passed or Failed on screen.
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'source_candidates'), (snap) => {
-      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Candidate);
-      rows.sort((a, b) => (b.found_at?.toDate?.()?.getTime() ?? 0) - (a.found_at?.toDate?.()?.getTime() ?? 0));
-      setCandidates(rows);
-      setLoading(false);
-    }, (e) => {
-      setError(String(e));
-      setLoading(false);
-    });
-    return () => {
-      unsubscribe();
-      stopRun.current?.();
-    };
-  }, []);
-
-  const filtered = useMemo(() => candidates.filter((c) => {
-    if (view === 'all') return true;
-    if (view === 'review') return !['approved', 'rejected'].includes(c.status);
-    return c.status === view;
-  }), [candidates, view]);
-
-  const pager = useArrayPage(filtered, perPage, view);
+  const pager = useCursorPage<Candidate>({
+    path: 'source_candidates',
+    constraints,
+    resetKey: view,
+    perPage,
+    map: mapCandidate,
+    enabled: ready,
+    withTotal: true,
+    live: true,
+  });
 
   // Pending until the trigger marks it testing or writes a newer test.
   const isQueued = (c: Candidate) => c.id in retests && c.status !== 'testing' && retests[c.id] === testStamp(c);
@@ -210,6 +221,9 @@ export default function CandidatesPage() {
       const batch = writeBatch(db);
       batch.set(sourceRef, {
         name: name.trim(),
+        // The Sources list sorts and filters on these; see models/Source.js.
+        name_lower: name.trim().toLowerCase(),
+        status: false,
         url: candidate.url,
         enabled: true,
         javascript: candidate.javascript === true,
@@ -277,7 +291,9 @@ export default function CandidatesPage() {
         one is never proposed again. Searches and the weekly schedule are under Options → Discovery.
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}><LinkifiedText>{error}</LinkifiedText></Alert>}
+      {(error || pager.error) && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}><LinkifiedText>{error || pager.error}</LinkifiedText></Alert>
+      )}
       {notice && (
         <Alert severity={notice.severity} sx={{ mb: 2 }} onClose={() => setNotice(null)}><LinkifiedText>{notice.text}</LinkifiedText></Alert>
       )}
@@ -296,7 +312,7 @@ export default function CandidatesPage() {
         </TextField>
       </ListFilterBar>
 
-      {loading ? (
+      {pager.loading && pager.rows.length === 0 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}><CircularProgress /></Box>
       ) : (
         <>
@@ -411,6 +427,7 @@ export default function CandidatesPage() {
             total={pager.total}
             hasPrev={pager.hasPrev}
             hasNext={pager.hasNext}
+            loading={pager.loading}
             onFirst={pager.first}
             onPrev={pager.prev}
             onNext={pager.next}

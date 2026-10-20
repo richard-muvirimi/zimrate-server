@@ -12,14 +12,15 @@ interface PaginationBarProps {
   hasNext: boolean;
   loading?: boolean;
   onFirst: () => void;
-  onPrev: () => void;
+  /** Omitted for a forward-only list, which can only go back to the first page. */
+  onPrev?: () => void;
   onNext: () => void;
   /** Plural noun for the caption, e.g. "rates". */
   label?: string;
 }
 
 /**
- * First / previous / next only.
+ * First / previous / next only — previous only where the source can step back.
  *
  * Deliberately not MUI's TablePagination: that assumes a known total and
  * arbitrary page jumps, neither of which cursor paging can provide — there is
@@ -65,13 +66,15 @@ export default function PaginationBar({
             </IconButton>
           </Box>
         </Tooltip>
-        <Tooltip title="Previous page">
-          <Box component="span">
-            <IconButton size="small" onClick={onPrev} disabled={loading || !hasPrev}>
-              <ChevronLeftIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        </Tooltip>
+        {onPrev && (
+          <Tooltip title="Previous page">
+            <Box component="span">
+              <IconButton size="small" onClick={onPrev} disabled={loading || !hasPrev}>
+                <ChevronLeftIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          </Tooltip>
+        )}
         <Tooltip title="Next page">
           <Box component="span">
             <IconButton size="small" onClick={onNext} disabled={loading || !hasNext}>

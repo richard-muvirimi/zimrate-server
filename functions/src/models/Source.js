@@ -32,6 +32,8 @@ class Source {
     toFirestore() {
         const data = { ...this };
         delete data.id;
+        // The admin Sources list sorts and searches on this; Firestore has no case-insensitive order.
+        data.name_lower = this.name.toLowerCase();
 
         const toTimestamp = (val) => {
             if (!val || val instanceof Timestamp) return val;
