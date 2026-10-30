@@ -16,6 +16,7 @@ export default function RestSection({
   restV2Url,
   openApiUrl,
   postmanUrl,
+  base,
   expanded,
   onExpandedChange,
   onOpenPlayground,
@@ -26,13 +27,14 @@ export default function RestSection({
   restV2Url: string;
   openApiUrl: string;
   postmanUrl: string;
+  base: string;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
   onOpenPlayground: () => void;
 }) {
   // A real, clickable url rather than a /{base} template — v2 needs a currency
   // in the path to respond at all.
-  const versionUrl = version === 'v2' ? `${restV2Url}/ZAR` : restUrl;
+  const versionUrl = version === 'v2' ? `${restV2Url}/${base}` : restUrl;
 
   return (
     <Box>
@@ -61,7 +63,7 @@ export default function RestSection({
         {version === 'v2' ? (
           <Typography color="text.secondary" sx={{ mb: 3 }}>
             Pick any currency as your base and every rate comes back converted to it.
-            Put it in the url, like <code>/api/v2/ZAR</code> — upper or lower case, it
+            Put it in the url, like <code>/api/v2/{base}</code> — upper or lower case, it
             does not matter. Each rate arrives with its full detail, and the base
             currency itself is left out, since against itself it would always be 1.
           </Typography>

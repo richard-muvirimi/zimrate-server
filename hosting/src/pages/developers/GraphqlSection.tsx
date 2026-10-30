@@ -7,21 +7,24 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CodeBlock from './CodeBlock';
 import ParamList from './ParamList';
 import { GRAPHQL_PARAMS } from './params';
-import { GRAPHQL_QUERY } from './examples';
+import { graphqlQuery } from './examples';
 
 export default function GraphqlSection({
   graphqlUrl,
   paramDocs,
+  base,
   expanded,
   onExpandedChange,
   onOpenPlayground,
 }: {
   graphqlUrl: string;
   paramDocs: Record<string, string>;
+  base: string;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
   onOpenPlayground: () => void;
 }) {
+  const query = graphqlQuery(base);
   const sandboxId = useId().replace(/:/g, '-');
   const sandboxInitialized = useRef(false);
 
@@ -46,7 +49,7 @@ export default function GraphqlSection({
         target: `#${sandboxId}`,
         initialEndpoint: graphqlUrl,
         initialState: {
-          document: GRAPHQL_QUERY,
+          document: query,
         },
         endpointIsEditable: false,
       });
@@ -55,7 +58,7 @@ export default function GraphqlSection({
     return () => {
       cancelled = true;
     };
-  }, [expanded, graphqlUrl, sandboxId]);
+  }, [expanded, graphqlUrl, sandboxId, query]);
 
   return (
     <Box>
@@ -89,7 +92,7 @@ export default function GraphqlSection({
       </Box>
 
       <Typography variant="h6" gutterBottom>Query</Typography>
-      <CodeBlock language="graphql" code={GRAPHQL_QUERY} />
+      <CodeBlock language="graphql" code={query} />
 
       {/* Separated so a collapsed playground does not read as one more
           parameter row in the list above it. */}

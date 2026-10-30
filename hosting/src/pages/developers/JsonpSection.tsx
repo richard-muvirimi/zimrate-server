@@ -13,6 +13,7 @@ export default function JsonpSection({
   onVersionChange,
   restUrl,
   restV2Url,
+  base,
   expanded,
   onExpandedChange,
   onOpenPlayground,
@@ -21,11 +22,13 @@ export default function JsonpSection({
   onVersionChange: (next: RestVersion) => void;
   restUrl: string;
   restV2Url: string;
+  base: string;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
   onOpenPlayground: () => void;
 }) {
-  const example = jsonpRequest(version === 'v2' ? restV2Url : restUrl, version);
+  // v2 carries its base currency in the path, so the url gains a segment.
+  const example = jsonpRequest(version === 'v2' ? `${restV2Url}/${base}` : restUrl);
 
   return (
     <Box>

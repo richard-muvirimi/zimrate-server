@@ -5,6 +5,7 @@ import { useQuery } from '@apollo/client/react';
 import PageHero from '../components/PageHero';
 import SiteLayout from '../components/SiteLayout';
 import { GET_RATES } from '../graphql/queries';
+import { useExampleBase } from '../hooks/useExampleBase';
 import GraphqlSection from './developers/GraphqlSection';
 import JsonpSection from './developers/JsonpSection';
 import OverviewSection from './developers/OverviewSection';
@@ -32,6 +33,8 @@ export default function DevelopersPage() {
   const restV2Url = `${origin}/api/v2`;
   const graphqlUrl = `${origin}/api/graphql`;
   const openApiUrl = `${origin}/docs/documentation.yaml`;
+  // One base for every example on the page, so the sections never disagree.
+  const exampleBase = useExampleBase();
   const postmanUrl = `${origin}/docs/zimrate.postman_collection.json`;
 
   const currencyList = useMemo(
@@ -83,6 +86,7 @@ export default function DevelopersPage() {
               onVersionChange={setRestVersion}
               restUrl={restUrl}
               restV2Url={restV2Url}
+              base={exampleBase}
               openApiUrl={openApiUrl}
               postmanUrl={postmanUrl}
               expanded={expandedPlayground === 'rest'}
@@ -95,6 +99,7 @@ export default function DevelopersPage() {
               onVersionChange={setRestVersion}
               restUrl={restUrl}
               restV2Url={restV2Url}
+              base={exampleBase}
               expanded={expandedPlayground === 'jsonp'}
               onExpandedChange={(expanded) => setExpandedPlayground(expanded ? 'jsonp' : false)}
               onOpenPlayground={() => openPlayground('jsonp')}
@@ -103,6 +108,7 @@ export default function DevelopersPage() {
             <GraphqlSection
               graphqlUrl={graphqlUrl}
               paramDocs={paramDocs}
+              base={exampleBase}
               expanded={expandedPlayground === 'graphql'}
               onExpandedChange={(expanded) => setExpandedPlayground(expanded ? 'graphql' : false)}
               onOpenPlayground={() => openPlayground('graphql')}

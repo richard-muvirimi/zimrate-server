@@ -3,6 +3,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { apiUrl } from '../config';
+import { useExampleBase } from '../hooks/useExampleBase';
 import { useInView } from '../hooks/useInView';
 import { useMotionTimeout } from '../hooks/useReducedMotion';
 
@@ -11,8 +12,11 @@ export default function CtaSection() {
   const { ref, inView } = useInView<HTMLDivElement>();
   const timeout = useMotionTimeout(600);
 
+  // v2, against the visitor's own currency as the developers page examples are.
+  const base = useExampleBase();
+
   // Both the rendered snippet and the copied text derive from this, so they cannot drift.
-  const restUrl = apiUrl('/api/v1');
+  const restUrl = apiUrl(`/api/v2/${base}`);
   const graphqlUrl = apiUrl('/api/graphql');
   const exampleCurl = `curl -X POST ${restUrl} \\\n  -d 'prefer=mean'`;
 
