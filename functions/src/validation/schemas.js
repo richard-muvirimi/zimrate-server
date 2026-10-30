@@ -22,12 +22,25 @@ const pastUnixTimestamp = Joi.number().integer().custom((value, helpers) =>
     value > DateTime.now().toUnixInteger() ? helpers.error('number.max', { limit: 'now' }) : value
 );
 
+// ISO 4217 codes from the runtime's own ICU data, so the list moves with Node
+// rather than being maintained here.
+const currencyCodes = new Set(Intl.supportedValuesOf('currency'));
+
+// A currency the api does not serve gets an empty list rather than an error,
+// since a served currency can drop out while its source is stale. Only a value
+// that is not a currency code at all is rejected.
+const isoCurrency = (field) => Joi.string().uppercase().custom((value, helpers) =>
+    currencyCodes.has(value)
+        ? value
+        : helpers.message({ custom: `${field} must be an ISO 4217 currency code, for example ZAR` })
+);
+
 export const rateQuerySchema = Joi.object({
     search: Joi.string().optional(),
     name: Joi.string().optional(),
     source: Joi.string().optional(), // deprecated
     date: pastUnixTimestamp.optional(),
-    currency: Joi.string().uppercase().optional(),
+    currency: isoCurrency('currency').optional(),
     prefer: Joi.string().valid('min', 'max', 'mean', 'median', 'random', 'mode', 'MIN', 'MAX', 'MEAN', 'MEDIAN', 'RANDOM', 'MODE').optional(),
     callback: Joi.string().optional(),
     extra: isBoolean.optional(),
@@ -36,9 +49,7 @@ export const rateQuerySchema = Joi.object({
     // Ensure search, name, and source are mutually exclusive
     const exclusiveFields = ['search', 'name', 'source'].filter(field => value[field] !== undefined);
     if (exclusiveFields.length > 1) {
-        return helpers.error('object.conflict', {
-            message: 'search, name, and source fields are mutually exclusive'
-        });
+        return helpers.message({ custom: 'search, name, and source fields are mutually exclusive' });
     }
     return value;
 });
@@ -56,12 +67,12 @@ export const graphqlRateQuerySchema = Joi.object({
 export const v2QuerySchema = Joi.object({
     // Supplied as a path segment, not a query parameter. uppercase() is what
     // makes /api/v2/zar and /api/v2/ZAR equivalent.
-    base: Joi.string().uppercase().required().messages({
+    base: isoCurrency('base').required().messages({
         'any.required': 'base must be given as a path segment, for example /api/v2/ZAR',
         'string.empty': 'base must be given as a path segment, for example /api/v2/ZAR',
     }),
     prefer: Joi.string().valid('min', 'max', 'mean', 'median', 'random', 'mode', 'MIN', 'MAX', 'MEAN', 'MEDIAN', 'RANDOM', 'MODE').optional(),
-    currency: Joi.string().uppercase().optional(),
+    currency: isoCurrency('currency').optional(),
     search: Joi.string().optional(),
     name: Joi.string().optional(),
     date: pastUnixTimestamp.optional(),
@@ -72,9 +83,7 @@ export const v2QuerySchema = Joi.object({
     // a new endpoint has no reason to carry.
     const exclusiveFields = ['search', 'name'].filter(field => value[field] !== undefined);
     if (exclusiveFields.length > 1) {
-        return helpers.error('object.conflict', {
-            message: 'search and name fields are mutually exclusive'
-        });
+        return helpers.message({ custom: 'search and name fields are mutually exclusive' });
     }
     return value;
 });

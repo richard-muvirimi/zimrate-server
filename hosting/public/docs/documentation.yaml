@@ -61,6 +61,54 @@ components:
                 message:
                     type: string
                     description: Human readable description of what went wrong.
+    examples:
+        V1Rates:
+            summary: Every rate, against the US dollar
+            value:
+                USD:
+                    - currency: ZWG
+                      name: Zim price check - Liquid Home
+                      url: https://zimpricecheck.com/price-updates/official-and-black-market-exchange-rates/
+                      rate: 26.5
+                      last_checked: 1793358035
+                      last_updated: 1793358035
+                    - currency: ZAR
+                      name: Zim price check - CROSS RATES AGAINST ZIG
+                      url: https://zimpricecheck.com/price-updates/official-and-black-market-exchange-rates/
+                      rate: 16.647704
+                      last_checked: 1793358035
+                      last_updated: 1793358035
+                info: ZimRate API - Real-time Zimbabwe exchange rates
+        V2Rates:
+            summary: Every rate, against the South African rand
+            value:
+                base: ZAR
+                rates:
+                    - currency: ZWG
+                      name: Zim price check - Liquid Home
+                      url: https://zimpricecheck.com/price-updates/official-and-black-market-exchange-rates/
+                      rate: 1.5918
+                      last_rate: 1.5918
+                      last_checked: 1793358035
+                      last_updated: 1793358035
+                    - currency: BWP
+                      name: Zim price check - CROSS RATES AGAINST ZIG
+                      url: https://zimpricecheck.com/price-updates/official-and-black-market-exchange-rates/
+                      rate: 0.8073
+                      last_rate: 0.8073
+                      last_checked: 1793358035
+                      last_updated: 1793358035
+                info: ZimRate API - Real-time Zimbabwe exchange rates
+        InvalidParameter:
+            summary: A parameter failed validation
+            value:
+                status: false
+                message: '"prefer" must be one of [min, max, mean, median, random, mode, MIN, MAX, MEAN, MEDIAN, RANDOM, MODE]'
+        UnusableBase:
+            summary: The base currency has no usable rate
+            value:
+                status: false
+                message: Base currency rate for ZWL is zero or unavailable
 
 paths:
     /v1:
@@ -93,7 +141,7 @@ paths:
                 - in: query
                   name: currency
                   example: RBZ
-                  description: Filter rates by currency. Must exist in the system.
+                  description: Filter rates by currency, given as an ISO 4217 code. A currency with no rates returns an empty list rather than an error.
                   schema:
                       type: string
                 - in: query
@@ -164,6 +212,9 @@ paths:
                                         type: array
                                         items:
                                             $ref: '#/components/schemas/Rate'
+                            examples:
+                                rates:
+                                    $ref: '#/components/examples/V1Rates'
                         application/javascript:
                             schema:
                                 type: string
@@ -175,6 +226,9 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
+                            examples:
+                                error:
+                                    $ref: '#/components/examples/InvalidParameter'
                 '500':
                     description: Unexpected server error.
                     content:
@@ -210,7 +264,7 @@ paths:
                                 currency:
                                     type: string
                                     example: RBZ
-                                    description: Filter rates by currency. Must exist in the system.
+                                    description: Filter rates by currency, given as an ISO 4217 code. A currency with no rates returns an empty list rather than an error.
                                 prefer:
                                     type: string
                                     example: MIN
@@ -270,6 +324,9 @@ paths:
                                         type: array
                                         items:
                                             $ref: '#/components/schemas/Rate'
+                            examples:
+                                rates:
+                                    $ref: '#/components/examples/V1Rates'
                         application/javascript:
                             schema:
                                 type: string
@@ -281,6 +338,9 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
+                            examples:
+                                error:
+                                    $ref: '#/components/examples/InvalidParameter'
                 '500':
                     description: Unexpected server error.
                     content:
@@ -309,15 +369,16 @@ paths:
                   required: true
                   example: ZAR
                   description: >-
-                      Currency code every rate is returned against, as a path segment.
-                      Case insensitive, so /v2/zar and /v2/ZAR are equivalent. Must have
-                      at least one rate in the system.
+                      ISO 4217 code of the currency every rate is returned against, as a
+                      path segment. Case insensitive, so /v2/zar and /v2/ZAR are
+                      equivalent. A currency with no rates returns an empty list rather
+                      than an error.
                   schema:
                       type: string
                 - in: query
                   name: currency
                   example: ZWG
-                  description: Return only this currency. Must exist in the system.
+                  description: Return only this currency, given as an ISO 4217 code. A currency with no rates returns an empty list rather than an error.
                   schema:
                       type: string
                 - in: query
@@ -385,6 +446,9 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/V2Response'
+                            examples:
+                                rates:
+                                    $ref: '#/components/examples/V2Rates'
                         application/javascript:
                             schema:
                                 type: string
@@ -396,18 +460,18 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
-                '404':
-                    description: No rates exist for the requested base currency.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
+                            examples:
+                                error:
+                                    $ref: '#/components/examples/InvalidParameter'
                 '422':
                     description: The base currency exists but its rate is zero or unavailable, so no conversion can be performed.
                     content:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
+                            examples:
+                                error:
+                                    $ref: '#/components/examples/UnusableBase'
                 '500':
                     description: Unexpected server error.
                     content:
@@ -427,9 +491,10 @@ paths:
                   required: true
                   example: ZAR
                   description: >-
-                      Currency code every rate is returned against, as a path segment.
-                      Case insensitive, so /v2/zar and /v2/ZAR are equivalent. Must have
-                      at least one rate in the system.
+                      ISO 4217 code of the currency every rate is returned against, as a
+                      path segment. Case insensitive, so /v2/zar and /v2/ZAR are
+                      equivalent. A currency with no rates returns an empty list rather
+                      than an error.
                   schema:
                       type: string
             requestBody:
@@ -442,7 +507,7 @@ paths:
                                 currency:
                                     type: string
                                     example: ZWG
-                                    description: Return only this currency. Must exist in the system.
+                                    description: Return only this currency, given as an ISO 4217 code. A currency with no rates returns an empty list rather than an error.
                                 search:
                                     type: string
                                     example: RBZ
@@ -480,6 +545,9 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/V2Response'
+                            examples:
+                                rates:
+                                    $ref: '#/components/examples/V2Rates'
                         application/javascript:
                             schema:
                                 type: string
@@ -491,18 +559,18 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
-                '404':
-                    description: No rates exist for the requested base currency.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
+                            examples:
+                                error:
+                                    $ref: '#/components/examples/InvalidParameter'
                 '422':
                     description: The base currency exists but its rate is zero or unavailable.
                     content:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
+                            examples:
+                                error:
+                                    $ref: '#/components/examples/UnusableBase'
                 '500':
                     description: Unexpected server error.
                     content:

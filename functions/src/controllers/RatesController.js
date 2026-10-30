@@ -15,8 +15,6 @@ export class RatesController {
                 });
             }
 
-            if (await RatesController._rejectUnknownCurrency(value.currency, res)) return;
-
             const rates = await RateService.getRates(value);
             return res.status(StatusCodes.OK).json(rates);
 
@@ -38,8 +36,6 @@ export class RatesController {
                     message: error.details.map(d => d.message).join(', ')
                 });
             }
-
-            if (await RatesController._rejectUnknownCurrency(value.currency, res)) return;
 
             const response = {};
             response.USD = await RateService.getRates(value);
@@ -100,10 +96,17 @@ export class RatesController {
             try {
                 rates = await RateService.getRatesForBase({ base, prefer, currency, search, name, date });
             } catch (err) {
-                // An unusable base is the caller's problem, not a server fault, so
-                // it keeps its own status rather than falling through to the 500.
                 if (!(err instanceof BaseRateError)) throw err;
-                return res.status(err.status).json({ status: false, message: err.message });
+                // A base with no rates answers like any other filter matching
+                // nothing, so a client pinned to a base that drops out of service
+                // keeps getting a valid response.
+                if (err.status === StatusCodes.NOT_FOUND) {
+                    rates = [];
+                } else {
+                    // An unusable base rate is not a server fault, so it keeps
+                    // its own status rather than falling through to the 500.
+                    return res.status(err.status).json({ status: false, message: err.message });
+                }
             }
 
             const response = { base, rates };
@@ -120,28 +123,6 @@ export class RatesController {
                 message: error.message
             });
         }
-    }
-
-    /**
-     * Answers an unrecognised `currency` with a 422. An empty 200 left a client
-     * no way to tell a typo from a currency that genuinely has no rates at the
-     * moment.
-     *
-     * Joi has already uppercased the value by the time this runs.
-     *
-     * @returns {Promise<boolean>} true when a response has been sent
-     */
-    static async _rejectUnknownCurrency(currency, res) {
-        if (!currency) return false;
-
-        const known = await RateService.getKnownCurrencies();
-        if (known.includes(currency)) return false;
-
-        res.status(StatusCodes.UNPROCESSABLE_ENTITY).json({
-            status: false,
-            message: 'The selected currency is invalid.'
-        });
-        return true;
     }
 
     static _sendV2Response(res, response, callback) {

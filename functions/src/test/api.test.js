@@ -330,10 +330,20 @@ describe('API v0 (/api)', () => {
         }
     });
 
-    it('rejects a currency it does not serve', async () => {
+    it('returns an empty list rather than an error for a currency it does not serve', async () => {
+        // The query mock ignores filters, so the empty list itself cannot be
+        // observed here; the filter Firestore is asked for is what produces it.
+        ratesQuery.where.mockClear();
         const res = await request.get('/api?currency=JPY');
-        expect(res.status).toBe(422);
+        expect(res.status).toBe(200);
+        expect(ratesQuery.where.mock.calls).toContainEqual(['rate_currency', '==', 'JPY']);
+    });
+
+    it.each(['dollars', 'DOL'])('rejects %s, which is not an ISO 4217 currency code', async (currency) => {
+        const res = await request.get(`/api?currency=${currency}`);
+        expect(res.status).toBe(400);
         expect(res.body.status).toBe(false);
+        expect(res.body.message).toBe('currency must be an ISO 4217 currency code, for example ZAR');
     });
 
     it('returns CORS header', async () => {
@@ -427,11 +437,22 @@ describe('API v1 (/api/v1)', () => {
         expect(currencies).toContain('ZAR');
     });
 
-    it('rejects a currency it does not serve', async () => {
+    it('returns an empty list rather than an error for a currency it does not serve', async () => {
+        // Matches v2: a client filtering on a currency that stops being served,
+        // even briefly while its source is stale, keeps getting a valid response.
+        // The query mock ignores filters, so the empty list itself cannot be
+        // observed here; the filter Firestore is asked for is what produces it.
+        ratesQuery.where.mockClear();
         const res = await request.get('/api/v1?currency=JPY');
-        expect(res.status).toBe(422);
+        expect(res.status).toBe(200);
+        expect(ratesQuery.where.mock.calls).toContainEqual(['rate_currency', '==', 'JPY']);
+    });
+
+    it.each(['dollars', 'DOL'])('rejects %s, which is not an ISO 4217 currency code', async (currency) => {
+        const res = await request.get(`/api/v1?currency=${currency}`);
+        expect(res.status).toBe(400);
         expect(res.body.status).toBe(false);
-        expect(res.body.message).toMatch(/currency/i);
+        expect(res.body.message).toBe('currency must be an ISO 4217 currency code, for example ZAR');
     });
 
     it('filters by date (unix timestamp)', async () => {
@@ -469,6 +490,12 @@ describe('API v1 (/api/v1)', () => {
             .type('form')
             .send({ prefer: 'invalid' });
         expect(res.status).toBe(400);
+    });
+
+    it('rejects search and name together', async () => {
+        const res = await request.get('/api/v1?search=rbz&name=rbz');
+        expect(res.status).toBe(400);
+        expect(res.body.message).toBe('search, name, and source fields are mutually exclusive');
     });
 });
 
@@ -1170,6 +1197,21 @@ describe('API v2', () => {
         expect(res.body.rates.every(r => r.currency === 'ZAR')).toBe(true);
     });
 
+    it('returns an empty list rather than an error for a currency it does not serve', async () => {
+        // A client filtering on a currency that stops being tracked keeps
+        // getting a valid response instead of breaking.
+        const res = await request.get('/api/v2/ZAR?currency=JPY');
+        expect(res.status).toBe(200);
+        expect(res.body.rates).toEqual([]);
+    });
+
+    it.each(['dollars', 'DOL'])('rejects %s, which is not an ISO 4217 currency code', async (currency) => {
+        const res = await request.get(`/api/v2/ZAR?currency=${currency}`);
+        expect(res.status).toBe(400);
+        expect(res.body.status).toBe(false);
+        expect(res.body.message).toBe('currency must be an ISO 4217 currency code, for example ZAR');
+    });
+
     it('narrows by rate name via search', async () => {
         const res = await request.get('/api/v2/USD?search=black');
         expect(res.status).toBe(200);
@@ -1180,6 +1222,7 @@ describe('API v2', () => {
     it('rejects search and name together', async () => {
         const res = await request.get('/api/v2/USD?search=rbz&name=rbz');
         expect(res.status).toBe(400);
+        expect(res.body.message).toBe('search and name fields are mutually exclusive');
     });
 
     it('excludes rates older than the date parameter', async () => {
@@ -1212,9 +1255,20 @@ describe('API v2', () => {
         expect(res.status).toBe(400);
     });
 
-    it('404s for a base currency with no rates', async () => {
+    it('returns an empty list rather than an error for a base currency with no rates', async () => {
+        // A client pinned to a base that drops out of service keeps getting a
+        // valid response instead of breaking.
         const res = await request.get('/api/v2/JPY');
-        expect(res.status).toBe(404);
+        expect(res.status).toBe(200);
+        expect(res.body.base).toBe('JPY');
+        expect(res.body.rates).toEqual([]);
+    });
+
+    it.each(['dollars', 'DOL'])('rejects a base of %s, which is not an ISO 4217 currency code', async (base) => {
+        const res = await request.get(`/api/v2/${base}`);
+        expect(res.status).toBe(400);
+        expect(res.body.status).toBe(false);
+        expect(res.body.message).toBe('base must be an ISO 4217 currency code, for example ZAR');
     });
 
     it('serves JSONP when a callback is given', async () => {

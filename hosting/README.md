@@ -38,7 +38,7 @@ Verify after any change to imports:
 ```bash
 npm run build
 for f in $(grep -o 'assets/[A-Za-z0-9_-]*\.js' dist/index.html | sort -u); do
-  grep -qE "@firebase|RedocStandalone|ApolloSandbox" "dist/$f" && echo "LEAK: $f"
+  grep -qE "@firebase|ApiReferenceReact|ApolloSandbox" "dist/$f" && echo "LEAK: $f"
 done
 ```
 

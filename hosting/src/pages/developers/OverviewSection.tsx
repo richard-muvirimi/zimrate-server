@@ -61,7 +61,7 @@ export default function OverviewSection({
             <Button component="a" href={openApiUrl} target="_blank" rel="noopener" variant="outlined" endIcon={<OpenInNewIcon />}>
               OpenAPI Specification
             </Button>
-            <Button component="a" href="#rest-specification" variant="outlined">
+            <Button component="a" href="#rest" variant="outlined">
               View REST Documentation
             </Button>
           </Stack>

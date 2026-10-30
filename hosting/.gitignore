@@ -15,6 +15,9 @@ dist-ssr
 # Copied from flag-icons by scripts/copy-flags.mjs on every build.
 calculator/public/flags/
 
+# Generated from the OpenAPI spec by scripts/generate-postman.mjs on every dev and build.
+public/docs/zimrate.postman_collection.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

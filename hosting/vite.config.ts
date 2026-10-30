@@ -43,7 +43,7 @@ export default defineConfig(({ mode }) => {
           // are deprecated in the Rolldown version Vite 8 bundles.
           //
           // These groups are tuning, not correctness: the React.lazy boundaries
-          // in App.tsx are what actually keep redoc, @apollo/sandbox and the
+          // in App.tsx are what actually keep Scalar, @apollo/sandbox and the
           // Firebase SDK off the landing page. The groups just give the shared
           // vendor code stable, recognisable names.
           //
@@ -92,7 +92,7 @@ export default defineConfig(({ mode }) => {
                 test: /node_modules[\\/]@firebase[\\/]firestore/,
                 priority: 30,
               },
-              // No groups for redoc / @apollo/sandbox either. Both are imported
+              // No groups for Scalar / @apollo/sandbox either. Both are imported
               // only by the lazy DevelopersPage, so automatic splitting already
               // keeps them off the landing page — whereas naming them pulled
               // shared modules into a chunk the entry imported statically.

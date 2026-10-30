@@ -22,7 +22,7 @@ interface DevelopersData {
 
 export default function DevelopersPage() {
   const { data, loading } = useQuery<DevelopersData>(GET_RATES);
-  const [expandedPlayground, setExpandedPlayground] = useState<'graphql' | 'jsonp' | false>(false);
+  const [expandedPlayground, setExpandedPlayground] = useState<'rest' | 'graphql' | 'jsonp' | false>(false);
   // One selection shared by the REST and JSONP sections, so they can never
   // disagree about which version is being documented.
   const [restVersion, setRestVersion] = useState<RestVersion>('v2');
@@ -32,6 +32,7 @@ export default function DevelopersPage() {
   const restV2Url = `${origin}/api/v2`;
   const graphqlUrl = `${origin}/api/graphql`;
   const openApiUrl = `${origin}/docs/documentation.yaml`;
+  const postmanUrl = `${origin}/docs/zimrate.postman_collection.json`;
 
   const currencyList = useMemo(
     () => Array.from(new Set((data?.rates ?? []).map((item) => item.currency))).sort().join(', '),
@@ -43,7 +44,7 @@ export default function DevelopersPage() {
     [loading, currencyList],
   );
 
-  const openPlayground = (playground: 'graphql' | 'jsonp') => {
+  const openPlayground = (playground: 'rest' | 'graphql' | 'jsonp') => {
     setExpandedPlayground(playground);
 
     requestAnimationFrame(() => {
@@ -59,7 +60,7 @@ export default function DevelopersPage() {
         description="The api can be accessed through REST, JSONP and GraphQL. Query parameters, examples and the specification are listed below."
         actions={
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <Button component="a" href="#rest-specification" variant="contained" size="large">
+            <Button onClick={() => openPlayground('rest')} variant="contained" size="large">
               REST API Specification
             </Button>
             <Button component="a" href={openApiUrl} target="_blank" rel="noopener" variant="outlined" size="large" endIcon={<OpenInNewIcon />}>
@@ -83,6 +84,10 @@ export default function DevelopersPage() {
               restUrl={restUrl}
               restV2Url={restV2Url}
               openApiUrl={openApiUrl}
+              postmanUrl={postmanUrl}
+              expanded={expandedPlayground === 'rest'}
+              onExpandedChange={(expanded) => setExpandedPlayground(expanded ? 'rest' : false)}
+              onOpenPlayground={() => openPlayground('rest')}
             />
 
             <JsonpSection

@@ -1,6 +1,7 @@
 import { Box, Typography, Button, Stack, Paper, Fade } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { apiUrl } from '../config';
 import { useInView } from '../hooks/useInView';
 import { useMotionTimeout } from '../hooks/useReducedMotion';
@@ -109,6 +110,15 @@ export default function CtaSection() {
             sx={{ px: 5 }}
           >
             GraphQL Playground
+          </Button>
+          <Button
+            component={RouterLink}
+            to="/developers"
+            variant="outlined"
+            size="large"
+            sx={{ px: 5 }}
+          >
+            Developer Docs
           </Button>
         </Stack>
       </Box>
