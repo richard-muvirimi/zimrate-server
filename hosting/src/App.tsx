@@ -11,6 +11,7 @@ import { trackPageView } from './analytics';
 // Header and Footer) in the entry chunk avoids a second waterfall before first
 // paint. Everything else is split.
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
 const FaqPage = lazy(() => import('./pages/FaqPage'));
 const DevelopersPage = lazy(() => import('./pages/DevelopersPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
@@ -39,6 +40,7 @@ const AdminNotFoundPage = lazy(() => import('./admin/pages/AdminNotFoundPage'));
 const routeTitles: Array<[RegExp, string]> = [
   [/^\/$/, 'ZimRate'],
   [/^\/privacy$/, 'Privacy | ZimRate'],
+  [/^\/terms$/, 'Terms | ZimRate'],
   [/^\/faq$/, 'FAQ | ZimRate'],
   [/^\/contact$/, 'Contact | ZimRate'],
   [/^\/delete-account$/, 'Delete Account | ZimRate'],
@@ -106,6 +108,7 @@ function App() {
             {/* Public landing page */}
             <Route path="/" element={<HomePage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
             <Route path="/faq" element={<FaqPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/delete-account" element={<DeleteAccountPage />} />

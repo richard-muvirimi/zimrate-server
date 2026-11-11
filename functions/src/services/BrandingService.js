@@ -15,7 +15,7 @@ const BRANDING_DOC = 'branding';
 const DEFAULTS = {
     app_name: 'ZimRate',
     tagline: 'Free, real-time Zimbabwe exchange rates',
-    // Contact details shown in the footer, FAQ, privacy policy and contact page.
+    // Contact details shown in the footer, FAQ, privacy policy, terms and contact page.
     // Previously hardcoded in seven places across four files.
     author_name: 'Richard Muvirimi',
     author_email: 'richard@tyganeutronics.com',

@@ -172,7 +172,7 @@ export default function BrandingPage() {
 
           <Typography variant="subtitle2" fontWeight={700}>Contact</Typography>
           <Typography variant="caption" color="text.secondary">
-            Shown in the footer, the FAQ, the privacy policy and as the fallback on the contact
+            Shown in the footer, the FAQ, the privacy policy, the terms and as the fallback on the contact
             page. These were previously hardcoded across four files.
           </Typography>
 
